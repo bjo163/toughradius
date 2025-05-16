@@ -14,6 +14,8 @@ services:
       POSTGRES_DB: toughradius
       POSTGRES_USER: toughradius
       POSTGRES_PASSWORD: toughradius
+      TZ: Asia/Jakarta
+      LANG: en_US.UTF-8
     volumes:
       - tsdb-volume:/home/postgres/pgdata/data
     networks:
@@ -29,8 +31,8 @@ services:
     restart: always
     user: "1000"
     environment:
-    - TZ=Asia/Shanghai
-    - LANG=zh_CN.UTF-8
+      - TZ=Asia/Jakarta
+      - LANG=en_US.UTF-8
     command: -config.file=/etc/loki/config.yml
     volumes:
       - /etc/loki/config.yml:/etc/loki/config.yml
@@ -44,7 +46,7 @@ services:
     depends_on:
       - 'tsdb'
     build:
-      context: .  # atau "." jika Dockerfile ada di root
+      context: .
       dockerfile: Dockerfile
     container_name: "toughradius"
     logging:
@@ -78,6 +80,8 @@ services:
       - TOUGHRADIUS_LOKI_ENABLE=true
       - TOUGHRADIUS_LOGGER_MODE=production
       - TOUGHRADIUS_LOGGER_FILE_ENABLE=true
+      - TZ=Asia/Jakarta
+      - LANG=en_US.UTF-8
     networks:
       - tr_network
 
