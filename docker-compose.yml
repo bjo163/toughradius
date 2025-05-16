@@ -9,7 +9,7 @@ services:
       options:
         max-size: "5m"
     ports:
-      - "5432:5432"
+      - "5432"
     environment:
       POSTGRES_DB: toughradius
       POSTGRES_USER: toughradius
@@ -38,7 +38,7 @@ services:
       - /etc/loki/config.yml:/etc/loki/config.yml
       - loki-volume:/loki
     ports:
-      - "3100:3100"
+      - "3100"
     networks:
       tr_network:
 
@@ -55,7 +55,7 @@ services:
         max-size: "5m"
     restart: always
     ports:
-      - "1816:1816"
+      - "1816"
       - "1817:1817"
       - "1818:1818"
       - "1819:1819"
