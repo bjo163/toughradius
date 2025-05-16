@@ -29,7 +29,7 @@ services:
       options:
         max-size: "5m"
     restart: always
-    user: "1000"
+    # user: "1000"
     environment:
       - TZ=Asia/Jakarta
       - LANG=en_US.UTF-8
