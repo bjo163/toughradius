@@ -9,7 +9,7 @@ services:
       options:
         max-size: "5m"
     ports:
-      - "5432"
+      - "5435:5432"
     environment:
       POSTGRES_DB: toughradius
       POSTGRES_USER: toughradius
