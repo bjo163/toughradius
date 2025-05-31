@@ -17,7 +17,6 @@ import (
 	"github.com/talkincode/toughradius/v8/freeradius"
 	"github.com/talkincode/toughradius/v8/installer"
 	"github.com/talkincode/toughradius/v8/toughradius"
-	"github.com/talkincode/toughradius/v8/tr069"
 	"github.com/talkincode/toughradius/v8/webserver"
 	"golang.org/x/sync/errgroup"
 )
