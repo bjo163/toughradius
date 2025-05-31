@@ -163,10 +163,10 @@ func main() {
 		return toughradius.ListenRadsecServer(radsec)
 	})
 
-	g.Go(func() error {
-		log.Info("Start tr069 server...")
-		return tr069.Listen()
-	})
+	// g.Go(func() error {
+	// 	log.Info("Start tr069 server...")
+	// 	return tr069.Listen()
+	// })
 
 	if err := g.Wait(); err != nil {
 		log.Fatal(err)
