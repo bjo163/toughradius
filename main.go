@@ -155,13 +155,13 @@ func main() {
 		return toughradius.ListenRadiusAcctServer(toughradius.NewAcctService(radiusService))
 	})
 
-	g.Go(func() error {
-		radsec := toughradius.NewRadsecService(
-			toughradius.NewAuthService(radiusService),
-			toughradius.NewAcctService(radiusService),
-		)
-		return toughradius.ListenRadsecServer(radsec)
-	})
+	// g.Go(func() error {
+	// 	radsec := toughradius.NewRadsecService(
+	// 		toughradius.NewAuthService(radiusService),
+	// 		toughradius.NewAcctService(radiusService),
+	// 	)
+	// 	return toughradius.ListenRadsecServer(radsec)
+	// })
 
 	// g.Go(func() error {
 	// 	log.Info("Start tr069 server...")
