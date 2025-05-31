@@ -23,15 +23,18 @@ func (ri *RejectItem) IsOver(max int64) bool {
     ri.Lock.RLock()
     defer ri.Lock.RUnlock()
     if time.Since(ri.LastReject).Seconds() > 10 {
-        ri.Lock.RUnlock()
+        ri.Lock.RUnlock() // release read lock before acquiring write lock
         ri.Lock.Lock()
-        defer ri.Lock.Unlock()
         if time.Since(ri.LastReject).Seconds() > 10 {
             atomic.StoreInt64(&ri.Rejects, 0)
         }
+        ri.Lock.Unlock()
         return false
+    } else {
+        over := atomic.LoadInt64(&ri.Rejects) > max
+        ri.Lock.RUnlock()
+        return over
     }
-    return atomic.LoadInt64(&ri.Rejects) > max
 }
 
 type RejectCache struct {
