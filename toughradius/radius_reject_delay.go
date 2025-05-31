@@ -21,7 +21,6 @@ func (ri *RejectItem) Incr() {
 
 func (ri *RejectItem) IsOver(max int64) bool {
     ri.Lock.RLock()
-    defer ri.Lock.RUnlock()
     if time.Since(ri.LastReject).Seconds() > 10 {
         ri.Lock.RUnlock() // release read lock before acquiring write lock
         ri.Lock.Lock()
