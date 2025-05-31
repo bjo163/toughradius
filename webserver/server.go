@@ -146,14 +146,7 @@ func NewAdminServer() *AdminServer {
 // Start Admin Server
 func (s *AdminServer) Start() error {
 	appconfig := app.GConfig()
-	go func() {
-		log.Infof("Prepare to start the TLS management port %s:%d", appconfig.Web.Host, appconfig.Web.TlsPort)
-		err := s.root.StartTLS(fmt.Sprintf("%s:%d", appconfig.Web.Host, appconfig.Web.TlsPort),
-			path.Join(appconfig.GetPrivateDir(), "toughradius.tls.crt"), path.Join(appconfig.GetPrivateDir(), "toughradius.tls.key"))
-		if err != nil {
-			log.Errorf("Error starting TLS management port %s", err.Error())
-		}
-	}()
+	// TLS management port is fully disabled
 	log.Infof("Start the management server %s:%d", appconfig.Web.Host, appconfig.Web.Port)
 	err := s.root.Start(fmt.Sprintf("%s:%d", appconfig.Web.Host, appconfig.Web.Port))
 	if err != nil {
