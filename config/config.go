@@ -173,7 +173,8 @@ var DefaultAppConfig = &AppConfig{
 	Web: WebConfig{
 		Host:    "0.0.0.0",
 		Port:    1816,
-		TlsPort: 1817,
+		TlsPort: 0,
+		// TlsPort: 1817,
 		Secret:  "9b6de5cc-0731-1203-xxtt-0f568ac9da37",
 	},
 	Database: DBConfig{
@@ -189,7 +190,7 @@ var DefaultAppConfig = &AppConfig{
 	},
 	Tr069: Tr069Config{
 		Host:   "0.0.0.0",
-		Tls:    true,
+		Tls:    false,
 		Port:   1819,
 		Secret: "9b6de5cc-0731-1203-xxtt-0f568ac9da37",
 		Debug:  true,
@@ -211,8 +212,10 @@ var DefaultAppConfig = &AppConfig{
 		Host:       "0.0.0.0",
 		AuthPort:   1812,
 		AcctPort:   1813,
-		RadsecPort: 2083,
-		RadsecWorker: 100,
+		RadsecPort: 0,
+		RadsecWorker: 0,
+		// RadsecPort: 2083,
+		// RadsecWorker: 100,
 		Debug:      true,
 	},
 	Logger: LogConfig{
