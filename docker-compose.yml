@@ -74,11 +74,11 @@ services:
       - TOUGHRADIUS_DB_PWD=toughradius
       - TOUGHRADIUS_RADIUS_DEBUG=off
       - TOUGHRADIUS_RADIUS_ENABLED=on
-      - TOUGHRADIUS_TR069_WEB_TLS=on
+      - TOUGHRADIUS_TR069_WEB_TLS=off
       - TOUGHRADIUS_LOKI_JOB=toughradius
       - TOUGHRADIUS_LOKI_SERVER=http://loki:3100
       - TOUGHRADIUS_LOKI_ENABLE=true
-      - TOUGHRADIUS_LOGGER_MODE=production
+      - TOUGHRADIUS_LOGGER_MODE=development
       - TOUGHRADIUS_LOGGER_FILE_ENABLE=true
       - TZ=Asia/Jakarta
       - LANG=en_US.UTF-8
