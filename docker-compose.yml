@@ -19,7 +19,7 @@ services:
     volumes:
       - tsdb-volume:/home/postgres/pgdata/data
     networks:
-      tr_network:
+      - coolify
 
   loki:
     image: grafana/loki:2.7.1
@@ -40,7 +40,7 @@ services:
     ports:
       - "3100"
     networks:
-      tr_network:
+      - coolify
 
   toughradius:
     depends_on:
@@ -83,10 +83,11 @@ services:
       - TZ=Asia/Jakarta
       - LANG=en_US.UTF-8
     networks:
-      - tr_network
+      - coolify
 
 networks:
-  tr_network:
+  coolify:
+    external: true
 
 volumes:
   tsdb-volume:
