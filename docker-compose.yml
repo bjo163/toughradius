@@ -48,7 +48,7 @@ services:
     # build:
     #   context: .
     #   dockerfile: Dockerfile
-    image: ca17/toughradius:latest  
+    image: talkincode/toughradius:latest
     container_name: "toughradius"
     logging:
       driver: "json-file"
