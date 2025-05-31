@@ -45,9 +45,10 @@ services:
   toughradius:
     depends_on:
       - 'tsdb'
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: ca17/toughradius:latest  
     container_name: "toughradius"
     logging:
       driver: "json-file"
