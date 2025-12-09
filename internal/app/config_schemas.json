@@ -92,5 +92,17 @@
       "description": "Observation window (seconds) for reject counter reset",
       "description_i18n": "config.radius.reject_delay_window_seconds.description"
     }
+    ,
+    {
+      "key": "scheduler.max_workers",
+      "type": "int",
+      "default": "50",
+      "min": 1,
+      "max": 1000,
+      "title": "Scheduler Max Workers",
+      "title_i18n": "config.scheduler.max_workers.title",
+      "description": "Maximum concurrent workers used by scheduler tasks (controls parallelism for tasks like latency checks)",
+      "description_i18n": "config.scheduler.max_workers.description"
+    }
   ]
 }

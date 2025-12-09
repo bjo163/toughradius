@@ -1,11 +1,14 @@
 package app
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"runtime/debug"
 	"time"
 	_ "time/tzdata"
 
+	"github.com/go-routeros/routeros"
 	"github.com/robfig/cron/v3"
 	"github.com/talkincode/toughradius/v9/config"
 	"github.com/talkincode/toughradius/v9/internal/domain"
@@ -134,6 +137,8 @@ func (a *Application) Init(cfg *config.AppConfig) {
 		a.checkSuper()
 		a.checkSettings()
 		a.checkDefaultPNode()
+		a.checkSchedulers()
+		a.checkVendors()
 	}()
 
 	// Initialize the configuration manager
@@ -219,6 +224,11 @@ func (a *Application) ProfileCache() *ProfileCache {
 	return a.profileCache
 }
 
+// Start scheduler job runner
+func (a *Application) StartBackgroundJobs(ctx context.Context) {
+	a.StartSchedulerService(ctx)
+}
+
 // checkDefaultPNode check default node
 func (a *Application) checkDefaultPNode() {
 	var pnode domain.NetNode
@@ -245,4 +255,152 @@ func (a *Application) Release() {
 
 	_ = metrics.Close()
 	_ = zap.L().Sync()
+}
+
+// RunSchedulerNow triggers a scheduler execution immediately by ID
+func (a *Application) RunSchedulerNow(id int64) error {
+	var sched domain.NetScheduler
+	if err := a.gormDB.First(&sched, id).Error; err != nil {
+		return err
+	}
+
+	switch sched.TaskType {
+	case "latency_check":
+		a.runLatencyCheckScheduler(&sched)
+	case "snmp_model":
+		a.runSnmpModelScheduler(&sched)
+case "api_probe":
+    a.runApiProbeScheduler(&sched)
+	default:
+		// unsupported task type
+	}
+
+	// update last and next run
+	now := time.Now()
+	a.gormDB.Model(&domain.NetScheduler{}).Where("id = ?", sched.ID).Updates(map[string]interface{}{
+		"last_run_at": now,
+		"next_run_at": now.Add(time.Duration(sched.Interval) * time.Second),
+	})
+	return nil
+}
+
+// RunSnmpProbe performs an immediate SNMP probe for a single NAS device by ID
+func (a *Application) RunSnmpProbe(nasID int64) error {
+	var n domain.NetNas
+	if err := a.gormDB.First(&n, nasID).Error; err != nil {
+		return err
+	}
+
+	zap.L().Info("RunSnmpProbe called", zap.Int64("nas_id", nasID), zap.String("ip", n.Ipaddr))
+
+	now := time.Now()
+	// ensure SNMP is enabled and community present
+	if n.SnmpState != "enabled" || n.SnmpCommunity == "" {
+		// mark failed with message
+		_ = a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+			"snmp_last_probe_at": now,
+			"snmp_last_result":   "failed",
+			"snmp_last_message":  "snmp disabled or community missing",
+		}).Error
+		return nil
+	}
+
+	model, msg := a.snmpProbeModel(n)
+	if model == "" {
+		// failed
+		if err := a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+			"snmp_last_probe_at": now,
+			"snmp_last_result":   "failed",
+			"snmp_last_message":  msg,
+		}).Error; err != nil {
+			zap.L().Error("failed to update NAS snmp probe result", zap.String("ip", n.Ipaddr), zap.Error(err))
+			return err
+		}
+		return nil
+	}
+
+	// success
+	if err := a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+		"model":               model,
+		"snmp_last_probe_at":  now,
+		"snmp_last_result":    "ok",
+		"snmp_last_message":   msg,
+	}).Error; err != nil {
+		zap.L().Error("failed to update NAS model/snmp result", zap.String("ip", n.Ipaddr), zap.Error(err))
+		return err
+	}
+	zap.L().Info("RunSnmpProbe: NAS model updated", zap.String("ip", n.Ipaddr), zap.String("model", model))
+	return nil
+}
+
+// RunApiProbe performs an immediate API probe for a single NAS device by ID
+func (a *Application) RunApiProbe(nasID int64) error {
+	var n domain.NetNas
+	if err := a.gormDB.First(&n, nasID).Error; err != nil {
+		return err
+	}
+
+	zap.L().Info("RunApiProbe called", zap.Int64("nas_id", nasID), zap.String("ip", n.Ipaddr))
+
+	now := time.Now()
+	// ensure API is enabled and credentials present
+	if n.ApiState != "enabled" || n.Username == "" || n.Password == "" {
+		_ = a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+			"api_last_probe_at": now,
+			"api_last_result":   "failed",
+			"api_last_message":  "api disabled or credentials missing",
+		}).Error
+		return nil
+	}
+
+	// Only Mikrotik vendor currently supported
+	if n.VendorCode != "14988" {
+		_ = a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+			"api_last_probe_at": now,
+			"api_last_result":   "unsupported",
+			"api_last_message":  "api probe only supported for Mikrotik (vendor code 14988)",
+		}).Error
+		return nil
+	}
+
+	port := n.ApiPort
+	if port == 0 {
+		port = 8728
+	}
+
+	addr := fmt.Sprintf("%s:%d", n.Ipaddr, port)
+
+	// attempt to connect using RouterOS API
+	client, err := routeros.Dial(addr, n.Username, n.Password)
+	if err != nil {
+		_ = a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+			"api_last_probe_at": now,
+			"api_last_result":   "failed",
+			"api_last_message":  err.Error(),
+		}).Error
+		zap.L().Warn("RunApiProbe failed to dial", zap.String("addr", addr), zap.Error(err))
+		return nil
+	}
+	defer client.Close()
+
+	// try to get device identity
+	reply, err := client.Run("/system/identity/print")
+	msg := "connected"
+	if err == nil && len(reply.Re) > 0 {
+		if name, ok := reply.Re[0].Map["name"]; ok {
+			msg = fmt.Sprintf("identity=%s", name)
+		}
+	}
+
+	if err := a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
+		"api_last_probe_at": now,
+		"api_last_result":   "ok",
+		"api_last_message":  msg,
+	}).Error; err != nil {
+		zap.L().Error("failed to update NAS api probe result", zap.String("ip", n.Ipaddr), zap.Error(err))
+		return err
+	}
+
+	zap.L().Info("RunApiProbe: NAS api probe ok", zap.String("ip", n.Ipaddr), zap.String("msg", msg))
+	return nil
 }

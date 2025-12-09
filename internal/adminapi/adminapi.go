@@ -13,7 +13,10 @@ func Init(appCtx app.AppContext) {
 	registerAccountingRoutes()
 	registerSessionRoutes()
 	registerNASRoutes()
+	registerSchedulerRoutes()
 	registerSettingsRoutes()
 	registerNodesRoutes()
 	registerOperatorsRoutes()
+	registerDbmsRoutes()
+	registerVendorRoutes()
 }

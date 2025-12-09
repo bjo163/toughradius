@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/talkincode/toughradius/v9/internal/domain"
 	"github.com/talkincode/toughradius/v9/internal/webserver"
+	"go.uber.org/zap"
 )
 
 // nasPayload represents the NAS device request structure
@@ -19,6 +20,13 @@ type nasPayload struct {
 	Ipaddr     string `json:"ipaddr" validate:"required,ip"`
 	Secret     string `json:"secret" validate:"required,min=6,max=100"`
 	CoaPort    *int   `json:"coa_port" validate:"omitempty,port"`
+	Username   string `json:"username" validate:"omitempty,max=100"`
+	Password   string `json:"password" validate:"omitempty,max=100"`
+	ApiPort    *int   `json:"api_port" validate:"omitempty,port"`
+	ApiState   string `json:"api_state" validate:"omitempty,oneof=enabled disabled"`
+	SnmpPort   *int   `json:"snmp_port" validate:"omitempty,port"`
+	SnmpCommunity string `json:"snmp_community" validate:"omitempty,max=200"`
+	SnmpState  string `json:"snmp_state" validate:"omitempty,oneof=enabled disabled"`
 	Model      string `json:"model" validate:"omitempty,max=50"`
 	VendorCode string `json:"vendor_code" validate:"omitempty,max=20"`
 	Status     string `json:"status" validate:"omitempty,oneof=enabled disabled"`
@@ -35,6 +43,13 @@ type nasUpdatePayload struct {
 	Ipaddr     string `json:"ipaddr" validate:"omitempty,ip"`
 	Secret     string `json:"secret" validate:"omitempty,min=6,max=100"`
 	CoaPort    *int   `json:"coa_port" validate:"omitempty,port"`
+	Username   string `json:"username" validate:"omitempty,max=100"`
+	Password   string `json:"password" validate:"omitempty,max=100"`
+	ApiPort    *int   `json:"api_port" validate:"omitempty,port"`
+	ApiState   string `json:"api_state" validate:"omitempty,oneof=enabled disabled"`
+	SnmpPort   *int   `json:"snmp_port" validate:"omitempty,port"`
+	SnmpCommunity string `json:"snmp_community" validate:"omitempty,max=200"`
+	SnmpState  string `json:"snmp_state" validate:"omitempty,oneof=enabled disabled"`
 	Model      string `json:"model" validate:"omitempty,max=50"`
 	VendorCode string `json:"vendor_code" validate:"omitempty,max=20"`
 	Status     string `json:"status" validate:"omitempty,oneof=enabled disabled"`
@@ -162,6 +177,16 @@ func CreateNAS(c echo.Context) error {
 		coaPort = *payload.CoaPort
 	}
 
+	apiPort := 0
+	if payload.ApiPort != nil {
+		apiPort = *payload.ApiPort
+	}
+
+	snmpPort := 0
+	if payload.SnmpPort != nil {
+		snmpPort = *payload.SnmpPort
+	}
+
 	device := domain.NetNas{
 		NodeId:     payload.NodeId,
 		Name:       payload.Name,
@@ -170,6 +195,13 @@ func CreateNAS(c echo.Context) error {
 		Ipaddr:     payload.Ipaddr,
 		Secret:     payload.Secret,
 		CoaPort:    coaPort,
+		Username:   payload.Username,
+		Password:   payload.Password,
+		ApiPort:    apiPort,
+		ApiState:   payload.ApiState,
+		SnmpPort:   snmpPort,
+		SnmpCommunity: payload.SnmpCommunity,
+		SnmpState:  payload.SnmpState,
 		Model:      payload.Model,
 		VendorCode: payload.VendorCode,
 		Status:     payload.Status,
@@ -257,6 +289,29 @@ func UpdateNAS(c echo.Context) error {
 		device.NodeId = payload.NodeId
 	}
 
+	// API/SNMP fields
+	if payload.Username != "" {
+		device.Username = payload.Username
+	}
+	if payload.Password != "" {
+		device.Password = payload.Password
+	}
+	if payload.ApiPort != nil {
+		device.ApiPort = *payload.ApiPort
+	}
+	if payload.ApiState != "" {
+		device.ApiState = payload.ApiState
+	}
+	if payload.SnmpPort != nil {
+		device.SnmpPort = *payload.SnmpPort
+	}
+	if payload.SnmpCommunity != "" {
+		device.SnmpCommunity = payload.SnmpCommunity
+	}
+	if payload.SnmpState != "" {
+		device.SnmpState = payload.SnmpState
+	}
+
 	if err := GetDB(c).Save(&device).Error; err != nil {
 		return fail(c, http.StatusInternalServerError, "UPDATE_FAILED", "Failed to update NAS device", err.Error())
 	}
@@ -301,4 +356,42 @@ func registerNASRoutes() {
 	webserver.ApiPOST("/network/nas", CreateNAS)
 	webserver.ApiPUT("/network/nas/:id", UpdateNAS)
 	webserver.ApiDELETE("/network/nas/:id", DeleteNAS)
+	webserver.ApiPOST("/network/nas/:id/probe-snmp", ProbeNAS)
+	webserver.ApiPOST("/network/nas/:id/probe-api", ProbeAPINAS)
+}
+
+// ProbeNAS triggers an immediate SNMP probe for the given NAS and returns result
+func ProbeNAS(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return fail(c, http.StatusBadRequest, "INVALID_ID", "Invalid NAS ID", nil)
+	}
+
+	zap.L().Info("ProbeNAS called", zap.Int64("nas_id", id))
+	appCtx := GetAppContext(c)
+	if err := appCtx.RunSnmpProbe(id); err != nil {
+		zap.L().Error("ProbeNAS failed", zap.Int64("nas_id", id), zap.Error(err))
+		return fail(c, http.StatusInternalServerError, "PROBE_FAILED", "SNMP probe failed", err.Error())
+	}
+
+	zap.L().Info("ProbeNAS finished", zap.Int64("nas_id", id))
+	return ok(c, map[string]interface{}{"message": "probe scheduled/finished"})
+}
+
+// ProbeAPINAS triggers an immediate API probe for the given NAS and returns result
+func ProbeAPINAS(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return fail(c, http.StatusBadRequest, "INVALID_ID", "Invalid NAS ID", nil)
+	}
+
+	zap.L().Info("ProbeAPINAS called", zap.Int64("nas_id", id))
+	appCtx := GetAppContext(c)
+	if err := appCtx.RunApiProbe(id); err != nil {
+		zap.L().Error("ProbeAPINAS failed", zap.Int64("nas_id", id), zap.Error(err))
+		return fail(c, http.StatusInternalServerError, "PROBE_API_FAILED", "API probe failed", err.Error())
+	}
+
+	zap.L().Info("ProbeAPINAS finished", zap.Int64("nas_id", id))
+	return ok(c, map[string]interface{}{"message": "api probe scheduled/finished"})
 }

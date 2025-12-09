@@ -33,11 +33,12 @@ import {
   Settings as SettingsIcon,
   Security as SecurityIcon,
   Router as RouterIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { useDataProvider, useNotify, useTranslate } from 'react-admin';
 import { useApiQuery } from '../hooks/useApiQuery';
 
-// 配置项类型定义
+// Configuration item type definitions
 interface ConfigSchema {
   key: string;
   type: 'string' | 'int' | 'bool' | 'duration' | 'json';
@@ -66,7 +67,7 @@ const SETTINGS_QUERY_KEY = ['system', 'settings'] as const;
 
 export const SystemConfigPage: React.FC = () => {
   const [configs, setConfigs] = useState<Record<string, ConfigValue>>({});
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['radius']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['radius', 'scheduler']);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const dataProvider = useDataProvider();
@@ -108,6 +109,12 @@ export const SystemConfigPage: React.FC = () => {
 
   const configGroups = useMemo(() => ({
     radius: {
+        scheduler: {
+          title: translate('pages.system_config.groups.scheduler.title'),
+          description: translate('pages.system_config.groups.scheduler.description'),
+          icon: <ScheduleIcon />,
+          color: '#6a1b9a',
+        },
       title: translate('pages.system_config.groups.radius.title'),
       description: translate('pages.system_config.groups.radius.description'),
       icon: <RouterIcon />,
@@ -294,12 +301,12 @@ export const SystemConfigPage: React.FC = () => {
       );
     },
     onSuccess: () => {
-      notify('配置保存成功', { type: 'success' });
+      notify('Configuration saved successfully', { type: 'success' });
       queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : 'unknown error';
-      notify(`配置保存失败: ${message}`, { type: 'error' });
+      notify(`Failed to save configuration: ${message}`, { type: 'error' });
     },
   });
 
@@ -319,7 +326,7 @@ export const SystemConfigPage: React.FC = () => {
     });
     setConfigs(nextConfigs);
     setResetDialogOpen(false);
-    notify('已重置为默认值', { type: 'info' });
+    notify('Reset to default values', { type: 'info' });
   };
 
   const handleGroupToggle = (group: string) => {
@@ -335,7 +342,7 @@ export const SystemConfigPage: React.FC = () => {
 
   const handleSave = () => {
     if (!schemaQuery.data?.length) {
-      notify('暂无可保存的配置项', { type: 'warning' });
+      notify('No configuration items to save', { type: 'warning' });
       return;
     }
     saveMutation.mutate({ ...configs });
@@ -343,7 +350,7 @@ export const SystemConfigPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 页面标题 */}
+      {/* Page title */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           {translate('pages.system_config.title')}
@@ -353,7 +360,7 @@ export const SystemConfigPage: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* 操作按钮 */}
+      {/* Action buttons */}
       <Box sx={{ mb: 3 }}>
         <Button
           variant="contained"
@@ -383,7 +390,7 @@ export const SystemConfigPage: React.FC = () => {
         </Button>
       </Box>
 
-      {/* 配置分组 */}
+      {/* Configuration groups */}
       {!isLoading && (schemaQuery.data?.length ?? 0) > 0 && (
         <Box sx={{ mb: 2 }}>
           <Alert severity="info" sx={{ mb: 2 }}>
@@ -393,7 +400,7 @@ export const SystemConfigPage: React.FC = () => {
           {Object.entries(groupedSchemas).map(([groupKey, groupSchemas]) => {
           const groupConfig = configGroups[groupKey as keyof typeof configGroups] || {
             title: groupKey,
-            description: `${groupKey} 相关配置`,
+            description: `${groupKey} related configuration`,
             icon: <SettingsIcon />,
             color: '#666',
           };
@@ -488,15 +495,15 @@ export const SystemConfigPage: React.FC = () => {
         <Alert severity="warning">
           {translate('pages.system_config.no_config_warning')}
           <br />
-          <strong>调试信息：</strong>
+          <strong>Debug info:</strong>
           <br />
-          - 配置schema数量：{schemaQuery.data?.length ?? 0}
+          - Config schema count: {schemaQuery.data?.length ?? 0}
           <br />
-          - 配置值数量：{Object.keys(configs).length}
+          - Config values count: {Object.keys(configs).length}
           <br />
-          - API地址：/api/v1/system/config/schemas
+          - API endpoint: /api/v1/system/config/schemas
           <br />
-          请打开浏览器控制台查看详细日志。
+          Please open browser console for detailed logs.
         </Alert>
       )}
 
@@ -506,7 +513,7 @@ export const SystemConfigPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* 重置确认对话框 */}
+      {/* Reset confirmation dialog */}
       <Dialog
       open={resetDialogOpen}
       onClose={() => setResetDialogOpen(false)}
@@ -521,7 +528,7 @@ export const SystemConfigPage: React.FC = () => {
           {translate('pages.system_config.reset_warning')}
           <br />
           <br />
-          <strong>注意：</strong>此操作将清除您对以下配置项的自定义设置：
+          <strong>Note:</strong> This operation will clear your custom settings for the following configuration items:
           <br />
           {schemaQuery.data?.map(schema => (
             <span key={schema.key}>

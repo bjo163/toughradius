@@ -36,6 +36,7 @@ import {
   RaRecord,
   FunctionField
 } from 'react-admin';
+import { apiRequest } from '../utils/apiClient';
 import {
   Box,
   Typography,
@@ -85,7 +86,7 @@ import {
 
 const LARGE_LIST_PER_PAGE = 50;
 
-// ============ 类型定义 ============
+// ============ Type Definitions ============
 
 interface NASDevice extends RaRecord {
   name?: string;
@@ -93,10 +94,20 @@ interface NASDevice extends RaRecord {
   ipaddr?: string;
   hostname?: string;
   secret?: string;
+  username?: string;
+  password?: string;
   vendor_code?: string;
   model?: string;
   coa_port?: number;
+  api_port?: number;
+  api_state?: 'enabled' | 'disabled';
+  snmp_port?: number;
+  snmp_community?: string;
+  snmp_state?: 'enabled' | 'disabled';
+  snmp_last_probe_at?: string;
+  snmp_last_result?: string;
   status?: 'enabled' | 'disabled';
+  latency?: number;
   node_id?: string;
   tags?: string;
   remark?: string;
@@ -104,33 +115,110 @@ interface NASDevice extends RaRecord {
   updated_at?: string;
 }
 
-// ============ 常量定义 ============
+// ============ Constants ============
 
-// 厂商代码选项
-const VENDOR_CHOICES = [
-  { id: '9', name: 'Cisco' },
-  { id: '2011', name: 'Huawei' },
-  { id: '14988', name: 'Mikrotik' },
-  { id: '25506', name: 'H3C' },
-  { id: '3902', name: 'ZTE' },
-  { id: '10055', name: 'Ikuai' },
-  { id: '0', name: 'Standard' },
-];
-
-// 状态选项
+// Status options
 const STATUS_CHOICES = [
-  { id: 'enabled', name: '启用' },
-  { id: 'disabled', name: '禁用' },
+  { id: 'enabled', name: 'Enabled' },
+  { id: 'disabled', name: 'Disabled' },
 ];
 
-// 获取厂商名称
-const getVendorName = (code?: string): string => {
-  if (!code) return '-';
-  const vendor = VENDOR_CHOICES.find(v => v.id === String(code));
-  return vendor ? vendor.name : code;
+// Vendor cache helper - load vendors from backend once and cache
+let _vendorCache: Array<{ code: string; name: string }> | null = null;
+const loadVendorCache = async () => {
+  if (_vendorCache) return _vendorCache;
+  try {
+    const res = await apiRequest('/network/vendors') as unknown;
+    // apiRequest may return an array or a paged object { data: [] }
+    let list: Array<Record<string, unknown>> = [];
+    if (Array.isArray(res)) {
+      list = res as Array<Record<string, unknown>>;
+    } else if (res && typeof res === 'object') {
+      const obj = res as Record<string, unknown>;
+      if (Array.isArray(obj.data)) {
+        list = obj.data as Array<Record<string, unknown>>;
+      }
+    }
+    _vendorCache = list.map(v => ({ code: String(v['code']), name: String(v['name'] ?? '') }));
+  } catch (e) {
+    _vendorCache = [];
+  }
+  return _vendorCache;
 };
 
-// ============ 工具函数 ============
+// Component to display vendor name for a NAS record (used in lists)
+const VendorField = () => {
+  const record = useRecordContext<NASDevice>();
+  const [name, setName] = useState<string>('-');
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!record || !record.vendor_code) {
+        setName('-');
+        return;
+      }
+      const list = await loadVendorCache();
+      const found = list.find(v => v.code === String(record.vendor_code));
+      if (mounted) setName(found ? found.name : String(record.vendor_code));
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [record]);
+
+  if (!record) return null;
+  return (
+    <Chip
+      label={name}
+      size="small"
+      color="info"
+      variant="outlined"
+      sx={{ height: 22, fontSize: '0.75rem' }}
+    />
+  );
+};
+
+// Component to render vendor name in detail panels
+const VendorName = ({ code }: { code?: string }) => {
+  const [name, setName] = useState<string>('-');
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!code) {
+        setName('-');
+        return;
+      }
+      const list = await loadVendorCache();
+      const found = list.find(v => v.code === String(code));
+      if (mounted) setName(found ? found.name : String(code));
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [code]);
+  return <Typography variant="body2" sx={{ fontWeight: 600 }}>{name}</Typography>;
+};
+
+// Select input that loads vendor choices from backend
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const VendorSelectInput = (props: any) => {
+  const [choices, setChoices] = useState<Array<{ id: string; name: string }>>([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const list = await loadVendorCache();
+      if (!mounted) return;
+      setChoices(list.map(v => ({ id: v.code, name: v.name })));
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  return <SelectInput {...props} choices={choices} />;
+};
+
+// ============ Utility Functions ============
 
 const formatTimestamp = (value?: string | number): string => {
   if (!value) {
@@ -143,11 +231,11 @@ const formatTimestamp = (value?: string | number): string => {
   return date.toLocaleString();
 };
 
-// ============ 列表加载骨架屏 ============
+// ============ List Loading Skeleton ============
 
 const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   <Box sx={{ width: '100%' }}>
-    {/* 搜索区域骨架屏 */}
+    {/* Search area skeleton */}
     <Card
       elevation={0}
       sx={{
@@ -179,7 +267,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       </CardContent>
     </Card>
 
-    {/* 表格骨架屏 */}
+    {/* Table skeleton */}
     <Card
       elevation={0}
       sx={{
@@ -188,7 +276,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         overflow: 'hidden',
       }}
     >
-      {/* 表头 */}
+      {/* Table header */}
       <Box
         sx={{
           display: 'grid',
@@ -205,7 +293,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         ))}
       </Box>
 
-      {/* 表格行 */}
+      {/* Table rows */}
       {[...Array(rows)].map((_, rowIndex) => (
         <Box
           key={rowIndex}
@@ -228,7 +316,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         </Box>
       ))}
 
-      {/* 分页骨架屏 */}
+      {/* Pagination skeleton */}
       <Box
         sx={{
           display: 'flex',
@@ -248,7 +336,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   </Box>
 );
 
-// ============ 空状态组件 ============
+// ============ Empty State Component ============
 
 const NASEmptyState = () => {
   const translate = useTranslate();
@@ -265,16 +353,16 @@ const NASEmptyState = () => {
     >
       <NasIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
       <Typography variant="h6" sx={{ opacity: 0.6, mb: 1 }}>
-        {translate('resources.network/nas.empty.title', { _: '暂无 NAS 设备' })}
+        {translate('resources.network/nas.empty.title', { _: 'No NAS Devices' })}
       </Typography>
       <Typography variant="body2" sx={{ opacity: 0.5 }}>
-        {translate('resources.network/nas.empty.description', { _: '点击"新建"按钮添加第一个 NAS 设备' })}
+        {translate('resources.network/nas.empty.description', { _: 'Click the "Create" button to add your first NAS device' })}
       </Typography>
     </Box>
   );
 };
 
-// ============ 搜索表头区块组件 ============
+// ============ Search Header Card Component ============
 
 const NASSearchHeaderCard = () => {
   const translate = useTranslate();
@@ -325,9 +413,9 @@ const NASSearchHeaderCard = () => {
   );
 
   const filterFields = [
-    { key: 'name', label: translate('resources.network/nas.fields.name', { _: '设备名称' }) },
-    { key: 'ipaddr', label: translate('resources.network/nas.fields.ipaddr', { _: 'IP地址' }) },
-    { key: 'identifier', label: translate('resources.network/nas.fields.identifier', { _: '标识符' }) },
+    { key: 'name', label: translate('resources.network/nas.fields.name', { _: 'Device Name' }) },
+    { key: 'ipaddr', label: translate('resources.network/nas.fields.ipaddr', { _: 'IP Address' }) },
+    { key: 'identifier', label: translate('resources.network/nas.fields.identifier', { _: 'Identifier' }) },
   ];
 
   return (
@@ -354,7 +442,7 @@ const NASSearchHeaderCard = () => {
       >
         <FilterIcon sx={{ color: 'primary.main', fontSize: 20 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-          {translate('resources.network/nas.filter.title', { _: '筛选条件' })}
+          {translate('resources.network/nas.filter.title', { _: 'Filter Criteria' })}
         </Typography>
       </Box>
 
@@ -388,9 +476,9 @@ const NASSearchHeaderCard = () => {
             />
           ))}
 
-          {/* 操作按钮 */}
+          {/* Action buttons */}
           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-            <Tooltip title={translate('ra.action.clear_filters', { _: '清除筛选' })}>
+            <Tooltip title={translate('ra.action.clear_filters', { _: 'Clear Filters' })}>
               <IconButton
                 onClick={handleClear}
                 size="small"
@@ -404,7 +492,7 @@ const NASSearchHeaderCard = () => {
                 <ClearIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title={translate('ra.action.search', { _: '搜索' })}>
+            <Tooltip title={translate('ra.action.search', { _: 'Search' })}>
               <IconButton
                 onClick={handleSearch}
                 color="primary"
@@ -425,14 +513,14 @@ const NASSearchHeaderCard = () => {
   );
 };
 
-// ============ 状态组件 ============
+// ============ Status Component ============
 
 const StatusIndicator = ({ isEnabled }: { isEnabled: boolean }) => {
   const translate = useTranslate();
   return (
     <Chip
       icon={isEnabled ? <EnabledIcon sx={{ fontSize: '0.85rem !important' }} /> : <DisabledIcon sx={{ fontSize: '0.85rem !important' }} />}
-      label={isEnabled ? translate('resources.network/nas.status.enabled', { _: '启用' }) : translate('resources.network/nas.status.disabled', { _: '禁用' })}
+      label={isEnabled ? translate('resources.network/nas.status.enabled', { _: 'Enabled' }) : translate('resources.network/nas.status.disabled', { _: 'Disabled' })}
       size="small"
       color={isEnabled ? 'success' : 'default'}
       variant={isEnabled ? 'filled' : 'outlined'}
@@ -441,7 +529,7 @@ const StatusIndicator = ({ isEnabled }: { isEnabled: boolean }) => {
   );
 };
 
-// ============ 增强版字段组件 ============
+// ============ Enhanced Field Components ============
 
 const NASNameField = () => {
   const record = useRecordContext<NASDevice>();
@@ -475,19 +563,109 @@ const NASNameField = () => {
   );
 };
 
-const VendorField = () => {
+// VendorField is defined above and provides dynamic vendor name rendering
+
+const LatencyField = () => {
   const record = useRecordContext<NASDevice>();
-  if (!record) return null;
+  if (!record || record.latency === undefined || record.latency === null) {
+    return <Typography variant="body2" color="text.disabled">-</Typography>;
+  }
   
-  const vendorName = getVendorName(record.vendor_code);
+  const getColor = (ms: number) => {
+    if (ms < 50) return 'success';
+    if (ms < 200) return 'warning';
+    return 'error';
+  };
+  
   return (
     <Chip
-      label={vendorName}
+      label={`${record.latency} ms`}
       size="small"
-      color="info"
-      variant="outlined"
-      sx={{ height: 22, fontSize: '0.75rem' }}
+      color={getColor(record.latency)}
+      sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600 }}
     />
+  );
+};
+
+const SNMPStatusField = () => {
+  const record = useRecordContext<NASDevice>();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [loading, setLoading] = useState(false);
+  if (!record) return null;
+
+  if (record.snmp_state !== 'enabled') {
+    return <Typography variant="body2" color="text.disabled">-</Typography>;
+  }
+
+  const lastProbe = record.snmp_last_probe_at;
+  const lastResult = (record.snmp_last_result || '').toLowerCase();
+
+  const handleProbe = async () => {
+    if (!record || !record.id) return;
+    setLoading(true);
+    try {
+      await apiRequest(`/network/nas/${record.id}/probe-snmp`, { method: 'POST' });
+      notify('SNMP probe triggered', { type: 'info' });
+      // refresh list to show updated status
+      refresh();
+    } catch (err) {
+      const msg = (err as Error)?.message || 'Probe failed';
+      notify(msg, { type: 'warning' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const label = !lastProbe ? 'SNMP: -' : (lastResult === 'ok' ? `SNMP OK (${formatTimestamp(lastProbe)})` : `SNMP Failed (${formatTimestamp(lastProbe)})`);
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Chip label={label} size="small" color={lastResult === 'ok' ? 'success' : undefined} variant={lastResult === 'ok' ? 'filled' : 'outlined'} />
+      <Tooltip title="Probe SNMP now">
+        <span>
+          <IconButton size="small" onClick={handleProbe} disabled={loading}>
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
+      {/* If API is enabled, show API probe button and status */}
+      {record.api_state === 'enabled' && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <FunctionField
+            render={() => {
+              const apiLast = record.api_last_probe_at ? formatTimestamp(record.api_last_probe_at) : '-';
+              const apiRes = (record.api_last_result || '').toLowerCase();
+              const apiLabel = apiLast === '-' ? `API: -` : (apiRes === 'ok' ? `API OK (${apiLast})` : `API ${apiRes.toUpperCase()} (${apiLast})`);
+              return <Chip label={apiLabel} size="small" variant={apiRes === 'ok' ? 'filled' : 'outlined'} color={apiRes === 'ok' ? 'success' : undefined} />;
+            }}
+          />
+          <Tooltip title="Probe API now">
+            <span>
+              <IconButton
+                size="small"
+                onClick={async () => {
+                  if (!record || !record.id) return;
+                  setLoading(true);
+                  try {
+                    await apiRequest(`/network/nas/${record.id}/probe-api`, { method: 'POST' });
+                    notify('API probe triggered', { type: 'info' });
+                    refresh();
+                  } catch (err) {
+                    notify((err as Error)?.message || 'API probe failed', { type: 'warning' });
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+              >
+                <NetworkIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+      )}
+    </Box>
   );
 };
 
@@ -513,7 +691,7 @@ const IPAddressField = () => {
   );
 };
 
-// 标签显示组件
+// Tags display component
 const TagsDisplay = ({ tags }: { tags?: string }) => {
   if (!tags) return <EmptyValue />;
 
@@ -539,7 +717,7 @@ const TagsDisplay = ({ tags }: { tags?: string }) => {
   );
 };
 
-// ============ 表单工具栏 ============
+// ============ Form Toolbar ============
 
 const NASFormToolbar = (props: ToolbarProps) => (
   <Toolbar {...props}>
@@ -548,7 +726,7 @@ const NASFormToolbar = (props: ToolbarProps) => (
   </Toolbar>
 );
 
-// ============ 列表操作栏组件 ============
+// ============ List Actions Bar Component ============
 
 const NASListActions = () => {
   const translate = useTranslate();
@@ -556,7 +734,7 @@ const NASListActions = () => {
     <TopToolbar>
       <SortButton
         fields={['created_at', 'name', 'ipaddr']}
-        label={translate('ra.action.sort', { _: '排序' })}
+        label={translate('ra.action.sort', { _: 'Sort' })}
       />
       <CreateButton />
       <ExportButton />
@@ -564,7 +742,7 @@ const NASListActions = () => {
   );
 };
 
-// ============ 内部列表内容组件 ============
+// ============ Internal List Content Component ============
 
 const NASListContent = () => {
   const translate = useTranslate();
@@ -574,18 +752,18 @@ const NASListContent = () => {
 
   const fieldLabels = useMemo(
     () => ({
-      name: translate('resources.network/nas.fields.name', { _: '设备名称' }),
-      ipaddr: translate('resources.network/nas.fields.ipaddr', { _: 'IP地址' }),
-      identifier: translate('resources.network/nas.fields.identifier', { _: '标识符' }),
-      status: translate('resources.network/nas.fields.status', { _: '状态' }),
+      name: translate('resources.network/nas.fields.name', { _: 'Device Name' }),
+      ipaddr: translate('resources.network/nas.fields.ipaddr', { _: 'IP Address' }),
+      identifier: translate('resources.network/nas.fields.identifier', { _: 'Identifier' }),
+      status: translate('resources.network/nas.fields.status', { _: 'Status' }),
     }),
     [translate],
   );
 
   const statusLabels = useMemo(
     () => ({
-      enabled: translate('resources.network/nas.status.enabled', { _: '启用' }),
-      disabled: translate('resources.network/nas.status.disabled', { _: '禁用' }),
+      enabled: translate('resources.network/nas.status.enabled', { _: 'Enabled' }),
+      disabled: translate('resources.network/nas.status.disabled', { _: 'Disabled' }),
     }),
     [translate],
   );
@@ -613,13 +791,13 @@ const NASListContent = () => {
 
   return (
     <Box>
-      {/* 搜索区块 */}
+      {/* Search section */}
       <NASSearchHeaderCard />
 
-      {/* 活动筛选标签 */}
+      {/* Active filter tags */}
       <ActiveFilters fieldLabels={fieldLabels} valueLabels={{ status: statusLabels }} />
 
-      {/* 表格容器 */}
+      {/* Table container */}
       <Card
         elevation={0}
         sx={{
@@ -628,7 +806,7 @@ const NASListContent = () => {
           overflow: 'hidden',
         }}
       >
-        {/* 表格统计信息 */}
+        {/* Table statistics */}
         <Box
           sx={{
             px: 2,
@@ -642,11 +820,11 @@ const NASListContent = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            共 <strong>{total?.toLocaleString() || 0}</strong> 台 NAS 设备
+            Total: <strong>{total?.toLocaleString() || 0}</strong> NAS devices
           </Typography>
         </Box>
 
-        {/* 响应式表格 */}
+        {/* Responsive table */}
         <Box
           sx={{
             overflowX: 'auto',
@@ -697,33 +875,43 @@ const NASListContent = () => {
           <Datagrid rowClick="show" bulkActionButtons={false}>
             <FunctionField
               source="name"
-              label={translate('resources.network/nas.fields.name', { _: '设备名称' })}
+              label={translate('resources.network/nas.fields.name', { _: 'Device Name' })}
               render={() => <NASNameField />}
             />
             <FunctionField
               source="ipaddr"
-              label={translate('resources.network/nas.fields.ipaddr', { _: 'IP地址' })}
+              label={translate('resources.network/nas.fields.ipaddr', { _: 'IP Address' })}
               render={() => <IPAddressField />}
             />
             <TextField
               source="identifier"
-              label={translate('resources.network/nas.fields.identifier', { _: '标识符' })}
+              label={translate('resources.network/nas.fields.identifier', { _: 'Identifier' })}
             />
             <FunctionField
               source="vendor_code"
-              label={translate('resources.network/nas.fields.vendor_code', { _: '厂商' })}
+              label={translate('resources.network/nas.fields.vendor_code', { _: 'Vendor' })}
               render={() => <VendorField />}
             />
             <TextField
               source="model"
-              label={translate('resources.network/nas.fields.model', { _: '型号' })}
+              label={translate('resources.network/nas.fields.model', { _: 'Model' })}
             />
-            <ReferenceField source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: '所属节点' })} link="show">
+            <FunctionField
+              source="snmp_last_probe_at"
+              label={translate('resources.network/nas.fields.snmp_status', { _: 'SNMP Status' })}
+              render={() => <SNMPStatusField />}
+            />
+            <FunctionField
+              source="latency"
+              label={translate('resources.network/nas.fields.latency', { _: 'Latency' })}
+              render={() => <LatencyField />}
+            />
+            <ReferenceField source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: 'Node' })} link="show">
               <TextField source="name" />
             </ReferenceField>
             <DateField
               source="created_at"
-              label={translate('resources.network/nas.fields.created_at', { _: '创建时间' })}
+              label={translate('resources.network/nas.fields.created_at', { _: 'Created At' })}
               showTime
             />
           </Datagrid>
@@ -733,7 +921,7 @@ const NASListContent = () => {
   );
 };
 
-// NAS 设备列表
+// NAS device list
 export const NASList = () => {
   return (
     <List
@@ -748,7 +936,7 @@ export const NASList = () => {
   );
 };
 
-// ============ 编辑页面 ============
+// ============ Edit Page ============
 
 export const NASEdit = () => {
   const translate = useTranslate();
@@ -757,16 +945,16 @@ export const NASEdit = () => {
     <Edit>
       <SimpleForm toolbar={<NASFormToolbar />} sx={formLayoutSx}>
         <FormSection
-          title={translate('resources.network/nas.sections.basic.title', { _: '基本信息' })}
-          description={translate('resources.network/nas.sections.basic.description', { _: 'NAS 设备的基本配置' })}
+          title={translate('resources.network/nas.sections.basic.title', { _: 'Basic Information' })}
+          description={translate('resources.network/nas.sections.basic.description', { _: 'Basic configuration of the NAS device' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
             <FieldGridItem>
               <TextInput
                 source="id"
                 disabled
-                label={translate('resources.network/nas.fields.id', { _: '设备ID' })}
-                helperText={translate('resources.network/nas.helpers.id', { _: '系统自动生成的唯一标识' })}
+                label={translate('resources.network/nas.fields.id', { _: 'Device ID' })}
+                helperText={translate('resources.network/nas.helpers.id', { _: 'Auto-generated unique identifier' })}
                 fullWidth
                 size="small"
               />
@@ -774,9 +962,9 @@ export const NASEdit = () => {
             <FieldGridItem>
               <TextInput
                 source="name"
-                label={translate('resources.network/nas.fields.name', { _: '设备名称' })}
+                label={translate('resources.network/nas.fields.name', { _: 'Device Name' })}
                 validate={[required(), minLength(1), maxLength(100)]}
-                helperText={translate('resources.network/nas.helpers.name', { _: '1-100个字符的设备名称' })}
+                helperText={translate('resources.network/nas.helpers.name', { _: 'Device name with 1-100 characters' })}
                 fullWidth
                 size="small"
               />
@@ -784,19 +972,18 @@ export const NASEdit = () => {
             <FieldGridItem>
               <TextInput
                 source="identifier"
-                label={translate('resources.network/nas.fields.identifier', { _: '标识符' })}
+                label={translate('resources.network/nas.fields.identifier', { _: 'Identifier' })}
                 validate={[required(), minLength(1), maxLength(100)]}
-                helperText={translate('resources.network/nas.helpers.identifier', { _: 'NAS-Identifier属性值' })}
+                helperText={translate('resources.network/nas.helpers.identifier', { _: 'NAS-Identifier attribute value' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <SelectInput
+              <VendorSelectInput
                 source="vendor_code"
-                label={translate('resources.network/nas.fields.vendor_code', { _: '厂商代码' })}
+                label={translate('resources.network/nas.fields.vendor_code', { _: 'Vendor Code' })}
                 validate={[required()]}
-                choices={VENDOR_CHOICES}
                 fullWidth
                 size="small"
               />
@@ -804,7 +991,7 @@ export const NASEdit = () => {
             <FieldGridItem>
               <TextInput
                 source="model"
-                label={translate('resources.network/nas.fields.model', { _: '设备型号' })}
+                label={translate('resources.network/nas.fields.model', { _: 'Device Model' })}
                 validate={[maxLength(100)]}
                 fullWidth
                 size="small"
@@ -813,7 +1000,7 @@ export const NASEdit = () => {
             <FieldGridItem>
               <SelectInput
                 source="status"
-                label={translate('resources.network/nas.fields.status', { _: '状态' })}
+                label={translate('resources.network/nas.fields.status', { _: 'Status' })}
                 validate={[required()]}
                 choices={STATUS_CHOICES}
                 fullWidth
@@ -824,16 +1011,16 @@ export const NASEdit = () => {
         </FormSection>
 
         <FormSection
-          title={translate('resources.network/nas.sections.network.title', { _: '网络配置' })}
-          description={translate('resources.network/nas.sections.network.description', { _: 'IP地址和主机名配置' })}
+          title={translate('resources.network/nas.sections.network.title', { _: 'Network Configuration' })}
+          description={translate('resources.network/nas.sections.network.description', { _: 'IP address and hostname configuration' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
             <FieldGridItem>
               <TextInput
                 source="ipaddr"
-                label={translate('resources.network/nas.fields.ipaddr', { _: 'IP地址' })}
+                label={translate('resources.network/nas.fields.ipaddr', { _: 'IP Address' })}
                 validate={[required()]}
-                helperText={translate('resources.network/nas.helpers.ipaddr', { _: 'NAS设备的IP地址' })}
+                helperText={translate('resources.network/nas.helpers.ipaddr', { _: 'IP address of NAS device' })}
                 fullWidth
                 size="small"
               />
@@ -841,9 +1028,9 @@ export const NASEdit = () => {
             <FieldGridItem>
               <TextInput
                 source="hostname"
-                label={translate('resources.network/nas.fields.hostname', { _: '主机名' })}
+                label={translate('resources.network/nas.fields.hostname', { _: 'Hostname' })}
                 validate={[maxLength(200)]}
-                helperText={translate('resources.network/nas.helpers.hostname', { _: 'NAS设备的主机名' })}
+                helperText={translate('resources.network/nas.helpers.hostname', { _: 'Hostname of NAS device' })}
                 fullWidth
                 size="small"
               />
@@ -851,9 +1038,9 @@ export const NASEdit = () => {
             <FieldGridItem>
               <NumberInput
                 source="coa_port"
-                label={translate('resources.network/nas.fields.coa_port', { _: 'CoA端口' })}
+                label={translate('resources.network/nas.fields.coa_port', { _: 'CoA Port' })}
                 validate={[number(), minValue(1), maxValue(65535)]}
-                helperText={translate('resources.network/nas.helpers.coa_port', { _: 'CoA/DM端口号 (1-65535)' })}
+                helperText={translate('resources.network/nas.helpers.coa_port', { _: 'CoA/DM port number (1-65535)' })}
                 fullWidth
                 size="small"
               />
@@ -862,31 +1049,31 @@ export const NASEdit = () => {
         </FormSection>
 
         <FormSection
-          title={translate('resources.network/nas.sections.radius.title', { _: 'RADIUS配置' })}
-          description={translate('resources.network/nas.sections.radius.description', { _: 'RADIUS认证相关配置' })}
+          title={translate('resources.network/nas.sections.radius.title', { _: 'RADIUS Configuration' })}
+          description={translate('resources.network/nas.sections.radius.description', { _: 'RADIUS authentication configuration' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
               <PasswordInput
                 source="secret"
-                label={translate('resources.network/nas.fields.secret', { _: '共享密钥' })}
+                label={translate('resources.network/nas.fields.secret', { _: 'Shared Secret' })}
                 validate={[required(), minLength(6)]}
-                helperText={translate('resources.network/nas.helpers.secret', { _: 'RADIUS共享密钥，至少6位' })}
+                helperText={translate('resources.network/nas.helpers.secret', { _: 'RADIUS shared secret, at least 6 characters' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <ReferenceInput source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: '所属节点' })}>
+              <ReferenceInput source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: 'Node' })}>
                 <SelectInput optionText="name" fullWidth size="small" />
               </ReferenceInput>
             </FieldGridItem>
             <FieldGridItem span={{ xs: 1, sm: 2 }}>
               <TextInput
                 source="tags"
-                label={translate('resources.network/nas.fields.tags', { _: '标签' })}
+                label={translate('resources.network/nas.fields.tags', { _: 'Tags' })}
                 validate={[maxLength(200)]}
-                helperText={translate('resources.network/nas.helpers.tags', { _: '多个标签用逗号分隔' })}
+                helperText={translate('resources.network/nas.helpers.tags', { _: 'Multiple tags separated by commas' })}
                 fullWidth
                 size="small"
               />
@@ -895,20 +1082,106 @@ export const NASEdit = () => {
         </FormSection>
 
         <FormSection
-          title={translate('resources.network/nas.sections.remark.title', { _: '备注信息' })}
-          description={translate('resources.network/nas.sections.remark.description', { _: '额外的说明和备注' })}
+          title={translate('resources.network/nas.sections.api.title', { _: 'API Configuration' })}
+          description={translate('resources.network/nas.sections.api.description', { _: 'Device API access configuration' })}
+        >
+          <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
+            <FieldGridItem>
+              <SelectInput
+                source="api_state"
+                label={translate('resources.network/nas.fields.api_state', { _: 'API State' })}
+                choices={STATUS_CHOICES}
+                defaultValue="disabled"
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <NumberInput
+                source="api_port"
+                label={translate('resources.network/nas.fields.api_port', { _: 'API Port' })}
+                validate={[number(), minValue(1), maxValue(65535)]}
+                helperText={translate('resources.network/nas.helpers.api_port', { _: 'API port number (1-65535)' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <TextInput
+                source="username"
+                label={translate('resources.network/nas.fields.username', { _: 'Username' })}
+                validate={[maxLength(100)]}
+                helperText={translate('resources.network/nas.helpers.username', { _: 'Device login username' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <PasswordInput
+                source="password"
+                label={translate('resources.network/nas.fields.password', { _: 'Password' })}
+                validate={[maxLength(100)]}
+                helperText={translate('resources.network/nas.helpers.password', { _: 'Device login password' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+          </FieldGrid>
+        </FormSection>
+
+        <FormSection
+          title={translate('resources.network/nas.sections.snmp.title', { _: 'SNMP Configuration' })}
+          description={translate('resources.network/nas.sections.snmp.description', { _: 'SNMP monitoring configuration' })}
+        >
+          <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
+            <FieldGridItem>
+              <SelectInput
+                source="snmp_state"
+                label={translate('resources.network/nas.fields.snmp_state', { _: 'SNMP State' })}
+                choices={STATUS_CHOICES}
+                defaultValue="disabled"
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <NumberInput
+                source="snmp_port"
+                label={translate('resources.network/nas.fields.snmp_port', { _: 'SNMP Port' })}
+                validate={[number(), minValue(1), maxValue(65535)]}
+                helperText={translate('resources.network/nas.helpers.snmp_port', { _: 'SNMP port number (default: 161)' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <TextInput
+                source="snmp_community"
+                label={translate('resources.network/nas.fields.snmp_community', { _: 'SNMP Community' })}
+                validate={[maxLength(100)]}
+                helperText={translate('resources.network/nas.helpers.snmp_community', { _: 'SNMP community string' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+          </FieldGrid>
+        </FormSection>
+
+        <FormSection
+          title={translate('resources.network/nas.sections.remark.title', { _: 'Remark Information' })}
+          description={translate('resources.network/nas.sections.remark.description', { _: 'Additional notes and remarks' })}
         >
           <FieldGrid columns={{ xs: 1 }}>
             <FieldGridItem>
               <TextInput
                 source="remark"
-                label={translate('resources.network/nas.fields.remark', { _: '备注' })}
+                label={translate('resources.network/nas.fields.remark', { _: 'Remark' })}
                 validate={[maxLength(500)]}
                 multiline
                 minRows={3}
                 fullWidth
                 size="small"
-                helperText={translate('resources.network/nas.helpers.remark', { _: '可选的备注信息' })}
+                helperText={translate('resources.network/nas.helpers.remark', { _: 'Optional remark information' })}
               />
             </FieldGridItem>
           </FieldGrid>
@@ -918,7 +1191,7 @@ export const NASEdit = () => {
   );
 };
 
-// ============ 创建页面 ============
+// ============ Create Page ============
 
 export const NASCreate = () => {
   const translate = useTranslate();
@@ -927,16 +1200,16 @@ export const NASCreate = () => {
     <Create>
       <SimpleForm sx={formLayoutSx}>
         <FormSection
-          title={translate('resources.network/nas.sections.basic.title', { _: '基本信息' })}
-          description={translate('resources.network/nas.sections.basic.description', { _: 'NAS 设备的基本配置' })}
+          title={translate('resources.network/nas.sections.basic.title', { _: 'Basic Information' })}
+          description={translate('resources.network/nas.sections.basic.description', { _: 'Basic configuration of the NAS device' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
             <FieldGridItem>
               <TextInput
                 source="name"
-                label={translate('resources.network/nas.fields.name', { _: '设备名称' })}
+                label={translate('resources.network/nas.fields.name', { _: 'Device Name' })}
                 validate={[required(), minLength(1), maxLength(100)]}
-                helperText={translate('resources.network/nas.helpers.name', { _: '1-100个字符的设备名称' })}
+                helperText={translate('resources.network/nas.helpers.name', { _: 'Device name with 1-100 characters' })}
                 fullWidth
                 size="small"
               />
@@ -944,19 +1217,18 @@ export const NASCreate = () => {
             <FieldGridItem>
               <TextInput
                 source="identifier"
-                label={translate('resources.network/nas.fields.identifier', { _: '标识符' })}
+                label={translate('resources.network/nas.fields.identifier', { _: 'Identifier' })}
                 validate={[required(), minLength(1), maxLength(100)]}
-                helperText={translate('resources.network/nas.helpers.identifier', { _: 'NAS-Identifier属性值' })}
+                helperText={translate('resources.network/nas.helpers.identifier', { _: 'NAS-Identifier attribute value' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <SelectInput
+              <VendorSelectInput
                 source="vendor_code"
-                label={translate('resources.network/nas.fields.vendor_code', { _: '厂商代码' })}
+                label={translate('resources.network/nas.fields.vendor_code', { _: 'Vendor Code' })}
                 validate={[required()]}
-                choices={VENDOR_CHOICES}
                 defaultValue="0"
                 fullWidth
                 size="small"
@@ -965,7 +1237,7 @@ export const NASCreate = () => {
             <FieldGridItem>
               <TextInput
                 source="model"
-                label={translate('resources.network/nas.fields.model', { _: '设备型号' })}
+                label={translate('resources.network/nas.fields.model', { _: 'Device Model' })}
                 validate={[maxLength(100)]}
                 fullWidth
                 size="small"
@@ -974,7 +1246,7 @@ export const NASCreate = () => {
             <FieldGridItem>
               <SelectInput
                 source="status"
-                label={translate('resources.network/nas.fields.status', { _: '状态' })}
+                label={translate('resources.network/nas.fields.status', { _: 'Status' })}
                 validate={[required()]}
                 choices={STATUS_CHOICES}
                 defaultValue="enabled"
@@ -986,16 +1258,16 @@ export const NASCreate = () => {
         </FormSection>
 
         <FormSection
-          title={translate('resources.network/nas.sections.network.title', { _: '网络配置' })}
-          description={translate('resources.network/nas.sections.network.description', { _: 'IP地址和主机名配置' })}
+          title={translate('resources.network/nas.sections.network.title', { _: 'Network Configuration' })}
+          description={translate('resources.network/nas.sections.network.description', { _: 'IP address and hostname configuration' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
             <FieldGridItem>
               <TextInput
                 source="ipaddr"
-                label={translate('resources.network/nas.fields.ipaddr', { _: 'IP地址' })}
+                label={translate('resources.network/nas.fields.ipaddr', { _: 'IP Address' })}
                 validate={[required()]}
-                helperText={translate('resources.network/nas.helpers.ipaddr', { _: 'NAS设备的IP地址' })}
+                helperText={translate('resources.network/nas.helpers.ipaddr', { _: 'IP address of NAS device' })}
                 fullWidth
                 size="small"
               />
@@ -1003,9 +1275,9 @@ export const NASCreate = () => {
             <FieldGridItem>
               <TextInput
                 source="hostname"
-                label={translate('resources.network/nas.fields.hostname', { _: '主机名' })}
+                label={translate('resources.network/nas.fields.hostname', { _: 'Hostname' })}
                 validate={[maxLength(200)]}
-                helperText={translate('resources.network/nas.helpers.hostname', { _: 'NAS设备的主机名' })}
+                helperText={translate('resources.network/nas.helpers.hostname', { _: 'Hostname of NAS device' })}
                 fullWidth
                 size="small"
               />
@@ -1013,9 +1285,9 @@ export const NASCreate = () => {
             <FieldGridItem>
               <NumberInput
                 source="coa_port"
-                label={translate('resources.network/nas.fields.coa_port', { _: 'CoA端口' })}
+                label={translate('resources.network/nas.fields.coa_port', { _: 'CoA Port' })}
                 validate={[number(), minValue(1), maxValue(65535)]}
-                helperText={translate('resources.network/nas.helpers.coa_port', { _: 'CoA/DM端口号 (1-65535)' })}
+                helperText={translate('resources.network/nas.helpers.coa_port', { _: 'CoA/DM port number (1-65535)' })}
                 defaultValue={3799}
                 fullWidth
                 size="small"
@@ -1025,31 +1297,31 @@ export const NASCreate = () => {
         </FormSection>
 
         <FormSection
-          title={translate('resources.network/nas.sections.radius.title', { _: 'RADIUS配置' })}
-          description={translate('resources.network/nas.sections.radius.description', { _: 'RADIUS认证相关配置' })}
+          title={translate('resources.network/nas.sections.radius.title', { _: 'RADIUS Configuration' })}
+          description={translate('resources.network/nas.sections.radius.description', { _: 'RADIUS authentication configuration' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
               <PasswordInput
                 source="secret"
-                label={translate('resources.network/nas.fields.secret', { _: '共享密钥' })}
+                label={translate('resources.network/nas.fields.secret', { _: 'Shared Secret' })}
                 validate={[required(), minLength(6)]}
-                helperText={translate('resources.network/nas.helpers.secret', { _: 'RADIUS共享密钥，至少6位' })}
+                helperText={translate('resources.network/nas.helpers.secret', { _: 'RADIUS shared secret, at least 6 characters' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <ReferenceInput source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: '所属节点' })}>
+              <ReferenceInput source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: 'Node' })}>
                 <SelectInput optionText="name" fullWidth size="small" />
               </ReferenceInput>
             </FieldGridItem>
             <FieldGridItem span={{ xs: 1, sm: 2 }}>
               <TextInput
                 source="tags"
-                label={translate('resources.network/nas.fields.tags', { _: '标签' })}
+                label={translate('resources.network/nas.fields.tags', { _: 'Tags' })}
                 validate={[maxLength(200)]}
-                helperText={translate('resources.network/nas.helpers.tags', { _: '多个标签用逗号分隔' })}
+                helperText={translate('resources.network/nas.helpers.tags', { _: 'Multiple tags separated by commas' })}
                 fullWidth
                 size="small"
               />
@@ -1058,20 +1330,108 @@ export const NASCreate = () => {
         </FormSection>
 
         <FormSection
-          title={translate('resources.network/nas.sections.remark.title', { _: '备注信息' })}
-          description={translate('resources.network/nas.sections.remark.description', { _: '额外的说明和备注' })}
+          title={translate('resources.network/nas.sections.api.title', { _: 'API Configuration' })}
+          description={translate('resources.network/nas.sections.api.description', { _: 'Device API access configuration' })}
+        >
+          <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
+            <FieldGridItem>
+              <SelectInput
+                source="api_state"
+                label={translate('resources.network/nas.fields.api_state', { _: 'API State' })}
+                choices={STATUS_CHOICES}
+                defaultValue="disabled"
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <NumberInput
+                source="api_port"
+                label={translate('resources.network/nas.fields.api_port', { _: 'API Port' })}
+                validate={[number(), minValue(1), maxValue(65535)]}
+                helperText={translate('resources.network/nas.helpers.api_port', { _: 'API port number (1-65535)' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <TextInput
+                source="username"
+                label={translate('resources.network/nas.fields.username', { _: 'Username' })}
+                validate={[maxLength(100)]}
+                helperText={translate('resources.network/nas.helpers.username', { _: 'Device login username' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <PasswordInput
+                source="password"
+                label={translate('resources.network/nas.fields.password', { _: 'Password' })}
+                validate={[maxLength(100)]}
+                helperText={translate('resources.network/nas.helpers.password', { _: 'Device login password' })}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+          </FieldGrid>
+        </FormSection>
+
+        <FormSection
+          title={translate('resources.network/nas.sections.snmp.title', { _: 'SNMP Configuration' })}
+          description={translate('resources.network/nas.sections.snmp.description', { _: 'SNMP monitoring configuration' })}
+        >
+          <FieldGrid columns={{ xs: 1, sm: 2, md: 3 }}>
+            <FieldGridItem>
+              <SelectInput
+                source="snmp_state"
+                label={translate('resources.network/nas.fields.snmp_state', { _: 'SNMP State' })}
+                choices={STATUS_CHOICES}
+                defaultValue="disabled"
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <NumberInput
+                source="snmp_port"
+                label={translate('resources.network/nas.fields.snmp_port', { _: 'SNMP Port' })}
+                validate={[number(), minValue(1), maxValue(65535)]}
+                helperText={translate('resources.network/nas.helpers.snmp_port', { _: 'SNMP port number (default: 161)' })}
+                defaultValue={161}
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
+              <TextInput
+                source="snmp_community"
+                label={translate('resources.network/nas.fields.snmp_community', { _: 'SNMP Community' })}
+                validate={[maxLength(100)]}
+                helperText={translate('resources.network/nas.helpers.snmp_community', { _: 'SNMP community string' })}
+                defaultValue="public"
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+          </FieldGrid>
+        </FormSection>
+
+        <FormSection
+          title={translate('resources.network/nas.sections.remark.title', { _: 'Remark Information' })}
+          description={translate('resources.network/nas.sections.remark.description', { _: 'Additional notes and remarks' })}
         >
           <FieldGrid columns={{ xs: 1 }}>
             <FieldGridItem>
               <TextInput
                 source="remark"
-                label={translate('resources.network/nas.fields.remark', { _: '备注' })}
+                label={translate('resources.network/nas.fields.remark', { _: 'Remark' })}
                 validate={[maxLength(500)]}
                 multiline
                 minRows={3}
                 fullWidth
                 size="small"
-                helperText={translate('resources.network/nas.helpers.remark', { _: '可选的备注信息' })}
+                helperText={translate('resources.network/nas.helpers.remark', { _: 'Optional remark information' })}
               />
             </FieldGridItem>
           </FieldGrid>
@@ -1081,7 +1441,7 @@ export const NASCreate = () => {
   );
 };
 
-// ============ 详情页顶部概览卡片 ============
+// ============ Detail Page Header Card ============
 
 const NASHeaderCard = () => {
   const record = useRecordContext<NASDevice>();
@@ -1091,12 +1451,12 @@ const NASHeaderCard = () => {
 
   const handleCopy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    notify(`${label} 已复制到剪贴板`, { type: 'info' });
+    notify(`${label} copied to clipboard`, { type: 'info' });
   }, [notify]);
 
   const handleRefresh = useCallback(() => {
     refresh();
-    notify('数据已刷新', { type: 'info' });
+    notify('Data refreshed', { type: 'info' });
   }, [refresh, notify]);
 
   if (!record) return null;
@@ -1121,7 +1481,7 @@ const NASHeaderCard = () => {
         position: 'relative',
       }}
     >
-      {/* 装饰背景 */}
+      {/* Decorative background */}
       <Box
         sx={{
           position: 'absolute',
@@ -1137,7 +1497,7 @@ const NASHeaderCard = () => {
 
       <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          {/* 左侧：设备信息 */}
+          {/* Left: Device information */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               sx={{
@@ -1154,7 +1514,7 @@ const NASHeaderCard = () => {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  {record.name || <EmptyValue message="未知设备" />}
+                  {record.name || <EmptyValue message="Unknown Device" />}
                 </Typography>
                 <StatusIndicator isEnabled={isEnabled} />
               </Box>
@@ -1167,10 +1527,10 @@ const NASHeaderCard = () => {
                   >
                     {record.ipaddr}
                   </Typography>
-                  <Tooltip title="复制IP地址">
+                  <Tooltip title="Copy IP address">
                     <IconButton
                       size="small"
-                      onClick={() => handleCopy(record.ipaddr!, 'IP地址')}
+                      onClick={() => handleCopy(record.ipaddr!, 'IP address')}
                       sx={{ p: 0.5 }}
                     >
                       <CopyIcon sx={{ fontSize: '0.75rem' }} />
@@ -1181,9 +1541,9 @@ const NASHeaderCard = () => {
             </Box>
           </Box>
 
-          {/* 右侧：操作按钮 */}
+          {/* Right: Action buttons */}
           <Box className="no-print" sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="打印详情">
+            <Tooltip title="Print details">
               <IconButton
                 onClick={() => window.print()}
                 sx={{
@@ -1196,7 +1556,7 @@ const NASHeaderCard = () => {
                 <PrintIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="刷新数据">
+            <Tooltip title="Refresh data">
               <IconButton
                 onClick={handleRefresh}
                 sx={{
@@ -1223,7 +1583,7 @@ const NASHeaderCard = () => {
           </Box>
         </Box>
 
-        {/* 快速统计 */}
+        {/* Quick statistics */}
         <Box
           sx={{
             display: 'grid',
@@ -1245,12 +1605,10 @@ const NASHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <VendorIcon sx={{ fontSize: '1.1rem', color: 'info.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.network/nas.fields.vendor_code', { _: '厂商' })}
+                {translate('resources.network/nas.fields.vendor_code', { _: 'Vendor' })}
               </Typography>
             </Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {getVendorName(record.vendor_code)}
-            </Typography>
+            <VendorName code={record.vendor_code} />
           </Box>
 
           <Box
@@ -1264,7 +1622,7 @@ const NASHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <ServerIcon sx={{ fontSize: '1.1rem', color: 'success.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.network/nas.fields.identifier', { _: '标识符' })}
+                {translate('resources.network/nas.fields.identifier', { _: 'Identifier' })}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
@@ -1283,7 +1641,7 @@ const NASHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <NasIcon sx={{ fontSize: '1.1rem', color: 'warning.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.network/nas.fields.model', { _: '型号' })}
+                {translate('resources.network/nas.fields.model', { _: 'Model' })}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -1302,7 +1660,7 @@ const NASHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <NetworkIcon sx={{ fontSize: '1.1rem', color: 'primary.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.network/nas.fields.coa_port', { _: 'CoA端口' })}
+                {translate('resources.network/nas.fields.coa_port', { _: 'CoA Port' })}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -1315,7 +1673,7 @@ const NASHeaderCard = () => {
   );
 };
 
-// 打印样式
+// Print styles
 const printStyles = `
   @media print {
     body * {
@@ -1337,7 +1695,7 @@ const printStyles = `
   }
 `;
 
-// ============ NAS 详情内容 ============
+// ============ NAS Details Content ============
 
 const NASDetails = () => {
   const record = useRecordContext<NASDevice>();
@@ -1352,13 +1710,13 @@ const NASDetails = () => {
       <style>{printStyles}</style>
       <Box className="printable-content" sx={{ width: '100%', p: { xs: 2, sm: 3, md: 4 } }}>
         <Stack spacing={3}>
-          {/* 顶部概览卡片 */}
+          {/* Top overview card */}
           <NASHeaderCard />
 
-          {/* 网络配置 */}
+          {/* Network configuration */}
           <DetailSectionCard
-            title={translate('resources.network/nas.sections.network.title', { _: '网络配置' })}
-            description={translate('resources.network/nas.sections.network.description', { _: '主机名配置' })}
+            title={translate('resources.network/nas.sections.network.title', { _: 'Network Configuration' })}
+            description={translate('resources.network/nas.sections.network.description', { _: 'Hostname configuration' })}
             icon={<NetworkIcon />}
             color="success"
           >
@@ -1373,16 +1731,26 @@ const NASDetails = () => {
               }}
             >
               <DetailItem
-                label={translate('resources.network/nas.fields.hostname', { _: '主机名' })}
+                label={translate('resources.network/nas.fields.hostname', { _: 'Hostname' })}
                 value={record.hostname || <EmptyValue />}
+              />
+              <DetailItem
+                label={translate('resources.network/nas.fields.latency', { _: 'Latency' })}
+                value={record.latency !== undefined && record.latency !== null ? (
+                  <Chip
+                    label={`${record.latency} ms`}
+                    size="small"
+                    color={record.latency < 50 ? 'success' : record.latency < 200 ? 'warning' : 'error'}
+                  />
+                ) : <EmptyValue />}
               />
             </Box>
           </DetailSectionCard>
 
-          {/* RADIUS 配置 */}
+          {/* RADIUS configuration */}
           <DetailSectionCard
-            title={translate('resources.network/nas.sections.radius.title', { _: 'RADIUS配置' })}
-            description={translate('resources.network/nas.sections.radius.description', { _: 'RADIUS认证相关配置' })}
+            title={translate('resources.network/nas.sections.radius.title', { _: 'RADIUS Configuration' })}
+            description={translate('resources.network/nas.sections.radius.description', { _: 'RADIUS authentication configuration' })}
             icon={<SecretIcon />}
             color="warning"
           >
@@ -1397,7 +1765,7 @@ const NASDetails = () => {
               }}
             >
               <DetailItem
-                label={translate('resources.network/nas.fields.node_id', { _: '所属节点' })}
+                label={translate('resources.network/nas.fields.node_id', { _: 'Node' })}
                 value={
                   record.node_id ? (
                     <ReferenceField source="node_id" reference="network/nodes" link="show">
@@ -1407,16 +1775,99 @@ const NASDetails = () => {
                 }
               />
               <DetailItem
-                label={translate('resources.network/nas.fields.tags', { _: '标签' })}
+                label={translate('resources.network/nas.fields.tags', { _: 'Tags' })}
                 value={<TagsDisplay tags={record.tags} />}
               />
             </Box>
           </DetailSectionCard>
 
-          {/* 时间信息 */}
+          {/* API configuration */}
           <DetailSectionCard
-            title={translate('resources.network/nas.sections.timestamps.title', { _: '时间信息' })}
-            description={translate('resources.network/nas.sections.timestamps.description', { _: '创建和更新时间' })}
+            title={translate('resources.network/nas.sections.api.title', { _: 'API Configuration' })}
+            description={translate('resources.network/nas.sections.api.description', { _: 'Device API access configuration' })}
+            icon={<ServerIcon />}
+            color="primary"
+          >
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: {
+                  xs: 'repeat(1, 1fr)',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(4, 1fr)',
+                },
+              }}
+            >
+              <DetailItem
+                label={translate('resources.network/nas.fields.api_state', { _: 'API State' })}
+                value={
+                  <Chip
+                    icon={record.api_state === 'enabled' ? <EnabledIcon /> : <DisabledIcon />}
+                    label={record.api_state === 'enabled' ? 'Enabled' : 'Disabled'}
+                    size="small"
+                    color={record.api_state === 'enabled' ? 'success' : 'default'}
+                  />
+                }
+              />
+              <DetailItem
+                label={translate('resources.network/nas.fields.api_port', { _: 'API Port' })}
+                value={record.api_port || <EmptyValue />}
+              />
+              <DetailItem
+                label={translate('resources.network/nas.fields.username', { _: 'Username' })}
+                value={record.username || <EmptyValue />}
+              />
+              <DetailItem
+                label={translate('resources.network/nas.fields.password', { _: 'Password' })}
+                value={record.password ? '••••••••' : <EmptyValue />}
+              />
+            </Box>
+          </DetailSectionCard>
+
+          {/* SNMP configuration */}
+          <DetailSectionCard
+            title={translate('resources.network/nas.sections.snmp.title', { _: 'SNMP Configuration' })}
+            description={translate('resources.network/nas.sections.snmp.description', { _: 'SNMP monitoring configuration' })}
+            icon={<NetworkIcon />}
+            color="success"
+          >
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: {
+                  xs: 'repeat(1, 1fr)',
+                  sm: 'repeat(3, 1fr)',
+                },
+              }}
+            >
+              <DetailItem
+                label={translate('resources.network/nas.fields.snmp_state', { _: 'SNMP State' })}
+                value={
+                  <Chip
+                    icon={record.snmp_state === 'enabled' ? <EnabledIcon /> : <DisabledIcon />}
+                    label={record.snmp_state === 'enabled' ? 'Enabled' : 'Disabled'}
+                    size="small"
+                    color={record.snmp_state === 'enabled' ? 'success' : 'default'}
+                  />
+                }
+              />
+              <DetailItem
+                label={translate('resources.network/nas.fields.snmp_port', { _: 'SNMP Port' })}
+                value={record.snmp_port || <EmptyValue />}
+              />
+              <DetailItem
+                label={translate('resources.network/nas.fields.snmp_community', { _: 'SNMP Community' })}
+                value={record.snmp_community || <EmptyValue />}
+              />
+            </Box>
+          </DetailSectionCard>
+
+          {/* Time information */}
+          <DetailSectionCard
+            title={translate('resources.network/nas.sections.timestamps.title', { _: 'Time Information' })}
+            description={translate('resources.network/nas.sections.timestamps.description', { _: 'Creation and update time' })}
             icon={<TimeIcon />}
             color="info"
           >
@@ -1431,20 +1882,20 @@ const NASDetails = () => {
               }}
             >
               <DetailItem
-                label={translate('resources.network/nas.fields.created_at', { _: '创建时间' })}
+                label={translate('resources.network/nas.fields.created_at', { _: 'Created At' })}
                 value={formatTimestamp(record.created_at)}
               />
               <DetailItem
-                label={translate('resources.network/nas.fields.updated_at', { _: '更新时间' })}
+                label={translate('resources.network/nas.fields.updated_at', { _: 'Updated At' })}
                 value={formatTimestamp(record.updated_at)}
               />
             </Box>
           </DetailSectionCard>
 
-          {/* 备注信息 */}
+          {/* Remark information */}
           <DetailSectionCard
-            title={translate('resources.network/nas.sections.remark.title', { _: '备注信息' })}
-            description={translate('resources.network/nas.sections.remark.description', { _: '额外的说明和备注' })}
+            title={translate('resources.network/nas.sections.remark.title', { _: 'Remarks' })}
+            description={translate('resources.network/nas.sections.remark.description', { _: 'Additional notes and remarks' })}
             icon={<NoteIcon />}
             color="primary"
           >
@@ -1469,7 +1920,7 @@ const NASDetails = () => {
                   fontStyle: record.remark ? 'normal' : 'italic',
                 }}
               >
-                {record.remark || translate('resources.network/nas.helpers.no_remark', { _: '无备注信息' })}
+                {record.remark || translate('resources.network/nas.helpers.no_remark', { _: 'No remarks' })}
               </Typography>
             </Box>
           </DetailSectionCard>
@@ -1479,7 +1930,7 @@ const NASDetails = () => {
   );
 };
 
-// NAS 设备详情
+// NAS Device Details
 export const NASShow = () => {
   return (
     <Show>

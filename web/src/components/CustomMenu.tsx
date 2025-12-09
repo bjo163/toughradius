@@ -7,6 +7,8 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import RouterOutlinedIcon from '@mui/icons-material/RouterOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
+import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import { Box, useTheme } from '@mui/material';
 import { MenuItemLink, MenuProps, useGetIdentity, useTranslate } from 'react-admin';
 
@@ -14,11 +16,14 @@ const menuItems = [
   { to: '/', labelKey: 'menu.dashboard', icon: <DashboardOutlinedIcon /> },
   { to: '/network/nodes', labelKey: 'menu.network_nodes', icon: <AccountTreeOutlinedIcon /> },
   { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
+  { to: '/network/vendors', labelKey: 'menu.vendors', icon: <StorageOutlinedIcon /> },
+  { to: '/network/schedulers', labelKey: 'menu.schedulers', icon: <ScheduleOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/radius/users', labelKey: 'menu.radius_users', icon: <PeopleAltOutlinedIcon /> },
   { to: '/radius/profiles', labelKey: 'menu.radius_profiles', icon: <SettingsSuggestOutlinedIcon /> },
   { to: '/radius/online', labelKey: 'menu.online_sessions', icon: <SensorsOutlinedIcon /> },
   { to: '/radius/accounting', labelKey: 'menu.accounting', icon: <ReceiptLongOutlinedIcon /> },
   { to: '/system/config', labelKey: 'menu.system_config', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/system/dbms', labelKey: 'menu.dbms', icon: <StorageOutlinedIcon />, permissions: ['super'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
 ];
 
@@ -29,11 +34,11 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
   const { data: identity } = useGetIdentity();
   const translate = useTranslate();
 
-  // 根据用户权限过滤菜单项
+  // Filter menu items based on user permissions
   const filteredMenuItems = menuItems.filter(item => {
-    if (!item.permissions) return true; // 无权限限制的菜单项对所有人可见
-    if (!identity?.level) return false; // 未登录用户不显示需要权限的菜单
-    return item.permissions.includes(identity.level); // 检查用户权限是否在允许列表中
+    if (!item.permissions) return true; // Menu items without permissions are visible to everyone
+    if (!identity?.level) return false; // Non-logged-in users don't see permission-required menus
+    return item.permissions.includes(identity.level); // Check if user permission is in allowed list
   });
 
   return (
@@ -42,7 +47,7 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        // 侧边栏根据主题使用不同背景色
+        // Sidebar uses different background colors based on theme
         backgroundColor: isDark ? '#1e293b' : '#1e40af',
         color: '#ffffff',
         pt: 0,

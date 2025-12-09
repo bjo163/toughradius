@@ -7,11 +7,12 @@ import { i18nProvider } from './i18n';
 import Dashboard from './pages/Dashboard';
 import AccountSettings from './pages/AccountSettings';
 import { SystemConfigPage } from './pages/SystemConfigPage';
+import { DbmsPage } from './pages/DbmsPage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
 import { theme, darkTheme } from './theme';
 
-// 自定义加载组件，避免闪烁
+// Custom loading component to prevent flickering
 const CustomLoading = () => (
   <Box
     sx={{
@@ -26,12 +27,12 @@ const CustomLoading = () => (
   >
     <CircularProgress size={40} sx={{ color: '#2563eb' }} />
     <Typography variant="body1" color="text.secondary" sx={{ color: '#64748b' }}>
-      正在加载...
+      Loading...
     </Typography>
   </Box>
 );
 
-// 导入资源组件
+// Import resource components
 import {
   RadiusUserList,
   RadiusUserEdit,
@@ -64,6 +65,16 @@ import {
   OperatorCreate,
   OperatorShow,
 } from './resources/operators';
+import {
+  SchedulerList,
+  SchedulerEdit,
+  SchedulerCreate,
+} from './resources/scheduler';
+import {
+  VendorList,
+  VendorEdit,
+  VendorCreate,
+} from './resources/vendors';
 
 const App = () => (
   <Admin
@@ -81,7 +92,7 @@ const App = () => (
     error={CustomError}
     requireAuth
   >
-    {/* RADIUS 用户管理 */}
+    {/* RADIUS User Management */}
     <Resource
       name="radius/users"
       list={RadiusUserList}
@@ -90,21 +101,21 @@ const App = () => (
       show={RadiusUserShow}
     />
 
-    {/* 在线会话 */}
+    {/* Online Sessions */}
     <Resource
       name="radius/online"
       list={OnlineSessionList}
       show={OnlineSessionShow}
     />
 
-    {/* 计费记录 */}
+    {/* Accounting Records */}
     <Resource
       name="radius/accounting"
       list={AccountingList}
       show={AccountingShow}
     />
 
-    {/* RADIUS 配置 */}
+    {/* RADIUS Profiles */}
     <Resource
       name="radius/profiles"
       list={RadiusProfileList}
@@ -113,7 +124,7 @@ const App = () => (
       show={RadiusProfileShow}
     />
 
-    {/* NAS 设备管理 */}
+    {/* NAS Device Management */}
     <Resource
       name="network/nas"
       list={NASList}
@@ -122,7 +133,7 @@ const App = () => (
       show={NASShow}
     />
 
-    {/* 网络节点 */}
+    {/* Network Nodes */}
     <Resource
       name="network/nodes"
       list={NodeList}
@@ -131,7 +142,7 @@ const App = () => (
       show={NodeShow}
     />
 
-    {/* 操作员管理 */}
+    {/* Operator Management */}
     <Resource
       name="system/operators"
       list={OperatorList}
@@ -140,10 +151,27 @@ const App = () => (
       show={OperatorShow}
     />
 
-    {/* 自定义路由 */}
+    {/* Scheduler Management */}
+    <Resource
+      name="network/schedulers"
+      list={SchedulerList}
+      edit={SchedulerEdit}
+      create={SchedulerCreate}
+    />
+
+    {/* Vendor Management */}
+    <Resource
+      name="network/vendors"
+      list={VendorList}
+      edit={VendorEdit}
+      create={VendorCreate}
+    />
+
+    {/* Custom Routes */}
     <CustomRoutes>
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
+      <Route path="/system/dbms" element={<DbmsPage />} />
     </CustomRoutes>
     </Admin>
 );

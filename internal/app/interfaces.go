@@ -53,4 +53,10 @@ type AppContext interface {
 	MigrateDB(track bool) error
 	InitDb()
 	DropAll()
+	// RunSchedulerNow triggers a scheduler execution immediately by ID
+	RunSchedulerNow(id int64) error
+	// RunSnmpProbe triggers an immediate SNMP probe for a single NAS by ID
+	RunSnmpProbe(nasID int64) error
+	// RunApiProbe triggers an immediate API probe (e.g., Mikrotik) for a single NAS by ID
+	RunApiProbe(nasID int64) error
 }

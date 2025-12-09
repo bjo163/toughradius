@@ -161,7 +161,7 @@ const SessionDurationField = ({ label }: { label?: string }) => {
   );
 };
 
-// ============ 美化的详情组件 ============
+// ============ Enhanced Detail Components ============
 
 interface DetailItemProps {
   label: string;
@@ -314,7 +314,7 @@ const DetailSectionCard = ({
   </Card>
 );
 
-// 流量统计卡片 - 使用特殊样式展示
+// Traffic Statistics Card - Special styling display
 interface TrafficStatProps {
   label: string;
   value: string;
@@ -395,12 +395,12 @@ const TrafficStat = ({ label, value, icon, color = 'primary', subValue }: Traffi
   </Box>
 );
 
-// 空态组件
+// Empty state component
 interface EmptyStateProps {
   message?: string;
 }
 
-const EmptyValue = ({ message = '暂无数据' }: EmptyStateProps) => (
+const EmptyValue = ({ message = 'No data' }: EmptyStateProps) => (
   <Box
     sx={{
       display: 'flex',
@@ -417,9 +417,9 @@ const EmptyValue = ({ message = '暂无数据' }: EmptyStateProps) => (
   </Box>
 );
 
-// 获取终止原因的颜色和图标
+// Get terminate cause color and icon
 const getTerminateCauseInfo = (cause?: string) => {
-  if (!cause) return { color: 'default' as const, icon: null, label: '未知' };
+  if (!cause) return { color: 'default' as const, icon: null, label: 'Unknown' };
   
   const normalCauses = ['User-Request', 'Session-Timeout', 'Idle-Timeout'];
   const errorCauses = ['Admin-Reset', 'Lost-Carrier', 'Port-Error', 'NAS-Error'];
@@ -433,7 +433,7 @@ const getTerminateCauseInfo = (cause?: string) => {
   return { color: 'warning' as const, icon: null, label: cause };
 };
 
-// 顶部概览卡片
+// Top overview card
 const AccountingHeaderCard = () => {
   const record = useRecordContext<AccountingRecord>();
   const translate = useTranslate();
@@ -442,12 +442,12 @@ const AccountingHeaderCard = () => {
 
   const handleCopy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    notify(`${label} 已复制到剪贴板`, { type: 'info' });
+    notify(`${label} copied to clipboard`, { type: 'info' });
   }, [notify]);
 
   const handleRefresh = useCallback(() => {
     refresh();
-    notify('数据已刷新', { type: 'info' });
+    notify('Data refreshed', { type: 'info' });
   }, [refresh, notify]);
 
   if (!record) return null;
@@ -474,7 +474,7 @@ const AccountingHeaderCard = () => {
         position: 'relative',
       }}
     >
-      {/* 装饰背景 */}
+      {/* Decorative background */}
       <Box
         sx={{
           position: 'absolute',
@@ -490,7 +490,7 @@ const AccountingHeaderCard = () => {
 
       <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          {/* 左侧：用户信息 */}
+          {/* Left: User information */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               sx={{
@@ -507,12 +507,12 @@ const AccountingHeaderCard = () => {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  {record.username || <EmptyValue message="未知用户" />}
+                  {record.username || <EmptyValue message="Unknown user" />}
                 </Typography>
                 {isOnline ? (
                   <Chip
                     icon={<OnlineIcon sx={{ fontSize: '1rem !important' }} />}
-                    label="在线"
+                    label="Online"
                     size="small"
                     color="success"
                     sx={{ fontWeight: 600, height: 24 }}
@@ -520,7 +520,7 @@ const AccountingHeaderCard = () => {
                 ) : (
                   <Chip
                     icon={<OfflineIcon sx={{ fontSize: '1rem !important' }} />}
-                    label="已结束"
+                    label="Ended"
                     size="small"
                     color="default"
                     variant="outlined"
@@ -530,13 +530,13 @@ const AccountingHeaderCard = () => {
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="body2" color="text.secondary">
-                  {record.framed_ipaddr || '未分配 IP'}
+                  {record.framed_ipaddr || 'No IP assigned'}
                 </Typography>
                 {record.framed_ipaddr && (
-                  <Tooltip title="复制 IP 地址">
+                  <Tooltip title="Copy IP address">
                     <IconButton
                       size="small"
-                      onClick={() => handleCopy(record.framed_ipaddr!, 'IP 地址')}
+                      onClick={() => handleCopy(record.framed_ipaddr!, 'IP address')}
                       sx={{ p: 0.5 }}
                     >
                       <CopyIcon sx={{ fontSize: '0.9rem' }} />
@@ -547,12 +547,12 @@ const AccountingHeaderCard = () => {
               {record.acct_session_id && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                   <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                    会话: {record.acct_session_id}
+                    Session: {record.acct_session_id}
                   </Typography>
-                  <Tooltip title="复制会话 ID">
+                  <Tooltip title="Copy session ID">
                     <IconButton
                       size="small"
-                      onClick={() => handleCopy(record.acct_session_id!, '会话 ID')}
+                      onClick={() => handleCopy(record.acct_session_id!, 'Session ID')}
                       sx={{ p: 0.5 }}
                     >
                       <CopyIcon sx={{ fontSize: '0.75rem' }} />
@@ -563,9 +563,9 @@ const AccountingHeaderCard = () => {
             </Box>
           </Box>
 
-          {/* 右侧：操作按钮 */}
+          {/* Right: Action buttons */}
           <Box className="no-print" sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="打印详情">
+            <Tooltip title="Print details">
               <IconButton
                 onClick={() => window.print()}
                 sx={{
@@ -578,7 +578,7 @@ const AccountingHeaderCard = () => {
                 <PrintIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="刷新数据">
+            <Tooltip title="Refresh data">
               <IconButton
                 onClick={handleRefresh}
                 sx={{
@@ -605,7 +605,7 @@ const AccountingHeaderCard = () => {
           </Box>
         </Box>
 
-        {/* 快速统计 */}
+        {/* Quick statistics */}
         <Box
           sx={{
             display: 'grid',
@@ -647,7 +647,7 @@ const AccountingHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <UploadIcon sx={{ fontSize: '1.1rem', color: 'info.main' }} />
               <Typography variant="caption" color="text.secondary">
-                上传流量
+                Upload Traffic
               </Typography>
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'info.main' }}>
@@ -666,7 +666,7 @@ const AccountingHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <DownloadIcon sx={{ fontSize: '1.1rem', color: 'warning.main' }} />
               <Typography variant="caption" color="text.secondary">
-                下载流量
+                Download Traffic
               </Typography>
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'warning.main' }}>
@@ -685,7 +685,7 @@ const AccountingHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <SpeedIcon sx={{ fontSize: '1.1rem', color: 'success.main' }} />
               <Typography variant="caption" color="text.secondary">
-                总流量
+                Total Traffic
               </Typography>
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
@@ -705,7 +705,7 @@ const AccountingHeaderCard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 {terminateInfo.icon || <InfoIcon sx={{ fontSize: '1.1rem', color: `${terminateInfo.color}.main` }} />}
                 <Typography variant="caption" color="text.secondary">
-                  终止原因
+                  Terminate Cause
                 </Typography>
               </Box>
               <Chip
@@ -722,7 +722,7 @@ const AccountingHeaderCard = () => {
   );
 };
 
-// 打印样式
+// Print styles
 const printStyles = `
   @media print {
     body * {
@@ -760,10 +760,10 @@ const AccountingDetails = () => {
       <style>{printStyles}</style>
       <Box className="printable-content" sx={{ width: '100%', p: { xs: 2, sm: 3, md: 4 } }}>
       <Stack spacing={3}>
-        {/* 顶部概览卡片 */}
+        {/* Top overview card */}
         <AccountingHeaderCard />
 
-        {/* 设备信息 */}
+        {/* Device information */}
         <DetailSectionCard
           title={translate('resources.radius/accounting.sections.device')}
           description={translate('resources.radius/accounting.sections.device_desc')}
@@ -793,7 +793,7 @@ const AccountingDetails = () => {
                     sx={{ fontFamily: 'monospace' }}
                   />
                 ) : (
-                  <EmptyValue message="未分配" />
+                  <EmptyValue message="Not assigned" />
                 )
               }
               highlight
@@ -813,22 +813,22 @@ const AccountingDetails = () => {
                     sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
                   />
                 ) : (
-                  <EmptyValue message="未获取" />
+                  <EmptyValue message="Not obtained" />
                 )
               }
             />
             <DetailItem
               label={translate('resources.radius/accounting.fields.framed_ipv6_address')}
-              value={record.framed_ipv6_address || <EmptyValue message="未配置" />}
+              value={record.framed_ipv6_address || <EmptyValue message="Not configured" />}
             />
             <DetailItem
               label={translate('resources.radius/accounting.fields.framed_ipv6_prefix')}
-              value={record.framed_ipv6_prefix || <EmptyValue message="未配置" />}
+              value={record.framed_ipv6_prefix || <EmptyValue message="Not configured" />}
             />
           </Box>
         </DetailSectionCard>
 
-        {/* NAS 设备信息 */}
+        {/* NAS device information */}
         <DetailSectionCard
           title={translate('resources.radius/accounting.sections.overview')}
           description={translate('resources.radius/accounting.sections.overview_desc')}
@@ -878,7 +878,7 @@ const AccountingDetails = () => {
           </Box>
         </DetailSectionCard>
 
-        {/* 会话时间 */}
+        {/* Session timing */}
         <DetailSectionCard
           title={translate('resources.radius/accounting.sections.timing')}
           description={translate('resources.radius/accounting.sections.timing_desc')}
@@ -915,7 +915,7 @@ const AccountingDetails = () => {
                 ) : (
                   <Chip
                     icon={<OnlineIcon sx={{ fontSize: '0.9rem !important' }} />}
-                    label="在线中"
+                    label="Online"
                     size="small"
                     color="success"
                     sx={{ fontWeight: 600 }}
@@ -941,7 +941,7 @@ const AccountingDetails = () => {
               value={
                 record.session_timeout !== undefined && record.session_timeout !== null
                   ? `${record.session_timeout}s`
-                  : <EmptyValue message="无限制" />
+                  : <EmptyValue message="Unlimited" />
               }
             />
             <DetailItem
@@ -951,7 +951,7 @@ const AccountingDetails = () => {
           </Box>
         </DetailSectionCard>
 
-        {/* 流量统计 - 特殊展示 */}
+        {/* Traffic statistics - Special display */}
         <DetailSectionCard
           title={translate('resources.radius/accounting.sections.traffic')}
           description={translate('resources.radius/accounting.sections.traffic_desc')}
@@ -959,7 +959,7 @@ const AccountingDetails = () => {
           color="success"
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* 流量统计卡片 */}
+            {/* Traffic statistics cards */}
             <Box
               sx={{
                 display: 'flex',
@@ -973,27 +973,27 @@ const AccountingDetails = () => {
                 value={formatBytes(record.acct_input_total)}
                 icon={<UploadIcon />}
                 color="info"
-                subValue={`${record.acct_input_packets?.toLocaleString() ?? 0} 包`}
+                subValue={`${record.acct_input_packets?.toLocaleString() ?? 0} packets`}
               />
               <TrafficStat
                 label={translate('resources.radius/accounting.fields.acct_output_total')}
                 value={formatBytes(record.acct_output_total)}
                 icon={<DownloadIcon />}
                 color="warning"
-                subValue={`${record.acct_output_packets?.toLocaleString() ?? 0} 包`}
+                subValue={`${record.acct_output_packets?.toLocaleString() ?? 0} packets`}
               />
               <TrafficStat
                 label={translate('resources.radius/accounting.fields.total_traffic')}
                 value={formatBytes(totalTraffic)}
                 icon={<SpeedIcon />}
                 color="success"
-                subValue={`${((record.acct_input_packets ?? 0) + (record.acct_output_packets ?? 0)).toLocaleString()} 包`}
+                subValue={`${((record.acct_input_packets ?? 0) + (record.acct_output_packets ?? 0)).toLocaleString()} packets`}
               />
             </Box>
           </Box>
         </DetailSectionCard>
 
-        {/* 会话详情 */}
+        {/* Session details */}
         <DetailSectionCard
           title={translate('resources.radius/accounting.sections.session_details')}
           description={translate('resources.radius/accounting.sections.session_details_desc')}
@@ -1043,13 +1043,13 @@ const AccountingDetails = () => {
                   isOnline ? (
                     <Chip
                       icon={<OnlineIcon sx={{ fontSize: '0.9rem !important' }} />}
-                      label="会话进行中"
+                      label="Session in progress"
                       size="small"
                       color="success"
                       variant="outlined"
                     />
                   ) : (
-                    <EmptyValue message="未记录" />
+                    <EmptyValue message="Not recorded" />
                   )
                 )
               }
@@ -1062,11 +1062,11 @@ const AccountingDetails = () => {
   );
 };
 
-// ============ 列表加载骨架屏 ============
+// ============ List Loading Skeleton ============
 
 const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   <Box sx={{ width: '100%' }}>
-    {/* 搜索区域骨架屏 */}
+    {/* Search area skeleton */}
     <Card
       elevation={0}
       sx={{
@@ -1099,7 +1099,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       </CardContent>
     </Card>
 
-    {/* 表格骨架屏 */}
+    {/* Table skeleton */}
     <Card
       elevation={0}
       sx={{
@@ -1108,7 +1108,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         overflow: 'hidden',
       }}
     >
-      {/* 表头 */}
+      {/* Table header */}
       <Box
         sx={{
           display: 'grid',
@@ -1125,7 +1125,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         ))}
       </Box>
 
-      {/* 表格行 */}
+      {/* Table rows */}
       {[...Array(rows)].map((_, rowIndex) => (
         <Box
           key={rowIndex}
@@ -1148,7 +1148,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         </Box>
       ))}
 
-      {/* 分页骨架屏 */}
+      {/* Pagination skeleton */}
       <Box
         sx={{
           display: 'flex',
@@ -1168,7 +1168,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   </Box>
 );
 
-// ============ 空状态组件 ============
+// ============ Empty State Component ============
 
 const EmptyListState = () => {
   const translate = useTranslate();
@@ -1185,22 +1185,22 @@ const EmptyListState = () => {
     >
       <TrafficIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
       <Typography variant="h6" sx={{ opacity: 0.6, mb: 1 }}>
-        {translate('resources.radius/accounting.empty.title', { _: '暂无计费记录' })}
+        {translate('resources.radius/accounting.empty.title', { _: 'No accounting records' })}
       </Typography>
       <Typography variant="body2" sx={{ opacity: 0.5 }}>
-        {translate('resources.radius/accounting.empty.description', { _: '尝试调整筛选条件或等待新的会话记录' })}
+        {translate('resources.radius/accounting.empty.description', { _: 'Try adjusting filter criteria or wait for new session records' })}
       </Typography>
     </Box>
   );
 };
-// ============ 搜索表头区块组件 ============
+// ============ Search Header Card Component ============
 
 const SearchHeaderCard = () => {
   const translate = useTranslate();
   const { filterValues, setFilters, displayedFilters } = useListContext();
   const [localFilters, setLocalFilters] = useState<Record<string, string>>({});
 
-  // 同步外部筛选值到本地状态
+  // Sync external filter values to local state
   useEffect(() => {
     const newLocalFilters: Record<string, string> = {};
     if (filterValues) {
@@ -1245,18 +1245,18 @@ const SearchHeaderCard = () => {
   );
 
   const filterFields = [
-    { key: 'username', label: translate('resources.radius/accounting.fields.username', { _: '用户名' }) },
-    { key: 'acct_session_id', label: translate('resources.radius/accounting.fields.acct_session_id', { _: '会话ID' }) },
-    { key: 'framed_ipaddr', label: translate('resources.radius/accounting.fields.framed_ipaddr', { _: '用户IP' }) },
-    { key: 'framed_ipv6addr', label: translate('resources.radius/accounting.fields.framed_ipv6addr', { _: 'IPv6地址' }) },
-    { key: 'nas_addr', label: translate('resources.radius/accounting.fields.nas_addr', { _: 'NAS地址' }) },
-    { key: 'mac_addr', label: translate('resources.radius/accounting.fields.mac_addr', { _: 'MAC地址' }) },
+    { key: 'username', label: translate('resources.radius/accounting.fields.username', { _: 'Username' }) },
+    { key: 'acct_session_id', label: translate('resources.radius/accounting.fields.acct_session_id', { _: 'Session ID' }) },
+    { key: 'framed_ipaddr', label: translate('resources.radius/accounting.fields.framed_ipaddr', { _: 'User IP' }) },
+    { key: 'framed_ipv6addr', label: translate('resources.radius/accounting.fields.framed_ipv6addr', { _: 'IPv6 Address' }) },
+    { key: 'nas_addr', label: translate('resources.radius/accounting.fields.nas_addr', { _: 'NAS Address' }) },
+    { key: 'mac_addr', label: translate('resources.radius/accounting.fields.mac_addr', { _: 'MAC Address' }) },
   ];
 
-  // 只保留开始时间范围筛选
+  // Keep only start time range filter
   const dateFields = [
-    { key: 'acct_start_time_gte', label: translate('resources.radius/accounting.filter.start_time_from', { _: '开始时间从' }) },
-    { key: 'acct_start_time_lte', label: translate('resources.radius/accounting.filter.start_time_to', { _: '开始时间至' }) },
+    { key: 'acct_start_time_gte', label: translate('resources.radius/accounting.filter.start_time_from', { _: 'Start Time From' }) },
+    { key: 'acct_start_time_lte', label: translate('resources.radius/accounting.filter.start_time_to', { _: 'Start Time To' }) },
   ];
 
   return (
@@ -1283,27 +1283,27 @@ const SearchHeaderCard = () => {
       >
         <FilterIcon sx={{ color: 'primary.main', fontSize: 20 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-          {translate('resources.radius/accounting.filter.title', { _: '筛选条件' })}
+          {translate('resources.radius/accounting.filter.title', { _: 'Filter Criteria' })}
         </Typography>
       </Box>
 
       <CardContent sx={{ p: 2 }}>
-        {/* 使用网格布局确保响应式 */}
+        {/* Use grid layout for responsive design */}
         <Box
           sx={{
             display: 'grid',
             gap: 1.5,
             gridTemplateColumns: {
-              xs: 'repeat(2, 1fr)',           // 手机：2列
-              sm: 'repeat(3, 1fr)',           // 平板：3列
-              md: 'repeat(4, 1fr)',           // 中屏：4列
-              lg: 'repeat(5, 1fr)',           // 大屏：5列
-              xl: 'repeat(8, 1fr) auto',      // 超大屏：8列 + 按钮
+              xs: 'repeat(2, 1fr)',           // Mobile: 2 columns
+              sm: 'repeat(3, 1fr)',           // Tablet: 3 columns
+              md: 'repeat(4, 1fr)',           // Medium: 4 columns
+              lg: 'repeat(5, 1fr)',           // Large: 5 columns
+              xl: 'repeat(8, 1fr) auto',      // Extra large: 8 columns + buttons
             },
             alignItems: 'end',
           }}
         >
-          {/* 文本筛选字段 */}
+          {/* Text filter fields */}
           {filterFields.map(field => (
             <MuiTextField
               key={field.key}
@@ -1321,7 +1321,7 @@ const SearchHeaderCard = () => {
             />
           ))}
 
-          {/* 时间范围筛选字段 */}
+          {/* Time range filter fields */}
           {dateFields.map(field => (
             <MuiTextField
               key={field.key}
@@ -1342,9 +1342,9 @@ const SearchHeaderCard = () => {
             />
           ))}
 
-          {/* 操作按钮 */}
+          {/* Action buttons */}
           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-            <Tooltip title={translate('ra.action.clear_filters', { _: '清除筛选' })}>
+            <Tooltip title={translate('ra.action.clear_filters', { _: 'Clear filters' })}>
               <IconButton
                 onClick={handleClear}
                 size="small"
@@ -1358,7 +1358,7 @@ const SearchHeaderCard = () => {
                 <ClearIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title={translate('ra.action.search', { _: '搜索' })}>
+            <Tooltip title={translate('ra.action.search', { _: 'Search' })}>
               <IconButton
                 onClick={handleSearch}
                 color="primary"
@@ -1379,12 +1379,12 @@ const SearchHeaderCard = () => {
   );
 };
 
-// ============ 状态指示器组件 ============
+// ============ Status Indicator Component ============
 
 const StatusIndicator = ({ isOnline }: { isOnline: boolean }) => (
   <Chip
     icon={isOnline ? <OnlineIcon sx={{ fontSize: '0.85rem !important' }} /> : <OfflineIcon sx={{ fontSize: '0.85rem !important' }} />}
-    label={isOnline ? '在线' : '离线'}
+    label={isOnline ? 'Online' : 'Offline'}
     size="small"
     color={isOnline ? 'success' : 'default'}
     variant={isOnline ? 'filled' : 'outlined'}
@@ -1392,7 +1392,7 @@ const StatusIndicator = ({ isOnline }: { isOnline: boolean }) => (
   />
 );
 
-// ============ 增强版 Datagrid 字段组件 ============
+// ============ Enhanced Datagrid Field Components ============
 
 const UsernameField = () => {
   const record = useRecordContext<AccountingRecord>();
@@ -1482,7 +1482,7 @@ const SessionIdField = () => {
   );
 };
 
-// ============ 列表操作栏组件 ============
+// ============ List Actions Bar Component ============
 
 const AccountingListActions = () => {
   const translate = useTranslate();
@@ -1490,14 +1490,14 @@ const AccountingListActions = () => {
     <TopToolbar>
       <SortButton
         fields={['acct_start_time', 'acct_stop_time', 'acct_session_time', 'username']}
-        label={translate('ra.action.sort', { _: '排序' })}
+        label={translate('ra.action.sort', { _: 'Sort' })}
       />
       <ExportButton />
     </TopToolbar>
   );
 };
 
-// ============ 内部列表内容组件 ============
+// ============ Internal List Content Component ============
 
 const AccountingListContent = () => {
   const translate = useTranslate();
@@ -1505,7 +1505,7 @@ const AccountingListContent = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { data, isLoading, total } = useListContext<AccountingRecord>();
 
-  // 活动筛选器标签配置
+  // Active filter tag configuration
   const fieldLabels = useMemo(
     () => ({
       username: translate('resources.radius/accounting.fields.username'),
@@ -1542,13 +1542,13 @@ const AccountingListContent = () => {
 
   return (
     <Box>
-      {/* 搜索区块 */}
+      {/* Search section */}
       <SearchHeaderCard />
 
-      {/* 活动筛选标签 */}
+      {/* Active filter tags */}
       <ActiveFilters fieldLabels={fieldLabels} />
 
-      {/* 表格容器 */}
+      {/* Table container */}
       <Card
         elevation={0}
         sx={{
@@ -1557,7 +1557,7 @@ const AccountingListContent = () => {
           overflow: 'hidden',
         }}
       >
-        {/* 表格统计信息 */}
+        {/* Table statistics */}
         <Box
           sx={{
             px: 2,
@@ -1571,11 +1571,11 @@ const AccountingListContent = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            共 <strong>{total?.toLocaleString() || 0}</strong> 条记录
+            Total <strong>{total?.toLocaleString() || 0}</strong> records
           </Typography>
         </Box>
 
-        {/* 响应式表格 */}
+        {/* Responsive table */}
         <Box
           sx={{
             overflowX: 'auto',
@@ -1679,7 +1679,7 @@ const AccountingListContent = () => {
   );
 };
 
-// ============ 主列表组件 ============
+// ============ Main List Component ============
 
 export const AccountingList = () => {
   return (

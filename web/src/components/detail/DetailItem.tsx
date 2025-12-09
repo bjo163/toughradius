@@ -54,6 +54,7 @@ export const DetailItem = ({ label, value, highlight = false }: DetailItemProps)
     </Typography>
     <Typography
       variant="body2"
+      component="div"
       sx={{
         fontWeight: highlight ? 600 : 500,
         color: highlight ? 'primary.main' : 'text.primary',

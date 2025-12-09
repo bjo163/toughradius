@@ -119,3 +119,78 @@ func (a *Application) checkSettings() {
 		}
 	}
 }
+
+// checkSchedulers initializes default scheduled tasks
+func (a *Application) checkSchedulers() {
+	// Default schedulers to initialize
+	defaultSchedulers := []domain.NetScheduler{
+		{
+			Name:     "NAS Latency Check",
+			TaskType: "latency_check",
+			Interval: 300, // 5 minutes
+			Status:   "enabled",
+			Remark:   "Periodically checks latency to all NAS devices",
+		},
+		{
+			Name:     "SNMP Model Probe",
+			TaskType: "snmp_model",
+			Interval: 3600, // 1 hour
+			Status:   "enabled",
+			Remark:   "Periodically probes NAS devices via SNMP to update device model",
+		},
+		{
+			Name:     "API Probe (Mikrotik)",
+			TaskType: "api_probe",
+			Interval: 3600, // 1 hour
+			Status:   "enabled",
+			Remark:   "Periodically probes NAS devices API (Mikrotik devices)",
+		},
+	}
+
+	for _, sched := range defaultSchedulers {
+		var count int64
+		a.gormDB.Model(&domain.NetScheduler{}).
+			Where("task_type = ?", sched.TaskType).
+			Count(&count)
+
+		if count == 0 {
+			sched.NextRunAt = time.Now().Add(time.Duration(sched.Interval) * time.Second)
+			if err := a.gormDB.Create(&sched).Error; err != nil {
+				zap.L().Error("failed to create default scheduler",
+					zap.String("name", sched.Name),
+					zap.Error(err))
+			} else {
+				zap.L().Info("initialized default scheduler",
+					zap.String("name", sched.Name),
+					zap.String("task_type", sched.TaskType))
+			}
+		}
+	}
+}
+
+// checkVendors initializes default vendor codes used by NAS entries
+func (a *Application) checkVendors() {
+	defaultVendors := []domain.NetVendor{
+		{Code: "9", Name: "Cisco", Remark: "Cisco Systems"},
+		{Code: "2011", Name: "Huawei", Remark: "Huawei"},
+		{Code: "14988", Name: "Mikrotik", Remark: "Mikrotik"},
+		{Code: "25506", Name: "H3C", Remark: "H3C"},
+		{Code: "3902", Name: "ZTE", Remark: "ZTE"},
+		{Code: "10055", Name: "Ikuai", Remark: "Ikuai"},
+		{Code: "0", Name: "Standard", Remark: "Standard/Generic"},
+	}
+
+	for _, v := range defaultVendors {
+		var count int64
+		a.gormDB.Model(&domain.NetVendor{}).Where("code = ?", v.Code).Count(&count)
+		if count == 0 {
+			v.CreatedAt = time.Now()
+			v.UpdatedAt = time.Now()
+			if err := a.gormDB.Create(&v).Error; err != nil {
+				zap.L().Error("failed to create default vendor", zap.String("code", v.Code), zap.Error(err))
+			} else {
+				zap.L().Info("initialized default vendor", zap.String("code", v.Code), zap.String("name", v.Name))
+			}
+		}
+	}
+}

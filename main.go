@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -114,6 +115,11 @@ func main() {
 		)
 		return radiusd.ListenRadsecServer(application, radsec)
 	})
+
+	// Start background jobs (scheduler)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	application.StartBackgroundJobs(ctx)
 
 	if err := g.Wait(); err != nil {
 		log.Fatal(err)

@@ -172,7 +172,7 @@ const SessionDurationField = ({ label }: { label?: string }) => {
   );
 };
 
-// ============ 美化的详情组件 ============
+// ============ Enhanced Detail Components ============
 
 interface DetailItemProps {
   label: string;
@@ -325,7 +325,7 @@ const DetailSectionCard = ({
   </Card>
 );
 
-// 流量统计卡片 - 使用特殊样式展示
+// Traffic statistics card - displayed with special styling
 interface TrafficStatProps {
   label: string;
   value: string;
@@ -406,13 +406,13 @@ const TrafficStat = ({ label, value, icon, color = 'primary', subValue }: Traffi
   </Box>
 );
 
-// 空态组件
+// Empty state component
 interface EmptyStateProps {
   icon?: ReactNode;
   message?: string;
 }
 
-const EmptyValue = ({ message = '暂无数据' }: EmptyStateProps) => (
+const EmptyValue = ({ message = 'No Data' }: EmptyStateProps) => (
   <Box
     sx={{
       display: 'flex',
@@ -429,7 +429,7 @@ const EmptyValue = ({ message = '暂无数据' }: EmptyStateProps) => (
   </Box>
 );
 
-// 顶部概览卡片
+// Top overview card
 const SessionHeaderCard = () => {
   const record = useRecordContext<OnlineSession>();
   const translate = useTranslate();
@@ -441,12 +441,12 @@ const SessionHeaderCard = () => {
 
   const handleCopy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    notify(`${label} 已复制到剪贴板`, { type: 'info' });
+    notify(`${label} copied to clipboard`, { type: 'info' });
   }, [notify]);
 
   const handleRefresh = useCallback(() => {
     refresh();
-    notify('数据已刷新', { type: 'info' });
+    notify('Data refreshed', { type: 'info' });
   }, [refresh, notify]);
 
   const handleDisconnect = useCallback(() => {
@@ -456,12 +456,12 @@ const SessionHeaderCard = () => {
       { id: record.id },
       {
         onSuccess: () => {
-          notify(translate('resources.radius/online.notifications.disconnected', { _: '用户已强制下线' }), { type: 'success' });
+          notify(translate('resources.radius/online.notifications.disconnected', { _: 'User disconnected' }), { type: 'success' });
           redirect('list', 'radius/online');
         },
         onError: (error) => {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          notify(translate('resources.radius/online.notifications.disconnect_error', { _: '强制下线失败' }) + `: ${errorMessage}`, { type: 'error' });
+          notify(translate('resources.radius/online.notifications.disconnect_error', { _: 'Disconnect failed' }) + `: ${errorMessage}`, { type: 'error' });
         },
       }
     );
@@ -489,7 +489,7 @@ const SessionHeaderCard = () => {
         position: 'relative',
       }}
     >
-      {/* 装饰背景 */}
+      {/* Decorative background */}
       <Box
         sx={{
           position: 'absolute',
@@ -517,7 +517,7 @@ const SessionHeaderCard = () => {
 
       <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          {/* 左侧：用户信息 */}
+          {/* Left side: User info */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               sx={{
@@ -534,11 +534,11 @@ const SessionHeaderCard = () => {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  {record.username || <EmptyValue message="未知用户" />}
+                  {record.username || <EmptyValue message="Unknown User" />}
                 </Typography>
                 <Chip
                   icon={<OnlineIcon sx={{ fontSize: '1rem !important' }} />}
-                  label="在线"
+                  label="Online"
                   size="small"
                   color="success"
                   sx={{ fontWeight: 600, height: 24 }}
@@ -546,13 +546,13 @@ const SessionHeaderCard = () => {
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="body2" color="text.secondary">
-                  {record.framed_ipaddr || '未分配 IP'}
+                  {record.framed_ipaddr || 'No IP Assigned'}
                 </Typography>
                 {record.framed_ipaddr && (
-                  <Tooltip title="复制 IP 地址">
+                  <Tooltip title="Copy IP Address">
                     <IconButton
                       size="small"
-                      onClick={() => handleCopy(record.framed_ipaddr!, 'IP 地址')}
+                      onClick={() => handleCopy(record.framed_ipaddr!, 'IP Address')}
                       sx={{ p: 0.5 }}
                     >
                       <CopyIcon sx={{ fontSize: '0.9rem' }} />
@@ -563,12 +563,12 @@ const SessionHeaderCard = () => {
               {record.acct_session_id && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                   <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                    会话: {record.acct_session_id}
+                    Session: {record.acct_session_id}
                   </Typography>
-                  <Tooltip title="复制会话 ID">
+                  <Tooltip title="Copy Session ID">
                     <IconButton
                       size="small"
-                      onClick={() => handleCopy(record.acct_session_id!, '会话 ID')}
+                      onClick={() => handleCopy(record.acct_session_id!, 'Session ID')}
                       sx={{ p: 0.5 }}
                     >
                       <CopyIcon sx={{ fontSize: '0.75rem' }} />
@@ -579,9 +579,9 @@ const SessionHeaderCard = () => {
             </Box>
           </Box>
 
-          {/* 右侧：操作按钮 */}
+          {/* Right side: Action buttons */}
           <Box className="no-print" sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title={translate('resources.radius/online.actions.disconnect', { _: '强制下线' })}>
+            <Tooltip title={translate('resources.radius/online.actions.disconnect', { _: 'Disconnect' })}>
               <IconButton
                 onClick={() => setDisconnectDialogOpen(true)}
                 disabled={isDeleting}
@@ -596,7 +596,7 @@ const SessionHeaderCard = () => {
                 <DisconnectIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="打印详情">
+            <Tooltip title="Print Details">
               <IconButton
                 onClick={() => window.print()}
                 sx={{
@@ -609,7 +609,7 @@ const SessionHeaderCard = () => {
                 <PrintIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="刷新数据">
+            <Tooltip title="Refresh Data">
               <IconButton
                 onClick={handleRefresh}
                 sx={{
@@ -636,7 +636,7 @@ const SessionHeaderCard = () => {
           </Box>
         </Box>
 
-        {/* 强制下线确认对话框 */}
+        {/* Disconnect confirmation dialog */}
         <Dialog
           open={disconnectDialogOpen}
           onClose={() => setDisconnectDialogOpen(false)}
@@ -644,13 +644,13 @@ const SessionHeaderCard = () => {
           fullWidth
         >
           <DialogTitle sx={{ color: 'error.main', fontWeight: 600 }}>
-            {translate('resources.radius/online.dialog.disconnect_title', { _: '确认强制下线' })}
+            {translate('resources.radius/online.dialog.disconnect_title', { _: 'Confirm Disconnect' })}
           </DialogTitle>
           <DialogContent>
             <DialogContentText>
               {translate('resources.radius/online.dialog.disconnect_content', {
-                _: '确定要强制下线用户 "{username}" 吗？此操作将断开用户的网络连接。',
-                username: record.username || '未知用户',
+                _: 'Are you sure you want to disconnect user "{username}"? This will terminate their network connection.',
+                username: record.username || 'Unknown User',
               })}
             </DialogContentText>
           </DialogContent>
@@ -659,7 +659,7 @@ const SessionHeaderCard = () => {
               onClick={() => setDisconnectDialogOpen(false)}
               disabled={isDeleting}
             >
-              {translate('ra.action.cancel', { _: '取消' })}
+              {translate('ra.action.cancel', { _: 'Cancel' })}
             </Button>
             <Button
               onClick={handleDisconnect}
@@ -669,13 +669,13 @@ const SessionHeaderCard = () => {
               startIcon={<DisconnectIcon />}
             >
               {isDeleting
-                ? translate('resources.radius/online.actions.disconnecting', { _: '正在下线...' })
-                : translate('resources.radius/online.actions.disconnect', { _: '强制下线' })}
+                ? translate('resources.radius/online.actions.disconnecting', { _: 'Disconnecting...' })
+                : translate('resources.radius/online.actions.disconnect', { _: 'Disconnect' })}
             </Button>
           </DialogActions>
         </Dialog>
 
-        {/* 快速统计 */}
+        {/* Quick statistics */}
         <Box
           sx={{
             display: 'grid',
@@ -786,7 +786,7 @@ const SessionHeaderCard = () => {
   );
 };
 
-// 打印样式
+// Print styles
 const printStyles = `
   @media print {
     body * {
@@ -823,10 +823,10 @@ const OnlineSessionDetails = () => {
       <style>{printStyles}</style>
       <Box className="printable-content" sx={{ width: '100%', p: { xs: 2, sm: 3, md: 4 } }}>
       <Stack spacing={3}>
-        {/* 顶部概览卡片 */}
+        {/* Top overview card */}
         <SessionHeaderCard />
 
-        {/* 设备信息 */}
+        {/* Device information */}
         <DetailSectionCard
           title={translate('resources.radius/online.sections.device')}
           description={translate('resources.radius/online.sections.device_desc')}
@@ -856,7 +856,7 @@ const OnlineSessionDetails = () => {
                     sx={{ fontFamily: 'monospace' }}
                   />
                 ) : (
-                  <EmptyValue message="未分配" />
+                  <EmptyValue message="Not Assigned" />
                 )
               }
               highlight
@@ -876,14 +876,14 @@ const OnlineSessionDetails = () => {
                     sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
                   />
                 ) : (
-                  <EmptyValue message="未获取" />
+                  <EmptyValue message="Not Retrieved" />
                 )
               }
             />
           </Box>
         </DetailSectionCard>
 
-        {/* NAS 信息 */}
+        {/* NAS Information */}
         <DetailSectionCard
           title={translate('resources.radius/online.sections.overview')}
           description={translate('resources.radius/online.sections.overview_desc')}
@@ -929,7 +929,7 @@ const OnlineSessionDetails = () => {
           </Box>
         </DetailSectionCard>
 
-        {/* 会话时间 */}
+        {/* Session Time */}
         <DetailSectionCard
           title={translate('resources.radius/online.sections.timing')}
           description={translate('resources.radius/online.sections.timing_desc')}
@@ -969,13 +969,13 @@ const OnlineSessionDetails = () => {
               value={
                 record.session_timeout !== undefined && record.session_timeout !== null
                   ? `${record.session_timeout}s`
-                  : <EmptyValue message="无限制" />
+                  : <EmptyValue message="Unlimited" />
               }
             />
           </Box>
         </DetailSectionCard>
 
-        {/* 流量统计 - 特殊展示 */}
+        {/* Traffic Statistics - Special Display */}
         <DetailSectionCard
           title={translate('resources.radius/online.sections.traffic')}
           description={translate('resources.radius/online.sections.traffic_desc')}
@@ -983,7 +983,7 @@ const OnlineSessionDetails = () => {
           color="success"
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* 流量统计卡片 */}
+            {/* Traffic statistics cards */}
             <Box
               sx={{
                 display: 'flex',
@@ -997,21 +997,21 @@ const OnlineSessionDetails = () => {
                 value={formatBytes(record.acct_input_octets)}
                 icon={<UploadIcon />}
                 color="info"
-                subValue={`${record.acct_input_packets?.toLocaleString() ?? 0} 包`}
+                subValue={`${record.acct_input_packets?.toLocaleString() ?? 0} pkts`}
               />
               <TrafficStat
                 label={translate('resources.radius/online.fields.acct_output_octets')}
                 value={formatBytes(record.acct_output_octets)}
                 icon={<DownloadIcon />}
                 color="warning"
-                subValue={`${record.acct_output_packets?.toLocaleString() ?? 0} 包`}
+                subValue={`${record.acct_output_packets?.toLocaleString() ?? 0} pkts`}
               />
               <TrafficStat
                 label={translate('resources.radius/online.fields.total_traffic')}
                 value={formatBytes(totalTraffic)}
                 icon={<SpeedIcon />}
                 color="success"
-                subValue={`${((record.acct_input_packets ?? 0) + (record.acct_output_packets ?? 0)).toLocaleString()} 包`}
+                subValue={`${((record.acct_input_packets ?? 0) + (record.acct_output_packets ?? 0)).toLocaleString()} pkts`}
               />
             </Box>
           </Box>
@@ -1022,11 +1022,11 @@ const OnlineSessionDetails = () => {
   );
 };
 
-// ============ 列表加载骨架屏 ============
+// ============ List Loading Skeleton ============
 
 const OnlineSessionListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   <Box sx={{ width: '100%' }}>
-    {/* 搜索区域骨架屏 */}
+    {/* Search area skeleton */}
     <Card
       elevation={0}
       sx={{
@@ -1059,7 +1059,7 @@ const OnlineSessionListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       </CardContent>
     </Card>
 
-    {/* 表格骨架屏 */}
+    {/* Table skeleton */}
     <Card
       elevation={0}
       sx={{
@@ -1068,7 +1068,7 @@ const OnlineSessionListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         overflow: 'hidden',
       }}
     >
-      {/* 表头 */}
+      {/* Table header */}
       <Box
         sx={{
           display: 'grid',
@@ -1085,7 +1085,7 @@ const OnlineSessionListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         ))}
       </Box>
 
-      {/* 表格行 */}
+      {/* Table rows */}
       {[...Array(rows)].map((_, rowIndex) => (
         <Box
           key={rowIndex}
@@ -1108,7 +1108,7 @@ const OnlineSessionListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         </Box>
       ))}
 
-      {/* 分页骨架屏 */}
+      {/* Pagination skeleton */}
       <Box
         sx={{
           display: 'flex',
@@ -1128,7 +1128,7 @@ const OnlineSessionListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   </Box>
 );
 
-// ============ 空状态组件 ============
+// ============ Empty State Component ============
 
 const EmptyListState = () => {
   const translate = useTranslate();
@@ -1145,23 +1145,23 @@ const EmptyListState = () => {
     >
       <OnlineIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
       <Typography variant="h6" sx={{ opacity: 0.6, mb: 1 }}>
-        {translate('resources.radius/online.empty.title', { _: '暂无在线会话' })}
+        {translate('resources.radius/online.empty.title', { _: 'No Online Sessions' })}
       </Typography>
       <Typography variant="body2" sx={{ opacity: 0.5 }}>
-        {translate('resources.radius/online.empty.description', { _: '当前没有用户在线' })}
+        {translate('resources.radius/online.empty.description', { _: 'No users currently online' })}
       </Typography>
     </Box>
   );
 };
 
-// ============ 搜索表头区块组件 ============
+// ============ Search Header Card Component ============
 
 const SearchHeaderCard = () => {
   const translate = useTranslate();
   const { filterValues, setFilters, displayedFilters } = useListContext();
   const [localFilters, setLocalFilters] = useState<Record<string, string>>({});
 
-  // 同步外部筛选值到本地状态
+  // Sync external filter values to local state
   useEffect(() => {
     const newLocalFilters: Record<string, string> = {};
     if (filterValues) {
@@ -1206,18 +1206,18 @@ const SearchHeaderCard = () => {
   );
 
   const filterFields = [
-    { key: 'username', label: translate('resources.radius/online.fields.username', { _: '用户名' }) },
-    { key: 'acct_session_id', label: translate('resources.radius/online.fields.acct_session_id', { _: '会话ID' }) },
-    { key: 'framed_ipaddr', label: translate('resources.radius/online.fields.framed_ipaddr', { _: '用户IP' }) },
-    { key: 'framed_ipv6addr', label: translate('resources.radius/online.fields.framed_ipv6addr', { _: 'IPv6地址' }) },
-    { key: 'nas_addr', label: translate('resources.radius/online.fields.nas_addr', { _: 'NAS地址' }) },
-    { key: 'mac_addr', label: translate('resources.radius/online.fields.mac_addr', { _: 'MAC地址' }) },
+    { key: 'username', label: translate('resources.radius/online.fields.username', { _: 'Username' }) },
+    { key: 'acct_session_id', label: translate('resources.radius/online.fields.acct_session_id', { _: 'Session ID' }) },
+    { key: 'framed_ipaddr', label: translate('resources.radius/online.fields.framed_ipaddr', { _: 'User IP' }) },
+    { key: 'framed_ipv6addr', label: translate('resources.radius/online.fields.framed_ipv6addr', { _: 'IPv6 Address' }) },
+    { key: 'nas_addr', label: translate('resources.radius/online.fields.nas_addr', { _: 'NAS Address' }) },
+    { key: 'mac_addr', label: translate('resources.radius/online.fields.mac_addr', { _: 'MAC Address' }) },
   ];
 
-  // 开始时间范围筛选
+  // Start time range filter
   const dateFields = [
-    { key: 'acct_start_time_gte', label: translate('resources.radius/online.filter.start_time_from', { _: '开始时间从' }) },
-    { key: 'acct_start_time_lte', label: translate('resources.radius/online.filter.start_time_to', { _: '开始时间至' }) },
+    { key: 'acct_start_time_gte', label: translate('resources.radius/online.filter.start_time_from', { _: 'Start Time From' }) },
+    { key: 'acct_start_time_lte', label: translate('resources.radius/online.filter.start_time_to', { _: 'Start Time To' }) },
   ];
 
   return (
@@ -1244,27 +1244,27 @@ const SearchHeaderCard = () => {
       >
         <FilterIcon sx={{ color: 'primary.main', fontSize: 20 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-          {translate('resources.radius/online.filter.title', { _: '筛选条件' })}
+          {translate('resources.radius/online.filter.title', { _: 'Filter Conditions' })}
         </Typography>
       </Box>
 
       <CardContent sx={{ p: 2 }}>
-        {/* 使用网格布局确保响应式 */}
+        {/* Use grid layout for responsive design */}
         <Box
           sx={{
             display: 'grid',
             gap: 1.5,
             gridTemplateColumns: {
-              xs: 'repeat(2, 1fr)',           // 手机：2列
-              sm: 'repeat(3, 1fr)',           // 平板：3列
-              md: 'repeat(4, 1fr)',           // 中屏：4列
-              lg: 'repeat(5, 1fr)',           // 大屏：5列
-              xl: 'repeat(8, 1fr) auto',      // 超大屏：8列 + 按钮
+              xs: 'repeat(2, 1fr)',           // Mobile: 2 columns
+              sm: 'repeat(3, 1fr)',           // Tablet: 3 columns
+              md: 'repeat(4, 1fr)',           // Medium: 4 columns
+              lg: 'repeat(5, 1fr)',           // Large: 5 columns
+              xl: 'repeat(8, 1fr) auto',      // Extra large: 8 columns + buttons
             },
             alignItems: 'end',
           }}
         >
-          {/* 文本筛选字段 */}
+          {/* Text filter fields */}
           {filterFields.map(field => (
             <MuiTextField
               key={field.key}
@@ -1282,7 +1282,7 @@ const SearchHeaderCard = () => {
             />
           ))}
 
-          {/* 时间范围筛选字段 */}
+          {/* Time range filter fields */}
           {dateFields.map(field => (
             <MuiTextField
               key={field.key}
@@ -1303,9 +1303,9 @@ const SearchHeaderCard = () => {
             />
           ))}
 
-          {/* 操作按钮 */}
+          {/* Action buttons */}
           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-            <Tooltip title={translate('ra.action.clear_filters', { _: '清除筛选' })}>
+            <Tooltip title={translate('ra.action.clear_filters', { _: 'Clear Filters' })}>
               <IconButton
                 onClick={handleClear}
                 size="small"
@@ -1319,7 +1319,7 @@ const SearchHeaderCard = () => {
                 <ClearIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title={translate('ra.action.search', { _: '搜索' })}>
+            <Tooltip title={translate('ra.action.search', { _: 'Search' })}>
               <IconButton
                 onClick={handleSearch}
                 color="primary"
@@ -1340,7 +1340,7 @@ const SearchHeaderCard = () => {
   );
 };
 
-// ============ 增强版 Datagrid 字段组件 ============
+// ============ Enhanced Datagrid Field Components ============
 
 const UsernameField = () => {
   const record = useRecordContext<OnlineSession>();
@@ -1368,7 +1368,7 @@ const UsernameField = () => {
         </Typography>
         <Chip
           icon={<OnlineIcon sx={{ fontSize: '0.85rem !important' }} />}
-          label="在线"
+          label="Online"
           size="small"
           color="success"
           sx={{ height: 20, fontWeight: 500, fontSize: '0.7rem' }}
@@ -1434,7 +1434,7 @@ const SessionIdField = () => {
   );
 };
 
-// ============ 列表操作栏组件 ============
+// ============ List Actions Bar Component ============
 
 const OnlineSessionActions = () => {
   const translate = useTranslate();
@@ -1442,14 +1442,14 @@ const OnlineSessionActions = () => {
     <TopToolbar>
       <SortButton
         fields={['acct_start_time', 'acct_session_time', 'username']}
-        label={translate('ra.action.sort', { _: '排序' })}
+        label={translate('ra.action.sort', { _: 'Sort' })}
       />
       <ExportButton />
     </TopToolbar>
   );
 };
 
-// ============ 内部列表内容组件 ============
+// ============ Internal List Content Component ============
 
 const OnlineSessionListContent = () => {
   const translate = useTranslate();
@@ -1457,7 +1457,7 @@ const OnlineSessionListContent = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { data, isLoading, total } = useListContext<OnlineSession>();
 
-  // 活动筛选器标签配置
+  // Active filter labels configuration
   const fieldLabels = useMemo(
     () => ({
       username: translate('resources.radius/online.fields.username'),
@@ -1495,13 +1495,13 @@ const OnlineSessionListContent = () => {
 
   return (
     <Box>
-      {/* 搜索区块 */}
+      {/* Search section */}
       <SearchHeaderCard />
 
-      {/* 活动筛选标签 */}
+      {/* Active filter tags */}
       <ActiveFilters fieldLabels={fieldLabels} />
 
-      {/* 表格容器 */}
+      {/* Table container */}
       <Card
         elevation={0}
         sx={{
@@ -1510,7 +1510,7 @@ const OnlineSessionListContent = () => {
           overflow: 'hidden',
         }}
       >
-        {/* 表格统计信息 */}
+        {/* Table statistics */}
         <Box
           sx={{
             px: 2,
@@ -1524,11 +1524,11 @@ const OnlineSessionListContent = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            共 <strong>{total?.toLocaleString() || 0}</strong> 个在线会话
+            Total: <strong>{total?.toLocaleString() || 0}</strong> online sessions
           </Typography>
         </Box>
 
-        {/* 响应式表格 */}
+        {/* Responsive table */}
         <Box
           sx={{
             overflowX: 'auto',
@@ -1627,7 +1627,7 @@ const OnlineSessionListContent = () => {
   );
 };
 
-// ============ 主列表组件 ============
+// ============ Main List Component ============
 
 export const OnlineSessionList = () => {
   return (
