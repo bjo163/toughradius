@@ -7,20 +7,20 @@ const translations = {
   'en-US': enUS,
 };
 
-// 从 localStorage 获取保存的语言设置，如果没有则使用默认语言
+// Get saved language from localStorage, fallback to default
 const getDefaultLocale = () => {
   const savedLocale = localStorage.getItem('locale');
   return savedLocale && translations[savedLocale as keyof typeof translations] 
     ? savedLocale 
-    : 'zh-CN';
+    : 'en-US';  // Changed default to English
 };
 
 const baseI18nProvider = polyglotI18nProvider(
-  (locale) => translations[locale as keyof typeof translations] || translations['zh-CN'],
-  getDefaultLocale(), // 使用保存的语言或默认语言
+  (locale) => translations[locale as keyof typeof translations] || translations['en-US'],
+  getDefaultLocale(), // Use saved language or default
   [
-    { locale: 'zh-CN', name: '简体中文' },
     { locale: 'en-US', name: 'English' },
+    { locale: 'zh-CN', name: '简体中文' },
   ],
   { allowMissing: true }
 );
