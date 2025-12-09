@@ -33,6 +33,7 @@ const customEnglishMessages: TranslationMessages = {
     dbms: 'Database Manager',
     account_settings: 'Account Settings',
   vendors: 'Vendors',
+    services: 'Services',
   },
   appbar: {
     switch_language: 'Switch Language',
@@ -412,6 +413,9 @@ const customEnglishMessages: TranslationMessages = {
         name: 'Vendor display name',
       },
     },
+      'network/services': {
+        name: 'Services',
+      },
     'system/operators': {
       name: 'Operator |||| Operators',
       fields: {

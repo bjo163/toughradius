@@ -358,6 +358,7 @@ func registerNASRoutes() {
 	webserver.ApiDELETE("/network/nas/:id", DeleteNAS)
 	webserver.ApiPOST("/network/nas/:id/probe-snmp", ProbeNAS)
 	webserver.ApiPOST("/network/nas/:id/probe-api", ProbeAPINAS)
+	webserver.ApiPOST("/network/nas/:id/fetch-services", FetchNASServices)
 }
 
 // ProbeNAS triggers an immediate SNMP probe for the given NAS and returns result
@@ -394,4 +395,22 @@ func ProbeAPINAS(c echo.Context) error {
 
 	zap.L().Info("ProbeAPINAS finished", zap.Int64("nas_id", id))
 	return ok(c, map[string]interface{}{"message": "api probe scheduled/finished"})
+}
+
+// FetchNASServices triggers a service discovery (queues/services) on the given NAS and persists results
+func FetchNASServices(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return fail(c, http.StatusBadRequest, "INVALID_ID", "Invalid NAS ID", nil)
+	}
+
+	zap.L().Info("FetchNASServices called", zap.Int64("nas_id", id))
+	appCtx := GetAppContext(c)
+	if err := appCtx.RunFetchServices(id); err != nil {
+		zap.L().Error("FetchNASServices failed", zap.Int64("nas_id", id), zap.Error(err))
+		return fail(c, http.StatusInternalServerError, "FETCH_SERVICES_FAILED", "Fetch services failed", err.Error())
+	}
+
+	zap.L().Info("FetchNASServices finished", zap.Int64("nas_id", id))
+	return ok(c, map[string]interface{}{"message": "fetch scheduled/finished"})
 }

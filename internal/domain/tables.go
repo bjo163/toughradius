@@ -8,6 +8,7 @@ var Tables = []interface{}{
 	// Network
 	&NetNode{},
 	&NetNas{},
+	&NetService{},
 	&NetVendor{},
 	&NetScheduler{},
 	// Radius

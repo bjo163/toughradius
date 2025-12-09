@@ -59,4 +59,7 @@ type AppContext interface {
 	RunSnmpProbe(nasID int64) error
 	// RunApiProbe triggers an immediate API probe (e.g., Mikrotik) for a single NAS by ID
 	RunApiProbe(nasID int64) error
+	// RunFetchServices discovers services (queues/etc) from a NAS and persists them.
+	// Implementation should dispatch to vendor-specific fetchers (e.g., Mikrotik)
+	RunFetchServices(nasID int64) error
 }

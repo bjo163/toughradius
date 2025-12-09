@@ -32,7 +32,8 @@ const customChineseMessages: TranslationMessages = {
     system_config: '系统配置',
     dbms: '数据库管理',
     account_settings: '账户设置',
-  vendors: '厂商管理',
+     vendors: '厂商',
+     services: '服务',
   },
   appbar: {
     switch_language: '切换语言',

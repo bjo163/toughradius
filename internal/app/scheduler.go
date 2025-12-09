@@ -36,6 +36,7 @@ func (a *Application) runSchedulers() {
 	for _, sched := range schedulers {
 		// Only run if now >= next_run_at
 		if sched.NextRunAt.IsZero() || now.After(sched.NextRunAt) || now.Equal(sched.NextRunAt) {
+			zap.L().Info("scheduler due, dispatching task", zap.Int64("scheduler_id", sched.ID), zap.String("task_type", sched.TaskType), zap.String("name", sched.Name))
 			switch sched.TaskType {
 			case "latency_check":
 				a.runLatencyCheckScheduler(&sched)
@@ -43,6 +44,8 @@ func (a *Application) runSchedulers() {
 				a.runSnmpModelScheduler(&sched)
 			case "api_probe":
 				a.runApiProbeScheduler(&sched)
+			case "fetch_services":
+				a.runFetchServicesScheduler(&sched)
 			// Add more task types here
 			}
 			// Update next_run_at
@@ -251,6 +254,48 @@ func (a *Application) runApiProbeScheduler(sched *domain.NetScheduler) {
 		"last_run_at": time.Now(),
 		"last_result": "success",
 		"last_message": "API probe completed",
+	})
+}
+
+// runFetchServicesScheduler discovers services on devices and persists them
+func (a *Application) runFetchServicesScheduler(sched *domain.NetScheduler) {
+	zap.L().Info("runFetchServicesScheduler invoked", zap.Int64("scheduler_id", sched.ID), zap.String("name", sched.Name))
+	var nases []domain.NetNas
+	a.gormDB.Where("status = ?", "enabled").Find(&nases)
+
+	const defaultMaxWorkers = 25
+	maxWorkers64 := a.GetSettingsInt64Value("scheduler", "max_workers")
+	maxWorkers := int(maxWorkers64)
+	if maxWorkers <= 0 {
+		maxWorkers = defaultMaxWorkers
+	}
+	sem := make(chan struct{}, maxWorkers)
+	var wg sync.WaitGroup
+
+	for _, nas := range nases {
+		// only for API-enabled Mikrotik devices (credentials present)
+		if nas.ApiState != "enabled" || nas.Username == "" || nas.Password == "" || nas.VendorCode != "14988" {
+			continue
+		}
+
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(n domain.NetNas) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if err := a.RunFetchServices(n.ID); err != nil {
+				zap.L().Error("fetch services failed for nas", zap.String("ip", n.Ipaddr), zap.Error(err))
+			}
+		}(nas)
+	}
+	wg.Wait()
+
+	// Update scheduler last run
+	a.gormDB.Model(&domain.NetScheduler{}).Where("id = ?", sched.ID).Updates(map[string]interface{}{
+		"last_run_at": time.Now(),
+		"last_result": "success",
+		"last_message": "Fetch services completed",
 	})
 }
 

@@ -2,9 +2,13 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -264,13 +268,16 @@ func (a *Application) RunSchedulerNow(id int64) error {
 		return err
 	}
 
+	zap.L().Info("RunSchedulerNow invoked", zap.Int64("scheduler_id", sched.ID), zap.String("task_type", sched.TaskType), zap.String("name", sched.Name))
 	switch sched.TaskType {
 	case "latency_check":
 		a.runLatencyCheckScheduler(&sched)
 	case "snmp_model":
 		a.runSnmpModelScheduler(&sched)
-case "api_probe":
-    a.runApiProbeScheduler(&sched)
+	case "api_probe":
+		a.runApiProbeScheduler(&sched)
+	case "fetch_services":
+		a.runFetchServicesScheduler(&sched)
 	default:
 		// unsupported task type
 	}
@@ -321,10 +328,10 @@ func (a *Application) RunSnmpProbe(nasID int64) error {
 
 	// success
 	if err := a.gormDB.Model(&domain.NetNas{}).Where("id = ?", n.ID).Updates(map[string]interface{}{
-		"model":               model,
-		"snmp_last_probe_at":  now,
-		"snmp_last_result":    "ok",
-		"snmp_last_message":   msg,
+		"model":              model,
+		"snmp_last_probe_at": now,
+		"snmp_last_result":   "ok",
+		"snmp_last_message":  msg,
 	}).Error; err != nil {
 		zap.L().Error("failed to update NAS model/snmp result", zap.String("ip", n.Ipaddr), zap.Error(err))
 		return err
@@ -402,5 +409,319 @@ func (a *Application) RunApiProbe(nasID int64) error {
 	}
 
 	zap.L().Info("RunApiProbe: NAS api probe ok", zap.String("ip", n.Ipaddr), zap.String("msg", msg))
+	return nil
+}
+
+// RunFetchServices discovers services/queues on the NAS and persists them as NetService.
+// Currently supports Mikrotik (/queue/simple) when VendorCode == "14988".
+func (a *Application) RunFetchServices(nasID int64) error {
+	var n domain.NetNas
+	if err := a.gormDB.First(&n, nasID).Error; err != nil {
+		return err
+	}
+
+	zap.L().Info("RunFetchServices called", zap.Int64("nas_id", nasID), zap.String("ip", n.Ipaddr))
+
+	// Only Mikrotik supported for now
+	if n.VendorCode != "14988" {
+		zap.L().Warn("RunFetchServices unsupported vendor", zap.String("vendor_code", n.VendorCode))
+		return nil
+	}
+
+	port := n.ApiPort
+	if port == 0 {
+		port = 8728
+	}
+	addr := fmt.Sprintf("%s:%d", n.Ipaddr, port)
+
+	client, err := routeros.Dial(addr, n.Username, n.Password)
+	if err != nil {
+		zap.L().Warn("RunFetchServices failed to dial", zap.String("addr", addr), zap.Error(err))
+		return err
+	}
+	defer client.Close()
+
+	// Fetch simple queues
+	reply, err := client.Run("/queue/simple/print")
+	if err != nil {
+		zap.L().Warn("RunFetchServices failed to run command", zap.String("addr", addr), zap.Error(err))
+		return err
+	}
+
+	now := time.Now()
+
+	// helper to parse sizes like "1M", "512k", "5000000" into Kbps integer
+	// preferBps: when true, raw numbers without suffix will be treated as bps (bits per second)
+	parseToKbps := func(s string, preferBps bool) int64 {
+		if s == "" {
+			return 0
+		}
+		ss := strings.TrimSpace(strings.ToLower(s))
+		// remove trailing bps if present
+		if strings.HasSuffix(ss, "bps") {
+			ss = strings.TrimSuffix(ss, "bps")
+			// now ss is a number in bps -> convert to Kbps later
+		}
+
+		// helper to parse a single token (no slash)
+		parseSingle := func(token string, preferBpsLocal bool) int64 {
+			t := strings.TrimSpace(token)
+			if t == "" {
+				return 0
+			}
+			// detect suffixes: kb, k, mb, m, gb, g
+			mul := float64(1) // multiplier in Kbps
+			if strings.HasSuffix(t, "kb") {
+				t = strings.TrimSuffix(t, "kb")
+				mul = 1
+			} else if strings.HasSuffix(t, "k") {
+				t = strings.TrimSuffix(t, "k")
+				mul = 1
+			} else if strings.HasSuffix(t, "mb") {
+				t = strings.TrimSuffix(t, "mb")
+				mul = 1000
+			} else if strings.HasSuffix(t, "m") {
+				t = strings.TrimSuffix(t, "m")
+				mul = 1000
+			} else if strings.HasSuffix(t, "gb") {
+				t = strings.TrimSuffix(t, "gb")
+				mul = 1000 * 1000
+			} else if strings.HasSuffix(t, "g") {
+				t = strings.TrimSuffix(t, "g")
+				mul = 1000 * 1000
+			}
+
+			// parse numeric value
+			f, err := strconv.ParseFloat(t, 64)
+			if err != nil {
+				return 0
+			}
+
+			// If no suffix and preferBpsLocal is set, or the number is huge (>= 1,000,000), assume it's in bps and convert to Kbps
+			if mul == 1 && !strings.HasSuffix(strings.TrimSpace(token), "k") && !strings.HasSuffix(strings.TrimSpace(token), "kb") && !strings.HasSuffix(strings.TrimSpace(token), "m") && !strings.HasSuffix(strings.TrimSpace(token), "mb") {
+				if preferBpsLocal || f >= 1000000 {
+					// treat as bps
+					return int64(f / 1000.0)
+				}
+			}
+
+			return int64(f * mul)
+		}
+
+		return parseSingle(ss, preferBps)
+	}
+
+	for _, re := range reply.Re {
+		m := re.Map
+		name := m["name"]
+		endpoint := m["target"]
+		rate := m["rate"]
+		// mikrotik max limit may be in "max-limit" or "max_limit"
+		maxLimit := m["max-limit"]
+		if maxLimit == "" {
+			maxLimit = m["max_limit"]
+		}
+		// parse up/down numeric values (Kbps) from max-limit
+		var maxUpKbps, maxDownKbps int64
+		// detect whether maxLimit raw tokens appear to be in bps (large raw numbers)
+		maxLimitPreferBps := false
+		if maxLimit != "" {
+			parts := strings.SplitN(maxLimit, "/", 2)
+			// if any raw part looks like a large integer >= 1_000_000 and has no suffix, treat max-limit as bps
+			for _, p := range parts {
+				pt := strings.TrimSpace(p)
+				// strip common suffixes for checking
+				if pt != "" {
+					lower := strings.ToLower(pt)
+					if !strings.HasSuffix(lower, "k") && !strings.HasSuffix(lower, "kb") && !strings.HasSuffix(lower, "m") && !strings.HasSuffix(lower, "mb") {
+						if f, err := strconv.ParseFloat(lower, 64); err == nil {
+							if f >= 1000000 {
+								maxLimitPreferBps = true
+							}
+						}
+					}
+				}
+			}
+
+			if len(parts) == 1 {
+				kb := parseToKbps(parts[0], maxLimitPreferBps)
+				maxUpKbps = kb
+				maxDownKbps = kb
+			} else {
+				maxUpKbps = parseToKbps(parts[0], maxLimitPreferBps)
+				maxDownKbps = parseToKbps(parts[1], maxLimitPreferBps)
+			}
+		}
+
+		// parse rate (current rate) into up/down Kbps
+		var rateUpKbps, rateDownKbps int64
+		if rate != "" {
+			parts := strings.SplitN(rate, "/", 2)
+			// prefer interpreting bare rate tokens in the same unit family as maxLimit when maxLimit looked like bps
+			preferBps := maxLimitPreferBps
+			if len(parts) == 1 {
+				token := parts[0]
+				r := parseToKbps(token, preferBps)
+				rateUpKbps = r
+				rateDownKbps = r
+				// if we parsed a value that is implausibly larger than max, try alternate interpretations
+				if maxUpKbps > 0 && rateUpKbps > maxUpKbps*2 {
+					// try interpret token as raw bytes/sec -> convert to Kbps (bytes*8/1000)
+					if f, err := strconv.ParseFloat(strings.TrimSpace(token), 64); err == nil {
+						// try bytes/sec interpretation
+						bytsk := int64(f * 8.0 / 1000.0)
+						if bytsk > 0 && bytsk <= maxUpKbps*12/10 {
+							rateUpKbps = bytsk
+						} else {
+							// try bps interpretation (token is bps -> /1000)
+							bpsk := int64(f / 1000.0)
+							if bpsk > 0 && bpsk <= maxUpKbps*12/10 {
+								rateUpKbps = bpsk
+							}
+						}
+					}
+				}
+			} else {
+				// parse up token
+				upTok := parts[0]
+				downTok := parts[1]
+				rateUpKbps = parseToKbps(upTok, preferBps)
+				rateDownKbps = parseToKbps(downTok, preferBps)
+				// try alternate interpretations individually when parsed value exceeds max by wide margin
+				if maxUpKbps > 0 && rateUpKbps > maxUpKbps*2 {
+					if f, err := strconv.ParseFloat(strings.TrimSpace(upTok), 64); err == nil {
+						bytsk := int64(f * 8.0 / 1000.0)
+						if bytsk > 0 && bytsk <= maxUpKbps*12/10 {
+							rateUpKbps = bytsk
+						} else {
+							bpsk := int64(f / 1000.0)
+							if bpsk > 0 && bpsk <= maxUpKbps*12/10 {
+								rateUpKbps = bpsk
+							}
+						}
+					}
+				}
+				if maxDownKbps > 0 && rateDownKbps > maxDownKbps*2 {
+					if f, err := strconv.ParseFloat(strings.TrimSpace(downTok), 64); err == nil {
+						bytsk := int64(f * 8.0 / 1000.0)
+						if bytsk > 0 && bytsk <= maxDownKbps*12/10 {
+							rateDownKbps = bytsk
+						} else {
+							bpsk := int64(f / 1000.0)
+							if bpsk > 0 && bpsk <= maxDownKbps*12/10 {
+								rateDownKbps = bpsk
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Sanity check: if parsed rate is wildly larger than max limit, clamp it to max limit
+		// This protects against vendor quirks where 'rate' may be reported in unexpected units.
+		if maxUpKbps > 0 && rateUpKbps > maxUpKbps*2 {
+			// clamp to configured max limit as a safe display value
+			rateUpKbps = maxUpKbps
+		}
+		if maxDownKbps > 0 && rateDownKbps > maxDownKbps*2 {
+			rateDownKbps = maxDownKbps
+		}
+
+		// Debug logging: show raw and parsed values to help diagnose vendor outputs
+		// vendor-specific id (Mikrotik uses ".id") - get it before logging
+		vendorID := ""
+		if v, ok := m[".id"]; ok {
+			vendorID = v
+		}
+
+		zap.L().Debug("fetch_service: parsed service",
+			zap.Int64("nas_id", n.ID),
+			zap.String("name", name),
+			zap.String("vendor_id", vendorID),
+			zap.String("raw_rate", rate),
+			zap.Int64("parsed_rate_up_kbps", rateUpKbps),
+			zap.Int64("parsed_rate_down_kbps", rateDownKbps),
+			zap.String("raw_max_limit", maxLimit),
+			zap.Int64("parsed_max_up_kbps", maxUpKbps),
+			zap.Int64("parsed_max_down_kbps", maxDownKbps),
+		)
+
+		// If we applied a clamp, log that fact so we can spot adjusted records
+		if (maxUpKbps > 0 && rateUpKbps == maxUpKbps) || (maxDownKbps > 0 && rateDownKbps == maxDownKbps) {
+			zap.L().Info("fetch_service: rate clamped to max_limit",
+				zap.Int64("nas_id", n.ID), zap.String("name", name), zap.String("vendor_id", vendorID), zap.String("raw_rate", rate), zap.String("raw_max_limit", maxLimit),
+			)
+		}
+		// determine disabled status if Mikrotik reports disabled
+		status := "enabled"
+		if d, ok := m["disabled"]; ok {
+			ds := strings.ToLower(strings.TrimSpace(d))
+			if ds == "true" || ds == "1" || ds == "yes" || ds == "y" {
+				status = "disabled"
+			}
+		}
+
+		// vendorID already obtained above
+		// marshal params
+		paramsBytes, _ := json.Marshal(m)
+
+		var svc domain.NetService
+		var err error
+		if vendorID != "" {
+			err = a.gormDB.Where("nas_id = ? AND vendor_service_id = ?", n.ID, vendorID).First(&svc).Error
+		} else {
+			// fallback to name-based upsert when vendor id not available
+			err = a.gormDB.Where("nas_id = ? AND name = ?", n.ID, name).First(&svc).Error
+		}
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// create
+			svc = domain.NetService{
+				NasId:           n.ID,
+				VendorServiceId: vendorID,
+				Name:            name,
+				ServiceType:     "mikrotik.queue.simple",
+				Endpoint:        endpoint,
+				Rate:            rate,
+				MaxLimit:        maxLimit,
+				UploadKbps:      maxUpKbps,
+				DownloadKbps:    maxDownKbps,
+				RateUpKbps:      rateUpKbps,
+				RateDownKbps:    rateDownKbps,
+				Status:          status,
+				Params:          string(paramsBytes),
+				VendorCode:      n.VendorCode,
+				LastSeenAt:      &now,
+			}
+			if err := a.gormDB.Create(&svc).Error; err != nil {
+				zap.L().Error("failed to create NetService", zap.Error(err), zap.Int64("nas_id", n.ID), zap.String("name", name))
+				continue
+			}
+		} else if err == nil {
+			// update
+			svc.VendorServiceId = vendorID
+			svc.ServiceType = "mikrotik.queue.simple"
+			svc.Endpoint = endpoint
+			svc.Rate = rate
+			svc.MaxLimit = maxLimit
+			svc.UploadKbps = maxUpKbps
+			svc.DownloadKbps = maxDownKbps
+			svc.RateUpKbps = rateUpKbps
+			svc.RateDownKbps = rateDownKbps
+			svc.Status = status
+			svc.Params = string(paramsBytes)
+			svc.VendorCode = n.VendorCode
+			svc.LastSeenAt = &now
+			if err := a.gormDB.Save(&svc).Error; err != nil {
+				zap.L().Error("failed to update NetService", zap.Error(err), zap.Int64("nas_id", n.ID), zap.String("name", name))
+				continue
+			}
+		} else {
+			zap.L().Error("db error fetching NetService", zap.Error(err))
+			continue
+		}
+	}
+
+	zap.L().Info("RunFetchServices completed", zap.Int64("nas_id", n.ID), zap.Int("count", len(reply.Re)))
 	return nil
 }

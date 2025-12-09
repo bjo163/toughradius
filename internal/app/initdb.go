@@ -145,6 +145,13 @@ func (a *Application) checkSchedulers() {
 			Status:   "enabled",
 			Remark:   "Periodically probes NAS devices API (Mikrotik devices)",
 		},
+			{
+				Name:     "Fetch Services (Mikrotik)",
+				TaskType: "fetch_services",
+				Interval: 3600, // 1 hour
+				Status:   "enabled",
+				Remark:   "Periodically fetches Mikrotik simple-queue services",
+			},
 	}
 
 	for _, sched := range defaultSchedulers {

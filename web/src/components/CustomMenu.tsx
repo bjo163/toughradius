@@ -17,6 +17,7 @@ const menuItems = [
   { to: '/network/nodes', labelKey: 'menu.network_nodes', icon: <AccountTreeOutlinedIcon /> },
   { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
   { to: '/network/vendors', labelKey: 'menu.vendors', icon: <StorageOutlinedIcon /> },
+  { to: '/network/services', labelKey: 'menu.services', icon: <StorageOutlinedIcon /> },
   { to: '/network/schedulers', labelKey: 'menu.schedulers', icon: <ScheduleOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/radius/users', labelKey: 'menu.radius_users', icon: <PeopleAltOutlinedIcon /> },
   { to: '/radius/profiles', labelKey: 'menu.radius_profiles', icon: <SettingsSuggestOutlinedIcon /> },

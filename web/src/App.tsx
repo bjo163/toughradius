@@ -75,6 +75,7 @@ import {
   VendorEdit,
   VendorCreate,
 } from './resources/vendors';
+import { ServiceList } from './resources/services';
 
 const App = () => (
   <Admin
@@ -165,6 +166,12 @@ const App = () => (
       list={VendorList}
       edit={VendorEdit}
       create={VendorCreate}
+    />
+
+    {/* Discovered Services */}
+    <Resource
+      name="network/services"
+      list={ServiceList}
     />
 
     {/* Custom Routes */}

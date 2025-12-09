@@ -58,6 +58,7 @@ export const SchedulerList = () => {
             'accounting_sync': translate('scheduler.taskType.accountingSync', { _: 'Accounting Sync' }),
             'backup': translate('scheduler.taskType.backup', { _: 'Database Backup' }),
             'snmp_model': translate('scheduler.taskType.snmpModel', { _: 'SNMP Model Probe' }),
+            'fetch_services': translate('scheduler.taskType.fetchServices', { _: 'Fetch Services' }),
         };
 
         return (
@@ -149,6 +150,7 @@ const taskTypeChoices = [
     { id: 'accounting_sync', name: 'Accounting Sync' },
     { id: 'backup', name: 'Database Backup' },
     { id: 'snmp_model', name: 'SNMP Model Probe' },
+    { id: 'fetch_services', name: 'Fetch Services' },
 ];
 
 // Status choices

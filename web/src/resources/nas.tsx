@@ -592,6 +592,7 @@ const SNMPStatusField = () => {
   const notify = useNotify();
   const refresh = useRefresh();
   const [loading, setLoading] = useState(false);
+  const [svcLoading, setSvcLoading] = useState(false);
   if (!record) return null;
 
   if (record.snmp_state !== 'enabled') {
@@ -663,6 +664,32 @@ const SNMPStatusField = () => {
               </IconButton>
             </span>
           </Tooltip>
+          {/* Fetch services (Mikrotik) */}
+          {String(record.vendor_code) === '14988' && (
+            <Tooltip title="Fetch services now">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={async () => {
+                    if (!record || !record.id) return;
+                    setSvcLoading(true);
+                    try {
+                      await apiRequest(`/network/nas/${record.id}/fetch-services`, { method: 'POST' });
+                      notify('Fetch services triggered', { type: 'info' });
+                      refresh();
+                    } catch (err) {
+                      notify((err as Error)?.message || 'Fetch services failed', { type: 'warning' });
+                    } finally {
+                      setSvcLoading(false);
+                    }
+                  }}
+                  disabled={svcLoading}
+                >
+                  <ServerIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
         </Box>
       )}
     </Box>
