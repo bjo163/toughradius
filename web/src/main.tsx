@@ -1,3 +1,14 @@
+// Ensure a safe ResizeObserver exists early (before other libraries import it).
+// This prevents third-party libs (echarts-for-react / sensors) from capturing an undefined
+// ResizeObserver during module initialization which can cause `disconnect` errors on unmount.
+if (typeof window !== 'undefined' && !(window as any).ResizeObserver) {
+  (window as any).ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'

@@ -13,8 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import ReactECharts from 'echarts-for-react';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useTranslate } from 'react-admin';
 import { useApiQuery } from '../hooks/useApiQuery';
 
@@ -32,6 +31,44 @@ interface DashboardStats {
   traffic_24h: DashboardTrafficPoint[];
   profile_distribution: DashboardProfileSlice[];
 }
+
+// Lightweight ECharts wrapper to avoid echarts-for-react ResizeObserver/sensor issues.
+const EChartsWrapper = ({ option, style }: { option: any; style?: React.CSSProperties }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let chart: any = null;
+    let mounted = true;
+    let onResize: (() => void) | null = null;
+
+    const init = async () => {
+      try {
+        const echarts = await import('echarts');
+        if (!mounted || !ref.current) return;
+        chart = echarts.init(ref.current);
+        chart.setOption(option);
+        onResize = () => chart && chart.resize();
+        window.addEventListener('resize', onResize);
+      } catch (e) {
+        console.error('Failed to load echarts', e);
+      }
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      if (onResize) window.removeEventListener('resize', onResize);
+      if (chart) {
+        try {
+          chart.dispose();
+        } catch (e) {}
+      }
+    };
+  }, [option]);
+
+  return <div ref={ref} style={{ height: style?.height ?? 300, ...(style || {}) }} />;
+};
 
 interface DashboardAuthTrendPoint {
   date: string;
@@ -441,7 +478,7 @@ const Dashboard = () => {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 {translate('dashboard.auth_trend')}
               </Typography>
-              <ReactECharts option={authTrendOption} style={{ height: 320 }} />
+              <EChartsWrapper option={authTrendOption} style={{ height: 320 }} />
             </CardContent>
           </Card>
         </Grid>
@@ -452,7 +489,7 @@ const Dashboard = () => {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 {translate('dashboard.online_distribution')}
               </Typography>
-              <ReactECharts option={onlineDistributionOption} style={{ height: 320 }} />
+              <EChartsWrapper option={onlineDistributionOption} style={{ height: 320 }} />
             </CardContent>
           </Card>
         </Grid>
@@ -463,7 +500,7 @@ const Dashboard = () => {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                 {translate('dashboard.traffic_stats')}
               </Typography>
-              <ReactECharts option={trafficOption} style={{ height: 360 }} />
+              <EChartsWrapper option={trafficOption} style={{ height: 360 }} />
             </CardContent>
           </Card>
         </Grid>
