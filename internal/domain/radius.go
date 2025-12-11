@@ -35,6 +35,7 @@ type RadiusUser struct {
 	ID              int64     `json:"id,string" form:"id"`                              // Primary key ID
 	NodeId          int64     `json:"node_id,string" form:"node_id"`                    // Node ID
 	ProfileId       int64     `gorm:"index" json:"profile_id,string" form:"profile_id"` // RADIUS profile ID
+	Type            string    `gorm:"default:ppp" json:"type" form:"type"`
 	Realname        string    `json:"realname" form:"realname"`                         // Contact name
 	Email           string    `json:"email" form:"email"`                               // Email address
 	Mobile          string    `json:"mobile" form:"mobile"`                             // Contact phone

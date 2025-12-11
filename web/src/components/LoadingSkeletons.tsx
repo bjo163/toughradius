@@ -98,7 +98,6 @@ export const FormSkeleton = ({ sections = 3 }: { sections?: number }) => (
           mb: 3,
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 2,
         }}
       >
         <CardContent>
@@ -121,8 +120,8 @@ export const FormSkeleton = ({ sections = 3 }: { sections?: number }) => (
               ))}
             </Box>
           </Stack>
-        </CardContent>
-      </Card>
+    </CardContent>
+    </Card>
     ))}
 
     {/* Toolbar skeleton */}
@@ -148,8 +147,8 @@ export const ShowSkeleton = () => (
       </Box>
 
       {/* Main info card skeleton */}
-      <Card elevation={2}>
-        <CardContent>
+    <Card elevation={2}>
+      <CardContent>
           <Skeleton variant="text" width={150} height={32} sx={{ mb: 2 }} />
           <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2 }}>
             <Table>
@@ -167,14 +166,14 @@ export const ShowSkeleton = () => (
               </TableBody>
             </Table>
           </Box>
-        </CardContent>
-      </Card>
+    </CardContent>
+    </Card>
 
       {/* Two column cards skeleton */}
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
         {[...Array(2)].map((_, cardIndex) => (
-          <Card key={cardIndex} elevation={2}>
-            <CardContent>
+    <Card key={cardIndex} elevation={2}>
+      <CardContent>
               <Skeleton variant="text" width={120} height={28} sx={{ mb: 2 }} />
               <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2 }}>
                 <Table>
@@ -220,13 +219,13 @@ export const DashboardSkeleton = () => (
       }}
     >
       {[...Array(4)].map((_, i) => (
-        <Card key={i} elevation={1}>
-          <CardContent>
+      <Card key={i} elevation={1}>
+        <CardContent>
             <Skeleton variant="circular" width={40} height={40} sx={{ mb: 1 }} />
             <Skeleton variant="text" width={80} height={20} />
             <Skeleton variant="text" width={60} height={32} />
           </CardContent>
-        </Card>
+  </Card>
       ))}
     </Box>
 
@@ -244,7 +243,7 @@ export const DashboardSkeleton = () => (
             <Skeleton variant="text" width={150} height={28} sx={{ mb: 2 }} />
             <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
           </CardContent>
-        </Card>
+  </Card>
       ))}
     </Box>
   </Box>

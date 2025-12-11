@@ -73,6 +73,9 @@ func (s *demoSeeder) Run() error {
 		if err := s.seedProfiles(tx); err != nil {
 			return err
 		}
+		if err := s.seedProducts(tx); err != nil {
+			return err
+		}
 		if err := s.seedUsers(tx); err != nil {
 			return err
 		}
@@ -104,6 +107,38 @@ func (s *demoSeeder) cleanup(tx *gorm.DB) error {
 	}
 	if err := tx.Where("remark = ?", demoMarker).Delete(&domain.NetNode{}).Error; err != nil {
 		return err
+	}
+	// cleanup demo products
+	if err := tx.Where("name LIKE ?", "demo-%").Delete(&domain.Product{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *demoSeeder) seedProducts(tx *gorm.DB) error {
+	// create a small catalog of demo products
+	specs := []struct {
+		Name  string
+		Price float64
+	}{
+		{Name: "demo-widget-basic", Price: 9.99},
+		{Name: "demo-widget-pro", Price: 24.5},
+		{Name: "demo-service-annual", Price: 199.0},
+		{Name: "demo-addon-support", Price: 49.95},
+	}
+	for _, srec := range specs {
+		p := domain.Product{
+			Name:      srec.Name,
+			Price:     srec.Price,
+			Image:     "",
+			Type:      func() string { if srec.Name == "demo-service-annual" { return "service" }; return "consumable" }(),
+			Qty:       func() *int { if srec.Name == "demo-service-annual" { return nil }; v := 100; return &v }(),
+			CreatedAt: s.now,
+			UpdatedAt: s.now,
+		}
+		if err := tx.Where("name = ?", srec.Name).Assign(p).FirstOrCreate(&p).Error; err != nil {
+			return err
+		}
 	}
 	return nil
 }

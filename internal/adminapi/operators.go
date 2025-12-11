@@ -25,6 +25,7 @@ type operatorPayload struct {
 	Level    string `json:"level"`
 	Status   string `json:"status"`
 	Remark   string `json:"remark"`
+	PartnerId int64  `json:"partner_id"`
 }
 
 // Register operator management routes
@@ -272,6 +273,7 @@ func createOperator(c echo.Context) error {
 		Email:     payload.Email,
 		Level:     payload.Level,
 		Status:    status,
+		PartnerId: payload.PartnerId,
 		Remark:    payload.Remark,
 		LastLogin: time.Time{}, // Initialize to zero value
 		CreatedAt: time.Now(),
@@ -383,6 +385,9 @@ func updateOperator(c echo.Context) error {
 		if status == common.ENABLED || status == common.DISABLED {
 			operator.Status = status
 		}
+	}
+	if payload.PartnerId != 0 {
+		operator.PartnerId = payload.PartnerId
 	}
 	if payload.Remark != "" {
 		operator.Remark = payload.Remark

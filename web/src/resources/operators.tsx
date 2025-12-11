@@ -12,7 +12,6 @@ import {
   Create,
   Show,
   TopToolbar,
-  CreateButton,
   ExportButton,
   ListButton,
   SortButton,
@@ -28,7 +27,12 @@ import {
   useNotify,
   useListContext,
   RaRecord,
-  FunctionField
+  FunctionField,
+  ReferenceField,
+  ReferenceInput,
+  AutocompleteInput,
+  CreateButton,
+  downloadCSV,
 } from 'react-admin';
 import {
   Box,
@@ -44,8 +48,10 @@ import {
   useTheme,
   useMediaQuery,
   TextField as MuiTextField,
+  Autocomplete,
   alpha
 } from '@mui/material';
+import { apiRequest } from '../utils/apiClient';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   Security as SecurityIcon,
@@ -85,6 +91,7 @@ interface Operator extends RaRecord {
   realname?: string;
   email?: string;
   mobile?: string;
+  partner_id?: number;
   level?: 'super' | 'admin' | 'operator';
   status?: 'enabled' | 'disabled';
   remark?: string;
@@ -279,6 +286,7 @@ const OperatorSearchHeaderCard = () => {
   const translate = useTranslate();
   const { filterValues, setFilters, displayedFilters } = useListContext();
   const [localFilters, setLocalFilters] = useState<Record<string, string>>({});
+  const [partners, setPartners] = useState<Array<{ id: number; name: string }>>([]);
 
   useEffect(() => {
     const newLocalFilters: Record<string, string> = {};
@@ -291,6 +299,26 @@ const OperatorSearchHeaderCard = () => {
     }
     setLocalFilters(newLocalFilters);
   }, [filterValues]);
+
+  useEffect(() => {
+    // fetch partner list for autocomplete
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await apiRequest(`/system/partners?perPage=200`);
+        let items: Array<Record<string, unknown>> = [];
+        if (Array.isArray(res)) items = res as Array<Record<string, unknown>>;
+        else if (res && typeof res === 'object') {
+          const r = res as Record<string, unknown>;
+          items = (Array.isArray(r.data) ? (r.data as Array<Record<string, unknown>>) : Array.isArray(r.items) ? (r.items as Array<Record<string, unknown>>) : []);
+        }
+        if (mounted) setPartners(items.map(i => ({ id: Number(i['id']), name: String(i['name'] || '') })));
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const handleFilterChange = useCallback(
     (field: string, value: string) => {
@@ -327,6 +355,7 @@ const OperatorSearchHeaderCard = () => {
     { key: 'username', label: translate('resources.system/operators.fields.username', { _: 'Username' }) },
     { key: 'realname', label: translate('resources.system/operators.fields.realname', { _: 'Real Name' }) },
     { key: 'email', label: translate('resources.system/operators.fields.email', { _: 'Email' }) },
+    { key: 'partner_id', label: translate('resources.system/operators.fields.partner', { _: 'Partner' }) },
   ];
 
   return (
@@ -370,22 +399,43 @@ const OperatorSearchHeaderCard = () => {
             alignItems: 'end',
           }}
         >
-          {filterFields.map(field => (
-            <MuiTextField
-              key={field.key}
-              label={field.label}
-              value={localFilters[field.key] || ''}
-              onChange={e => handleFilterChange(field.key, e.target.value)}
-              onKeyPress={handleKeyPress}
-              size="small"
-              fullWidth
-              sx={{
-                '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-          ))}
+          {filterFields.map(field => {
+            if (field.key === 'partner_id') {
+              return (
+                <Autocomplete
+                  key={field.key}
+                  options={partners}
+                  getOptionLabel={(opt: { id: number; name: string } | null) => opt?.name || ''}
+                  value={partners.find(p => String(p.id) === String(localFilters['partner_id'])) || null}
+                  onChange={(_, v: { id: number; name: string } | null) => handleFilterChange('partner_id', v ? String(v.id) : '')}
+                  renderInput={(params) => (
+                    <MuiTextField
+                      {...params}
+                      label={field.label}
+                      size="small"
+                      fullWidth
+                    />
+                  )}
+                />
+              );
+            }
+            return (
+              <MuiTextField
+                key={field.key}
+                label={field.label}
+                value={localFilters[field.key] || ''}
+                onChange={e => handleFilterChange(field.key, e.target.value)}
+                onKeyPress={handleKeyPress}
+                size="small"
+                fullWidth
+                sx={{
+                  '& .MuiInputBase-root': {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+            );
+          })}
 
           {/* Action buttons */}
           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
@@ -505,14 +555,42 @@ const LevelField = () => {
 
 const OperatorListActions = () => {
   const translate = useTranslate();
+  const exporter = (records: Record<string, unknown>[]) => {
+    // include partner_id and partner_name if available on record
+    const data: Array<Record<string, unknown>> = records.map(r => ({
+      id: r.id,
+      username: r.username,
+      realname: r.realname,
+      email: r.email,
+      mobile: r.mobile,
+  partner_id: r.partner_id ?? '',
+  partner_name: ((r.partner as Record<string, unknown>)?.['name'] as string) || (r.partner_name as string) || '',
+      level: r.level,
+      status: r.status,
+      last_login: r.last_login,
+      created_at: r.created_at,
+    }));
+
+    if (!data || data.length === 0) {
+      downloadCSV('', 'operators');
+      return;
+    }
+
+    const keys = Object.keys(data[0]);
+  const escape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = keys.join(',');
+  const rows = data.map(d => keys.map(k => escape((d as Record<string, unknown>)[k])).join(','));
+    const csv = [header, ...rows].join('\n');
+    downloadCSV(csv, 'operators');
+  };
   return (
     <TopToolbar>
       <SortButton
         fields={['created_at', 'username', 'last_login']}
         label={translate('ra.action.sort', { _: 'Sort' })}
       />
-      <CreateButton />
-      <ExportButton />
+  <CreateButton />
+      <ExportButton exporter={exporter} />
     </TopToolbar>
   );
 };
@@ -671,6 +749,14 @@ const OperatorListContent = () => {
               source="email"
               label={translate('resources.system/operators.fields.email', { _: 'Email' })}
             />
+              <ReferenceField
+                label={translate('resources.system/operators.fields.partner', { _: 'Partner' })}
+                source="partner_id"
+                reference="system/partners"
+                link="show"
+              >
+                <TextField source="name" />
+              </ReferenceField>
             <TextField
               source="mobile"
               label={translate('resources.system/operators.fields.mobile', { _: 'Mobile' })}
@@ -803,6 +889,17 @@ export const OperatorEdit = () => {
                 fullWidth
                 size="small"
               />
+            </FieldGridItem>
+            <FieldGridItem>
+              <ReferenceInput
+                source="partner_id"
+                reference="system/partners"
+                label={translate('resources.system/operators.fields.partner', { _: 'Partner' })}
+                perPage={100}
+                allowEmpty
+              >
+                <AutocompleteInput optionText="name" size="small" />
+              </ReferenceInput>
             </FieldGridItem>
             <FieldGridItem span={{ xs: 1, sm: 2 }}>
               <TextInput 
@@ -941,6 +1038,17 @@ export const OperatorCreate = () => {
                 fullWidth
                 size="small"
               />
+            </FieldGridItem>
+            <FieldGridItem>
+              <ReferenceInput
+                source="partner_id"
+                reference="system/partners"
+                label={translate('resources.system/operators.fields.partner', { _: 'Partner' })}
+                perPage={100}
+                allowEmpty
+              >
+                <AutocompleteInput optionText="name" size="small" />
+              </ReferenceInput>
             </FieldGridItem>
             <FieldGridItem span={{ xs: 1, sm: 2 }}>
               <TextInput 
@@ -1099,6 +1207,11 @@ const OperatorHeaderCard = () => {
                   <Typography variant="body2" color="text.secondary">
                     {record.realname}
                   </Typography>
+                )}
+                {record.partner_id && (
+                  <ReferenceField source="partner_id" reference="system/partners" link="show">
+                    <TextField source="name" />
+                  </ReferenceField>
                 )}
               </Box>
               {record.username && (

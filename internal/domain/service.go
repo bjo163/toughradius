@@ -23,6 +23,8 @@ type NetService struct {
     Status       string  `gorm:"size:20;index;default:'enabled'" json:"status"` // enabled|disabled
     Params     string    `gorm:"type:text" json:"params"`     // raw JSON of other fields
     VendorCode string    `gorm:"size:20;index" json:"vendor_code"`
+    // Dynamic indicates whether this service/queue is dynamic (true) or static (false).
+    Dynamic    bool      `gorm:"default:false" json:"dynamic"`
     LastSeenAt *time.Time `json:"last_seen_at"`
     CreatedAt  time.Time `json:"created_at"`
     UpdatedAt  time.Time `json:"updated_at"`

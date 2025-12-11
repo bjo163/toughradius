@@ -22,6 +22,7 @@ func (SysConfig) TableName() string {
 
 type SysOpr struct {
 	ID        int64     `json:"id,string" form:"id"`
+	PartnerId int64     `gorm:"index" json:"partner_id" form:"partner_id"`
 	Realname  string    `json:"realname" form:"realname"`
 	Mobile    string    `json:"mobile" form:"mobile"`
 	Email     string    `json:"email" form:"email"`
@@ -38,6 +39,26 @@ type SysOpr struct {
 // TableName Specify table name
 func (SysOpr) TableName() string {
 	return "sys_opr"
+}
+
+// SysPartner represents a contact/partner record (like Odoo partner)
+type SysPartner struct {
+	ID        int64     `json:"id,string" form:"id"`
+	Name      string    `gorm:"index" json:"name" form:"name"`
+	Company   string    `json:"company" form:"company"`
+	Email     string    `json:"email" form:"email"`
+	Mobile    string    `json:"mobile" form:"mobile"`
+	Phone     string    `json:"phone" form:"phone"`
+	Address   string    `json:"address" form:"address"`
+	City      string    `json:"city" form:"city"`
+	Country   string    `json:"country" form:"country"`
+	Remark    string    `json:"remark" form:"remark"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (SysPartner) TableName() string {
+	return "sys_partner"
 }
 
 type SysOprLog struct {

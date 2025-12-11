@@ -73,6 +73,8 @@ func (ur *UserRequest) toRadiusUser() *domain.RadiusUser {
 		Vlanid2:  ur.Vlanid2,
 		IpAddr:   ur.IpAddr,
 		MacAddr:  ur.MacAddr,
+		// Default type to ppp if not provided
+		Type:     "ppp",
 		Remark:   ur.Remark,
 	}
 
@@ -180,6 +182,7 @@ func (ur *UserUpdateRequest) toRadiusUser() *domain.RadiusUser {
 		Domain:          ur.Domain,
 		ProfileLinkMode: ur.ProfileLinkMode,
 		Remark:          ur.Remark,
+		// No default here for update; keep empty to avoid overwriting existing value accidentally
 	}
 
 	// Handle profile_id

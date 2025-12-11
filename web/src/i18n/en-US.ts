@@ -19,6 +19,8 @@ const customEnglishMessages: TranslationMessages = {
   menu: {
     dashboard: 'Dashboard',
     radius: 'RADIUS Management',
+    crm: 'CRM',
+    isp: 'ISP',
     radius_users: 'Users Management',
     online_sessions: 'Online Sessions',
     accounting: 'Accounting Logs',
@@ -29,10 +31,12 @@ const customEnglishMessages: TranslationMessages = {
     schedulers: 'Task Schedulers',
     system: 'System Management',
     operators: 'Operators Management',
+  partners: 'Partners',
     system_config: 'System Configuration',
     dbms: 'Database Manager',
     account_settings: 'Account Settings',
   vendors: 'Vendors',
+    products: 'Products',
     services: 'Services',
   },
   appbar: {
@@ -80,6 +84,23 @@ const customEnglishMessages: TranslationMessages = {
     profile_unassigned: 'Unassigned Profile',
   },
   resources: {
+    'system/partners': {
+      name: 'Partner |||| Partners',
+      fields: {
+        id: 'ID',
+        name: 'Name',
+        company: 'Company',
+        email: 'Email',
+        mobile: 'Mobile',
+        phone: 'Phone',
+        address: 'Address',
+        city: 'City',
+        country: 'Country',
+        remark: 'Remark',
+        created_at: 'Created At',
+        updated_at: 'Updated At',
+      },
+    },
     'radius/users': {
       name: 'RADIUS User |||| RADIUS Users',
       fields: {
@@ -372,6 +393,19 @@ const customEnglishMessages: TranslationMessages = {
         no_remark: 'No remark',
       },
     },
+    'crm/products': {
+      name: 'Product |||| Products',
+      fields: {
+        id: 'ID',
+        name: 'Name',
+        price: 'Price',
+        created_at: 'Created At',
+        updated_at: 'Updated At',
+      },
+      helpers: {
+        price: 'Price in main currency units',
+      },
+    },
     'network/nodes': {
       name: 'Network Node |||| Network Nodes',
       fields: {
@@ -415,10 +449,22 @@ const customEnglishMessages: TranslationMessages = {
     },
       'network/services': {
         name: 'Services',
+        metrics: {
+          month_label: 'Month',
+          month_helper: 'Empty = last 24 hours',
+          clear_month: 'Clear month',
+          timeframe_label: 'Timeframe',
+          last_24_hours: 'Last 24 hours',
+          this_week: 'This week',
+          this_month: 'This month',
+          this_year: 'This year',
+          select_month: 'Select month',
+        },
       },
     'system/operators': {
       name: 'Operator |||| Operators',
       fields: {
+        partner: 'Partner',
         id: 'ID',
         username: 'Username',
         realname: 'Real Name',

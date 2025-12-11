@@ -12,7 +12,6 @@ import {
   Create,
   Show,
   TopToolbar,
-  CreateButton,
   ExportButton,
   SortButton,
   ReferenceField,
@@ -36,6 +35,7 @@ import {
   RaRecord,
   FunctionField
 } from 'react-admin';
+import { CreateButton } from 'react-admin';
 import { apiRequest } from '../utils/apiClient';
 import {
   Box,
@@ -54,6 +54,7 @@ import {
   alpha
 } from '@mui/material';
 import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import {
   Router as NasIcon,
   NetworkCheck as NetworkIcon,
@@ -763,7 +764,7 @@ const NASListActions = () => {
         fields={['created_at', 'name', 'ipaddr']}
         label={translate('ra.action.sort', { _: 'Sort' })}
       />
-      <CreateButton />
+  <CreateButton />
       <ExportButton />
     </TopToolbar>
   );
@@ -1773,6 +1774,17 @@ const NASDetails = () => {
               />
             </Box>
           </DetailSectionCard>
+              {/* Latency chart */}
+              <DetailSectionCard
+                title={translate('resources.network/nas.sections.latency.title', { _: 'Latency (ms)' })}
+                description={translate('resources.network/nas.sections.latency.description', { _: 'Recent latency to the device (ms)' })}
+                icon={<NetworkIcon />}
+                color="info"
+              >
+                <Box sx={{ height: 280 }}>
+                  <NASLatencyChart />
+                </Box>
+              </DetailSectionCard>
 
           {/* RADIUS configuration */}
           <DetailSectionCard
@@ -1954,6 +1966,92 @@ const NASDetails = () => {
         </Stack>
       </Box>
     </>
+  );
+};
+
+// Latency chart component for NAS details
+const NASLatencyChart = () => {
+  const record = useRecordContext<NASDevice>();
+  const [data, setData] = useState<Array<{ ts: number; latency: number }>>([]);
+  const [fetching, setFetching] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // lightweight ECharts wrapper (dynamic import)
+  useEffect(() => {
+    let chart: any = null;
+    let mounted = true;
+    let onResize: (() => void) | null = null;
+
+    const initChart = async (option: any) => {
+      try {
+        const echarts = await import('echarts');
+        if (!mounted || !containerRef.current) return;
+        chart = echarts.init(containerRef.current as HTMLDivElement);
+        chart.setOption(option);
+        onResize = () => chart && chart.resize();
+        window.addEventListener('resize', onResize);
+      } catch (e) {
+        console.error('Failed to load echarts', e);
+      }
+    };
+
+    if (data && data.length > 0) {
+      const option = {
+        tooltip: { trigger: 'axis', formatter: (params: any) => {
+          const p = params[0];
+          const d = new Date(p.data[0] * 1000);
+          return `${d.toLocaleString()}<br/>Latency: ${p.data[1]} ms`;
+        }},
+        xAxis: { type: 'time', boundaryGap: false },
+        yAxis: { type: 'value', name: 'ms' },
+        series: [{ type: 'line', smooth: true, areaStyle: {}, data: data.map(d => [d.ts * 1000, d.latency]), showSymbol: false }],
+        grid: { left: 40, right: 20, bottom: 40, top: 20 },
+      };
+      initChart(option);
+    }
+
+    return () => {
+      mounted = false;
+      if (onResize) window.removeEventListener('resize', onResize);
+      if (chart) {
+        try { chart.dispose(); } catch (e) { /* ignore */ }
+      }
+    };
+  }, [data]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!record || !record.id) return;
+      setFetching(true);
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const oneHourAgo = now - 3600;
+        let res = await apiRequest<{ ts: number; latency: number }[]>(`/network/nas/${record.id}/metrics?start=${oneHourAgo}&end=${now}`);
+        if (!mounted) return;
+        if (!res || res.length === 0) {
+          const oneDayAgo = now - 24 * 3600;
+          try {
+            const res24 = await apiRequest<{ ts: number; latency: number }[]>(`/network/nas/${record.id}/metrics?start=${oneDayAgo}&end=${now}`);
+            res = res24 || [];
+          } catch (e) { console.error('NAS metrics 24h fallback failed', e); }
+        }
+        setData(res || []);
+      } catch (e) {
+        console.error('Failed to fetch NAS metrics', e);
+      } finally {
+        if (mounted) setFetching(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [record]);
+
+  return (
+    <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+      {fetching && <Skeleton variant="rectangular" height={40} />}
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+    </Box>
   );
 };
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/talkincode/toughradius/v9/internal/domain"
@@ -359,6 +360,7 @@ func registerNASRoutes() {
 	webserver.ApiPOST("/network/nas/:id/probe-snmp", ProbeNAS)
 	webserver.ApiPOST("/network/nas/:id/probe-api", ProbeAPINAS)
 	webserver.ApiPOST("/network/nas/:id/fetch-services", FetchNASServices)
+	webserver.ApiGET("/network/nas/:id/metrics", GetNASMetrics)
 }
 
 // ProbeNAS triggers an immediate SNMP probe for the given NAS and returns result
@@ -413,4 +415,48 @@ func FetchNASServices(c echo.Context) error {
 
 	zap.L().Info("FetchNASServices finished", zap.Int64("nas_id", id))
 	return ok(c, map[string]interface{}{"message": "fetch scheduled/finished"})
+}
+
+// GetNASMetrics returns time-series latency metrics for a NAS device.
+// Query params: start=<unix|rfc3339>, end=<unix|rfc3339>
+func GetNASMetrics(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return fail(c, http.StatusBadRequest, "INVALID_ID", "Invalid NAS ID", nil)
+	}
+
+	// default: last 1 hour
+	now := time.Now()
+	start := now.Add(-1 * time.Hour)
+	end := now
+
+	if s := strings.TrimSpace(c.QueryParam("start")); s != "" {
+		if ts, e := strconv.ParseInt(s, 10, 64); e == nil {
+			start = time.Unix(ts, 0)
+		} else if t, e2 := time.Parse(time.RFC3339, s); e2 == nil {
+			start = t
+		}
+	}
+	if s := strings.TrimSpace(c.QueryParam("end")); s != "" {
+		if ts, e := strconv.ParseInt(s, 10, 64); e == nil {
+			end = time.Unix(ts, 0)
+		} else if t, e2 := time.Parse(time.RFC3339, s); e2 == nil {
+			end = t
+		}
+	}
+
+	var rows []domain.NetNasMetric
+	if err := GetDB(c).Where("nas_id = ? AND ts >= ? AND ts <= ?", id, start, end).Order("ts ASC").Find(&rows).Error; err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to query NAS metrics", err.Error())
+	}
+
+	res := make([]map[string]interface{}, 0, len(rows))
+	for _, r := range rows {
+		res = append(res, map[string]interface{}{
+			"ts":      r.Ts.Unix(),
+			"latency": r.Latency,
+		})
+	}
+
+	return ok(c, res)
 }

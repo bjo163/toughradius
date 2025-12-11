@@ -13,3 +13,6 @@ export * from './form';
 
 // Detail components
 export * from './detail';
+
+// UI primitives
+// UI primitives removed - using default MUI / react-admin components

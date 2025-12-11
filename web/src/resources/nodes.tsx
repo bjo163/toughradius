@@ -17,8 +17,9 @@ import {
   SimpleForm,
   ToolbarProps,
   TopToolbar,
-  ListButton,
   CreateButton,
+  ListButton,
+  
   ExportButton,
   useTranslate,
   useRefresh,
@@ -44,6 +45,7 @@ import {
   TextField as MuiTextField,
   alpha
 } from '@mui/material';
+// Using default MUI Card
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   Hub as NodeIcon,
@@ -100,14 +102,7 @@ const formatTimestamp = (value?: string | number): string => {
 const NodeListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   <Box sx={{ width: '100%' }}>
     {/* Search area skeleton */}
-    <Card
-      elevation={0}
-      sx={{
-        mb: 2,
-        borderRadius: 2,
-        border: theme => `1px solid ${theme.palette.divider}`,
-      }}
-    >
+    <Card sx={{ mb: 2 }}>
       <CardContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Skeleton variant="rectangular" width={24} height={24} />
@@ -128,18 +123,11 @@ const NodeListSkeleton = ({ rows = 10 }: { rows?: number }) => (
             <Skeleton key={i} variant="rectangular" height={40} sx={{ borderRadius: 1 }} />
           ))}
         </Box>
-      </CardContent>
-    </Card>
+    </CardContent>
+  </Card>
 
     {/* Table skeleton */}
-    <Card
-      elevation={0}
-      sx={{
-        borderRadius: 2,
-        border: theme => `1px solid ${theme.palette.divider}`,
-        overflow: 'hidden',
-      }}
-    >
+  <Card sx={{ overflow: 'hidden' }}>
       {/* Table header */}
       <Box
         sx={{
@@ -196,7 +184,7 @@ const NodeListSkeleton = ({ rows = 10 }: { rows?: number }) => (
           <Skeleton variant="circular" width={32} height={32} />
         </Box>
       </Box>
-    </Card>
+  </Card>
   </Box>
 );
 
@@ -452,7 +440,7 @@ const NodeListActions = () => {
         fields={['created_at', 'name']}
         label={translate('ra.action.sort', { _: 'Sort' })}
       />
-      <CreateButton />
+  <CreateButton />
       <ExportButton />
     </TopToolbar>
   );

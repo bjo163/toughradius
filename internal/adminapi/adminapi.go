@@ -17,7 +17,9 @@ func Init(appCtx app.AppContext) {
 	registerSettingsRoutes()
 	registerNodesRoutes()
 	registerOperatorsRoutes()
+	registerPartnersRoutes()
 	registerDbmsRoutes()
 	registerVendorRoutes()
 	registerServiceRoutes()
+	registerProductRoutes()
 }

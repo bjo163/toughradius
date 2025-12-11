@@ -19,6 +19,8 @@ const customChineseMessages: TranslationMessages = {
   menu: {
     dashboard: '控制台',
     radius: 'RADIUS管理',
+    crm: 'CRM',
+    isp: 'ISP',
     radius_users: '用户管理',
     online_sessions: '在线会话',
     accounting: '计费日志',
@@ -29,11 +31,13 @@ const customChineseMessages: TranslationMessages = {
     schedulers: '任务调度',
     system: '系统管理',
     operators: '操作员管理',
+  partners: '联系人',
     system_config: '系统配置',
     dbms: '数据库管理',
     account_settings: '账户设置',
-     vendors: '厂商',
-     services: '服务',
+    vendors: '厂商',
+    products: '产品',
+    services: '服务',
   },
   appbar: {
     switch_language: '切换语言',
@@ -83,6 +87,7 @@ const customChineseMessages: TranslationMessages = {
     'radius/users': {
       name: 'RADIUS用户 |||| RADIUS用户',
       fields: {
+        partner: '联系人',
         id: 'ID',
         username: '用户名',
         realname: '真实姓名',
@@ -372,6 +377,19 @@ const customChineseMessages: TranslationMessages = {
         no_remark: '无备注信息',
       },
     },
+    'crm/products': {
+      name: '产品 |||| 产品',
+      fields: {
+        id: 'ID',
+        name: '名称',
+        price: '价格',
+        created_at: '创建时间',
+        updated_at: '更新时间',
+      },
+      helpers: {
+        price: '以主货币单位表示的价格',
+      },
+    },
     'network/nodes': {
       name: '网络节点 |||| 网络节点',
       fields: {
@@ -487,6 +505,37 @@ const customChineseMessages: TranslationMessages = {
         realname_required: '真实姓名不能为空',
         level_required: '请选择权限级别',
         status_required: '请选择状态',
+      },
+    },
+  },
+  'system/partners': {
+    name: '联系人 |||| 联系人',
+    fields: {
+      id: 'ID',
+      name: '姓名',
+      company: '公司',
+      email: '邮箱',
+      mobile: '手机',
+      phone: '电话',
+      address: '地址',
+      city: '城市',
+      country: '国家',
+      remark: '备注',
+      created_at: '创建时间',
+      updated_at: '更新时间',
+    },
+    'network/services': {
+      name: '服务',
+      metrics: {
+        month_label: '月份',
+        month_helper: '为空 = 最近24小时',
+        clear_month: '清除月份',
+        timeframe_label: '时间范围',
+        last_24_hours: '最近24小时',
+        this_week: '本周',
+        this_month: '本月',
+        this_year: '今年',
+        select_month: '选择月份',
       },
     },
   },

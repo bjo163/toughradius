@@ -2,7 +2,7 @@ import type { SxProps, Theme } from '@mui/material';
 import { Layout, LayoutProps } from 'react-admin';
 
 import { CustomAppBar } from './CustomAppBar';
-import { CustomMenu } from './CustomMenu';
+import CustomMenu from './CustomMenu';
 
 type CustomLayoutProps = LayoutProps & { sx?: SxProps<Theme> };
 

@@ -143,6 +143,7 @@ func (a *Application) Init(cfg *config.AppConfig) {
 		a.checkDefaultPNode()
 		a.checkSchedulers()
 		a.checkVendors()
+		a.checkProducts()
 	}()
 
 	// Initialize the configuration manager
@@ -665,6 +666,29 @@ func (a *Application) RunFetchServices(nasID int64) error {
 		// marshal params
 		paramsBytes, _ := json.Marshal(m)
 
+	// We keep a stable ServiceType for Mikrotik simple queues. Do NOT overwrite
+	// it with vendor-provided 'type' values which may be boolean-like (e.g. "false").
+
+		// Determine if this service is dynamic by inspecting common vendor fields.
+		// Store the boolean in svc.Dynamic (added to domain.NetService) so the UI
+		// can show whether a service is dynamic without relying on free-text fields.
+		isDynamic := false
+		if d, ok := m["dynamic"]; ok {
+			ds := strings.ToLower(strings.TrimSpace(d))
+			if ds == "true" || ds == "1" || ds == "yes" || ds == "y" {
+				isDynamic = true
+			}
+		}
+		// some vendors may use 'type' to indicate dynamic/static in string form
+		if !isDynamic {
+			if t, ok := m["type"]; ok {
+				ts := strings.ToLower(strings.TrimSpace(t))
+				if ts == "dynamic" || ts == "true" || ts == "1" {
+					isDynamic = true
+				}
+			}
+		}
+
 		var svc domain.NetService
 		var err error
 		if vendorID != "" {
@@ -681,6 +705,7 @@ func (a *Application) RunFetchServices(nasID int64) error {
 				VendorServiceId: vendorID,
 				Name:            name,
 				ServiceType:     "mikrotik.queue.simple",
+				Dynamic:         isDynamic,
 				Endpoint:        endpoint,
 				Rate:            rate,
 				MaxLimit:        maxLimit,
@@ -697,10 +722,24 @@ func (a *Application) RunFetchServices(nasID int64) error {
 				zap.L().Error("failed to create NetService", zap.Error(err), zap.Int64("nas_id", n.ID), zap.String("name", name))
 				continue
 			}
+
+				// store metric point for created service
+				// store metric point for created service - latency-only (unknown at discovery)
+				// store initial metric point including parsed traffic rates when available
+				_ = a.gormDB.Create(&domain.NetServiceMetric{
+					ServiceId: svc.ID,
+					NasId:     n.ID,
+					Ts:        now,
+					Latency:   -1,
+					UpKbps:    rateUpKbps,
+					DownKbps:  rateDownKbps,
+				}).Error
 		} else if err == nil {
 			// update
 			svc.VendorServiceId = vendorID
+			// keep the stable mikrotik queue type and only update dynamic flag
 			svc.ServiceType = "mikrotik.queue.simple"
+			svc.Dynamic = isDynamic
 			svc.Endpoint = endpoint
 			svc.Rate = rate
 			svc.MaxLimit = maxLimit
@@ -716,6 +755,18 @@ func (a *Application) RunFetchServices(nasID int64) error {
 				zap.L().Error("failed to update NetService", zap.Error(err), zap.Int64("nas_id", n.ID), zap.String("name", name))
 				continue
 			}
+
+				// store metric point for updated service
+				// store metric point for updated service - latency-only (unknown at discovery)
+				// store metric point for updated service including parsed traffic rates
+				_ = a.gormDB.Create(&domain.NetServiceMetric{
+					ServiceId: svc.ID,
+					NasId:     n.ID,
+					Ts:        now,
+					Latency:   -1,
+					UpKbps:    rateUpKbps,
+					DownKbps:  rateDownKbps,
+				}).Error
 		} else {
 			zap.L().Error("db error fetching NetService", zap.Error(err))
 			continue

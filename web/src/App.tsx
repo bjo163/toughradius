@@ -66,6 +66,12 @@ import {
   OperatorShow,
 } from './resources/operators';
 import {
+  PartnerList,
+  PartnerEdit,
+  PartnerCreate,
+  PartnerShow,
+} from './resources/partners';
+import {
   SchedulerList,
   SchedulerEdit,
   SchedulerCreate,
@@ -76,6 +82,12 @@ import {
   VendorCreate,
 } from './resources/vendors';
 import { ServiceList, ServiceShow } from './resources/services';
+import {
+  ProductList,
+  ProductEdit,
+  ProductCreate,
+  ProductShow,
+} from './resources/products';
 
 const App = () => (
   <Admin
@@ -152,6 +164,15 @@ const App = () => (
       show={OperatorShow}
     />
 
+    {/* Partners (contacts) */}
+    <Resource
+      name="system/partners"
+      list={PartnerList}
+      edit={PartnerEdit}
+      create={PartnerCreate}
+      show={PartnerShow}
+    />
+
     {/* Scheduler Management */}
     <Resource
       name="network/schedulers"
@@ -173,6 +194,15 @@ const App = () => (
       name="network/services"
       list={ServiceList}
       show={ServiceShow}
+    />
+
+    {/* Products (simple) */}
+    <Resource
+      name="crm/products"
+      list={ProductList}
+      edit={ProductEdit}
+      create={ProductCreate}
+      show={ProductShow}
     />
 
     {/* Custom Routes */}

@@ -13,7 +13,6 @@ import {
     EditButton,
     DeleteButton,
     TopToolbar,
-    CreateButton,
     ExportButton,
     useTranslate,
     Labeled,
@@ -21,6 +20,7 @@ import {
     RaRecord,
 } from 'react-admin';
 import { Box, Chip, Typography, Button } from '@mui/material';
+import { CreateButton } from 'react-admin';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -34,8 +34,6 @@ const ListActions = () => (
         <ExportButton />
     </TopToolbar>
 );
-
-// Scheduler List
 export const SchedulerList = () => {
     const translate = useTranslate();
 

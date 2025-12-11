@@ -20,7 +20,6 @@ import {
   ToolbarProps,
   TopToolbar,
   ListButton,
-  CreateButton,
   ExportButton,
   SortButton,
   useTranslate,
@@ -30,6 +29,7 @@ import {
   RaRecord,
   FunctionField
 } from 'react-admin';
+import { CreateButton } from 'react-admin';
 import {
   Box,
   Chip,
@@ -498,7 +498,7 @@ const ProfileListActions = () => {
         fields={['created_at', 'name', 'up_rate', 'down_rate']}
         label={translate('ra.action.sort', { _: 'Sort' })}
       />
-      <CreateButton />
+  <CreateButton />
       <ExportButton />
     </TopToolbar>
   );

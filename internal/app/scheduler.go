@@ -83,6 +83,13 @@ func (a *Application) runLatencyCheckScheduler(sched *domain.NetScheduler) {
 				zap.L().Error("failed to update NAS latency", zap.String("ip", n.Ipaddr), zap.Error(err))
 				return
 			}
+
+			// Persist time-series NAS latency point
+			_ = a.gormDB.Create(&domain.NetNasMetric{
+				NasId:   n.ID,
+				Ts:      time.Now(),
+				Latency: int64(latency),
+			}).Error
 			zap.L().Info("NAS latency updated", zap.String("ip", n.Ipaddr), zap.Int("latency", latency))
 		}(nas)
 	}

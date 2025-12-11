@@ -201,3 +201,27 @@ func (a *Application) checkVendors() {
 		}
 	}
 }
+
+// checkProducts initializes default CRM products
+func (a *Application) checkProducts() {
+	defaultProducts := []domain.Product{
+		{Name: "demo-widget-basic", Price: 9.99, Image: "", Type: "consumable", Qty: func() *int { v := 100; return &v }()},
+		{Name: "demo-widget-pro", Price: 24.5, Image: "", Type: "consumable", Qty: func() *int { v := 50; return &v }()},
+		{Name: "demo-service-annual", Price: 199.0, Image: "", Type: "service", Qty: nil},
+		{Name: "demo-addon-support", Price: 49.95, Image: "", Type: "consumable", Qty: func() *int { v := 200; return &v }()},
+	}
+
+	for _, p := range defaultProducts {
+		var count int64
+		a.gormDB.Model(&domain.Product{}).Where("name = ?", p.Name).Count(&count)
+		if count == 0 {
+			p.CreatedAt = time.Now()
+			p.UpdatedAt = time.Now()
+			if err := a.gormDB.Create(&p).Error; err != nil {
+				zap.L().Error("failed to create default product", zap.String("name", p.Name), zap.Error(err))
+			} else {
+				zap.L().Info("initialized default product", zap.String("name", p.Name))
+			}
+		}
+	}
+}

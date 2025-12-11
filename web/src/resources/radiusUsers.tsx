@@ -24,7 +24,6 @@ import {
   ReferenceField,
   TopToolbar,
   ListButton,
-  CreateButton,
   ExportButton,
   useTranslate,
   useRefresh,
@@ -34,6 +33,7 @@ import {
   RaRecord,
   FunctionField
 } from 'react-admin';
+import { CreateButton } from 'react-admin';
 import {
   Box,
   Chip,
@@ -857,7 +857,7 @@ const UserListActions = () => {
         fields={['created_at', 'expire_time', 'username']}
         label={translate('ra.action.sort', { _: 'Sort' })}
       />
-      <CreateButton />
+  <CreateButton />
       <ExportButton />
     </TopToolbar>
   );
@@ -1090,6 +1090,21 @@ export const RadiusUserEdit = () => {
               />
             </FieldGridItem>
             <FieldGridItem>
+              <SelectInput
+                source="type"
+                label="Type"
+                choices={[
+                  { id: 'ppp', name: 'Default PPP' },
+                  { id: 'static', name: 'Static' },
+                  { id: 'hotspot', name: 'Hotspot' },
+                  { id: 'access', name: 'Auth Access' },
+                ]}
+                helperText="Select account type"
+                fullWidth
+                size="small"
+              />
+            </FieldGridItem>
+            <FieldGridItem>
               <TextInput
                 source="password"
                 label="Password"
@@ -1273,6 +1288,22 @@ export const RadiusUserCreate = () => (
               validate={[required(), minLength(6), maxLength(128)]}
               helperText="6-128 character password"
               autoComplete="new-password"
+              fullWidth
+              size="small"
+            />
+          </FieldGridItem>
+          <FieldGridItem>
+            <SelectInput
+              source="type"
+              label="Type"
+              defaultValue="ppp"
+              choices={[
+                { id: 'ppp', name: 'Default PPP' },
+                { id: 'static', name: 'Static' },
+                { id: 'hotspot', name: 'Hotspot' },
+                { id: 'access', name: 'Auth Access' },
+              ]}
+              helperText="Select account type"
               fullWidth
               size="small"
             />

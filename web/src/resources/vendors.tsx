@@ -10,15 +10,15 @@ import {
   EditButton,
   DeleteButton,
   TopToolbar,
-  CreateButton,
   ExportButton,
   useTranslate,
 } from 'react-admin';
+import { CreateButton } from 'react-admin';
 import { Box } from '@mui/material';
 
 const ListActions = () => (
   <TopToolbar>
-    <CreateButton />
+  <CreateButton />
     <ExportButton />
   </TopToolbar>
 );

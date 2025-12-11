@@ -13,15 +13,15 @@ import {
   SimpleShowLayout,
   FilterButton,
   TopToolbar,
-  CreateButton,
   ExportButton,
 } from 'react-admin';
+import { CreateButton } from 'react-admin';
 
 // System settings list toolbar
 const SettingsListActions = () => (
   <TopToolbar>
     <FilterButton />
-    <CreateButton />
+  <CreateButton />
     <ExportButton />
   </TopToolbar>
 );
