@@ -73,6 +73,14 @@ func createPartner(c echo.Context) error {
     if strings.TrimSpace(payload.Name) == "" {
         return fail(c, http.StatusBadRequest, "MISSING_NAME", "Partner name is required", nil)
     }
+    // ensure mobile/phone uniqueness
+    if payload.Mobile != "" {
+        var dup domain.SysPartner
+        if err := GetDB(c).Where("mobile = ? OR phone = ?", payload.Mobile, payload.Mobile).First(&dup).Error; err == nil {
+            return fail(c, http.StatusConflict, "DUPLICATE_PARTNER", "Partner with this phone/mobile already exists", nil)
+        }
+    }
+
     p := domain.SysPartner{
         ID:        common.UUIDint64(),
         Name:      strings.TrimSpace(payload.Name),
@@ -119,9 +127,18 @@ func updatePartner(c echo.Context) error {
         updates["email"] = payload.Email
     }
     if payload.Mobile != "" {
+        // ensure new mobile value is not used by another partner
+        var dup domain.SysPartner
+        if err := GetDB(c).Where("(mobile = ? OR phone = ?) AND id != ?", payload.Mobile, payload.Mobile, id).First(&dup).Error; err == nil {
+            return fail(c, http.StatusConflict, "DUPLICATE_PARTNER", "Another partner with this phone/mobile already exists", nil)
+        }
         updates["mobile"] = payload.Mobile
     }
     if payload.Phone != "" {
+        var dup domain.SysPartner
+        if err := GetDB(c).Where("(mobile = ? OR phone = ?) AND id != ?", payload.Phone, payload.Phone, id).First(&dup).Error; err == nil {
+            return fail(c, http.StatusConflict, "DUPLICATE_PARTNER", "Another partner with this phone/mobile already exists", nil)
+        }
         updates["phone"] = payload.Phone
     }
     if payload.Address != "" {
