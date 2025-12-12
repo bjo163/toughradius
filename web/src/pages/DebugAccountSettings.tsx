@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNotify } from 'react-admin';
+import { apiRequest } from '../utils/apiClient';
 import {
   Card,
   CardContent,
@@ -48,45 +49,14 @@ export default function DebugAccountSettings() {
   const testAPI = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        notify('没有找到认证令牌', { type: 'error' });
-        return;
-      }
-      
-      console.log('Testing API call...');
-      const response = await fetch('/api/v1/system/operators/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', errorText);
-        notify(`API调用失败: ${response.status} ${response.statusText}`, { type: 'error' });
-        return;
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest<unknown>('/system/operators/me', { method: 'GET' });
       console.log('API Response:', result);
-      
-      if (result.success) {
-        notify('API调用成功');
-        setDebugInfo({
-          ...debugInfo,
-          apiResponse: result,
-          lastApiCall: new Date().toISOString()
-        });
-      } else {
-        notify(`API返回错误: ${result.message}`, { type: 'error' });
-      }
-      
+      notify('API调用成功');
+      setDebugInfo({
+        ...debugInfo,
+        apiResponse: result as Record<string, unknown>,
+        lastApiCall: new Date().toISOString()
+      });
     } catch (error) {
       console.error('API Call Error:', error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';

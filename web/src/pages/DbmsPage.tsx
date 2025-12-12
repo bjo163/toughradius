@@ -50,7 +50,7 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useNotify, useTranslate } from 'react-admin';
-import { apiRequest } from '../utils/apiClient';
+import { apiRequest, authFetch } from '../utils/apiClient';
 
 // ============================================================================
 // Types
@@ -237,24 +237,17 @@ export const DbmsPage: React.FC = () => {
   const dataQuery = useQuery<{ data: RowData[]; total: number }>({
     queryKey: DBMS_DATA_KEY(selectedTable, page, rowsPerPage),
     queryFn: async () => {
-      const response = await fetch(
-        `/api/v1/dbms/tables/${selectedTable}?page=${page + 1}&pageSize=${rowsPerPage}&_sort=id&_order=DESC`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Accept': 'application/json',
-          },
+        const url = `/dbms/tables/${selectedTable}?page=${page + 1}&pageSize=${rowsPerPage}&_sort=id&_order=DESC`;
+        const response = await authFetch(url, { method: 'GET' });
+        if (!response.ok) throw new Error('Failed to fetch data');
+        const contentRange = response.headers.get('Content-Range');
+        let total = 0;
+        if (contentRange) {
+          const match = contentRange.match(/\d+-\d+\/(\d+)/);
+          if (match) total = parseInt(match[1], 10);
         }
-      );
-      if (!response.ok) throw new Error('Failed to fetch data');
-      const contentRange = response.headers.get('Content-Range');
-      let total = 0;
-      if (contentRange) {
-        const match = contentRange.match(/\d+-\d+\/(\d+)/);
-        if (match) total = parseInt(match[1], 10);
-      }
-      const data = await response.json();
-      return { data: data || [], total };
+        const data = await response.json().catch(() => []);
+        return { data: data || [], total };
     },
     enabled: !!selectedTable,
     staleTime: 10 * 1000,
@@ -565,16 +558,10 @@ export const DbmsPage: React.FC = () => {
   }, [dropColumnMutation]);
 
   const handleBackupDatabase = useCallback(() => {
-    const token = localStorage.getItem('token');
-    const url = `/api/v1/dbms/backup`;
+  const url = `/api/v1/dbms/backup`;
     
     // Create a temporary link to trigger download
-    fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    })
+    authFetch(url, { method: 'GET' })
       .then((response) => {
         if (!response.ok) throw new Error('Backup failed');
         return response.blob();

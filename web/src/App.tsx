@@ -1,11 +1,12 @@
 import { Admin, Resource, CustomRoutes } from 'react-admin';
-import { Route } from 'react-router-dom';
+import { Route, Navigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { dataProvider } from './providers/dataProvider';
 import { authProvider } from './providers/authProvider';
 import { i18nProvider } from './i18n';
 import Dashboard from './pages/Dashboard';
 import AccountSettings from './pages/AccountSettings';
+import { WhatsAppList, WhatsAppShow } from './resources/whatsapp';
 import { SystemConfigPage } from './pages/SystemConfigPage';
 import { DbmsPage } from './pages/DbmsPage';
 import { LoginPage } from './pages/LoginPage';
@@ -205,9 +206,13 @@ const App = () => (
       show={ProductShow}
     />
 
+  {/* WhatsApp device management - modern resource-style page */}
+  <Resource name="whatsapp/devices" list={WhatsAppList} show={WhatsAppShow} />
+
     {/* Custom Routes */}
     <CustomRoutes>
       <Route path="/account/settings" element={<AccountSettings />} />
+  <Route path="/whatsapp" element={<Navigate to="/whatsapp/devices" replace />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
       <Route path="/system/dbms" element={<DbmsPage />} />
     </CustomRoutes>

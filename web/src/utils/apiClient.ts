@@ -69,6 +69,10 @@ export const extractTotal = (payload: unknown): number => {
 export const httpClient = (url: string, options: fetchUtils.Options = {}) =>
   fetchUtils.fetchJson(normalizePath(url), withAuth(options));
 
+// Returns the raw Response but with Authorization and other headers applied.
+export const authFetch = (url: string, init: RequestInit = {}) =>
+  fetch(normalizePath(url), withAuth(init));
+
 export class ApiError extends Error {
   status: number;
   body: unknown;

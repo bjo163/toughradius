@@ -14,6 +14,8 @@ import (
 	"github.com/talkincode/toughradius/v9/internal/app"
 	"github.com/talkincode/toughradius/v9/internal/radiusd"
 	"github.com/talkincode/toughradius/v9/internal/webserver"
+	"github.com/talkincode/toughradius/v9/internal/whatsapp"
+	"go.uber.org/zap"
 	"github.com/talkincode/toughradius/v9/pkg/common"
 	"golang.org/x/sync/errgroup"
 
@@ -89,6 +91,18 @@ func main() {
 		adminapi.Init(application)
 		return webserver.Listen(application)
 	})
+
+	// Initialize WhatsApp service (optional) and run in background if configured
+	// This uses whatsmeow to connect via QR and persist session to workdir
+	waSvc, waErr := whatsapp.New(application)
+	if waErr != nil {
+		zap.L().Warn("whatsapp: failed to initialize service", zap.Error(waErr))
+	} else {
+		g.Go(func() error {
+			ctx := context.Background()
+			return waSvc.Start(ctx)
+		})
+	}
 
 	// Initialize RADIUS service with dependency injection
 	radiusService := radiusd.NewRadiusService(application)

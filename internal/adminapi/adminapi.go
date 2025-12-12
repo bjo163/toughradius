@@ -22,4 +22,5 @@ func Init(appCtx app.AppContext) {
 	registerVendorRoutes()
 	registerServiceRoutes()
 	registerProductRoutes()
+	registerWhatsAppRoutes()
 }

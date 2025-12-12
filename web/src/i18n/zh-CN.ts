@@ -35,6 +35,7 @@ const customChineseMessages: TranslationMessages = {
     system_config: '系统配置',
     dbms: '数据库管理',
     account_settings: '账户设置',
+  whatsapp: 'WhatsApp',
     vendors: '厂商',
     products: '产品',
     services: '服务',

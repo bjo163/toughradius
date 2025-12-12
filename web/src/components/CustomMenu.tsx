@@ -4,6 +4,7 @@ import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SensorsOutlinedIcon from '@mui/icons-material/SensorsOutlined';
 import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import SettingsSuggestOutlinedIcon from '@mui/icons-material/SettingsSuggestOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
@@ -63,6 +64,7 @@ const menuGroups: MenuGroup[] = [
       { to: '/system/dbms', labelKey: 'menu.dbms', icon: <StorageOutlinedIcon />, permissions: ['super'] },
       { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
       { to: '/system/partners', labelKey: 'menu.partners', icon: <ContactsOutlinedIcon />, permissions: ['super', 'admin'] },
+      { to: '/whatsapp/devices', labelKey: 'menu.whatsapp', icon: <ChatBubbleOutlineIcon />, permissions: ['super', 'admin'] },
     ],
   },
 ];
@@ -77,7 +79,7 @@ export default function CustomMenu(props: MenuProps) {
     try {
       const saved = localStorage.getItem('tough_menu_open_groups');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { /* ignore read error */ }
     const init: Record<string, boolean> = {};
     menuGroups.forEach((g) => {
       init[g.key] = true; // default expanded
@@ -88,7 +90,7 @@ export default function CustomMenu(props: MenuProps) {
   const toggleGroup = (key: string) => {
     setOpenGroups((s) => {
       const next = { ...s, [key]: !s[key] };
-      try { localStorage.setItem('tough_menu_open_groups', JSON.stringify(next)); } catch (e) {}
+      try { localStorage.setItem('tough_menu_open_groups', JSON.stringify(next)); } catch (e) { /* ignore write error */ }
       return next;
     });
   };

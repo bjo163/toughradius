@@ -27,6 +27,8 @@
     "react": "^19.2.1",
     "react-admin": "^5.0.0",
     "react-dom": "^19.2.1"
+    ,
+    "qrcode": "^1.5.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

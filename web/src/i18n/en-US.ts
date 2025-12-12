@@ -35,6 +35,7 @@ const customEnglishMessages: TranslationMessages = {
     system_config: 'System Configuration',
     dbms: 'Database Manager',
     account_settings: 'Account Settings',
+    whatsapp: 'WhatsApp',
   vendors: 'Vendors',
     products: 'Products',
     services: 'Services',

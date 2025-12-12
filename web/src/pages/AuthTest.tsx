@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNotify } from 'react-admin';
+import { apiRequest } from '../utils/apiClient';
 import {
   Card,
   CardContent,
@@ -24,29 +25,18 @@ export default function AuthTest() {
   const testLogin = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: 'admin',
-          password: 'admin',
-        }),
-      });
-
-      const data = await response.json();
+      const data = await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ username: 'admin', password: 'admin' }) });
       console.log('Login response:', data);
-      
-      if (response.ok && data.data && !data.error) {
-        const newToken = data.data.token;
+      const payload = (data && (data as any).data) ? (data as any).data : data;
+      if (payload && payload.token) {
+        const newToken = payload.token;
         localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
+        localStorage.setItem('user', JSON.stringify(payload.user || {}));
         setToken(newToken);
         setResult(`登录成功，获得token: ${newToken.substring(0, 20)}...`);
         notify('登录成功', { type: 'success' });
       } else {
-        setResult(`登录失败: ${data.message || '未知错误'}`);
+        setResult(`登录失败: ${JSON.stringify(data)}`);
         notify('登录失败', { type: 'error' });
       }
     } catch (error) {
@@ -67,27 +57,10 @@ export default function AuthTest() {
     try {
       console.log('Testing with token:', token.substring(0, 20) + '...');
       
-      const response = await fetch('/api/v1/system/operators/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('API Response status:', response.status);
-      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      const data = await response.json();
+      const data = await apiRequest('/system/operators/me', { method: 'GET' });
       console.log('API Response data:', data);
-      
-      if (response.ok && data.data && !data.error) {
-        setResult(`API调用成功: ${JSON.stringify(data.data, null, 2)}`);
-        notify('API调用成功', { type: 'success' });
-      } else {
-        setResult(`API调用失败: ${data.message || '未知错误'}`);
-        notify('API调用失败', { type: 'error' });
-      }
+      setResult(`API调用成功: ${JSON.stringify(data, null, 2)}`);
+      notify('API调用成功', { type: 'success' });
     } catch (error) {
       console.error('API error:', error);
       setResult(`API异常: ${error instanceof Error ? error.message : '未知错误'}`);

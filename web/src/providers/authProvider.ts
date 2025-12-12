@@ -1,46 +1,25 @@
 import { AuthProvider } from 'react-admin';
 import { clearAuthStorage } from '../utils/storage';
+import { apiRequest } from '../utils/apiClient';
 
 export const authProvider: AuthProvider = {
   // 登录
   login: async ({ username, password }) => {
-    const request = new Request('/api/v1/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-      headers: new Headers({ 'Content-Type': 'application/json' }),
-    });
-    
     try {
-      const response = await fetch(request);
-      const result = await response.json();
-      
-      if (response.status < 200 || response.status >= 300) {
-        // 返回后端的错误消息
-        const errorMessage = result?.message || result?.error || response.statusText || '登录失败';
-        throw new Error(errorMessage);
-      }
-      
-      const auth = result.data || result; // 兼容包装格式
-      
-      if (!auth.token) {
+      const resp = await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+      const auth = (resp && (resp as any).data) ? (resp as any).data : resp;
+      if (!auth || !auth.token) {
         throw new Error('登录响应中缺少 token');
       }
-      
       // 同步存储所有认证信息
       localStorage.setItem('token', auth.token);
       localStorage.setItem('username', username);
       localStorage.setItem('permissions', JSON.stringify(auth.permissions || []));
-      
-      // 存储完整的用户信息
       if (auth.user) {
         localStorage.setItem('user', JSON.stringify(auth.user));
       }
-      
-      // 确保数据已经写入 localStorage 后再继续
       await new Promise(resolve => setTimeout(resolve, 0));
-      
       console.log('登录成功，token 已保存:', localStorage.getItem('token') ? '✓' : '✗');
-      
       return Promise.resolve();
     } catch (error) {
       console.error('登录错误:', error);

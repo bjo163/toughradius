@@ -15,6 +15,7 @@ var Tables = []interface{}{
 	&NetVendor{},
 	&Product{},
 	&NetScheduler{},
+    &WhatsAppDevice{},
 	// Radius
 	&RadiusAccounting{},
 	&RadiusOnline{},
