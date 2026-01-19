@@ -10,8 +10,8 @@ services:
     restart: unless-stopped
     ports:
       - "1816:1816/tcp"    # Web/Admin API
-      - "1812:1812/udp"    # RADIUS Authentication
-      - "1813:1813/udp"    # RADIUS Accounting
+      - "51812:1812/udp"    # RADIUS Authentication
+      - "51813:1813/udp"    # RADIUS Accounting
       - "2083:2083/tcp"    # RadSec (RADIUS over TLS)
     environment:
       # ============================================
@@ -65,8 +65,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     # Expose port to host for debugging or external access
-    # ports:
-    #   - "5432:5432"
+    ports:
+       - "15432:5432"
 
 volumes:
   postgres_data:
