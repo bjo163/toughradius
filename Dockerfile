@@ -43,4 +43,9 @@ RUN chmod +x /usr/local/bin/toughradius
 # 2083 - RadSec (RADIUS over TLS)
 EXPOSE 1816/tcp 1812/udp 1813/udp 2083/tcp
 
-ENTRYPOINT ["/usr/local/bin/toughradius"]
+# Create working directory
+WORKDIR /data
+
+# Use CMD instead of ENTRYPOINT to allow easier override
+# If -c flag is not provided, will use default toughradius.yml
+CMD ["/usr/local/bin/toughradius"]
