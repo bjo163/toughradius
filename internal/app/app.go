@@ -30,6 +30,7 @@ type Application struct {
 	configManager *ConfigManager
 	profileCache  *ProfileCache
 	qosService    interface{} // QoS sync service (initialized in initJob)
+}
 
 // Ensure Application implements all interfaces
 var (
