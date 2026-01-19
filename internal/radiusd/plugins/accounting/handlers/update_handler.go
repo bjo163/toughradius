@@ -65,7 +65,7 @@ func (h *UpdateHandler) Handle(acctCtx *accounting.AccountingContext) error {
 			NasId:             acctCtx.NAS.Identifier,
 			NasAddr:           acctCtx.NAS.Ipaddr,
 			NasPaddr:          acctCtx.NASIP,
-			SessionTimeout:    int64(rfc2865.SessionTimeout_Get(acctCtx.Request.Packet)),
+			SessionTimeout:    int(rfc2865.SessionTimeout_Get(acctCtx.Request.Packet)),
 			FramedIpaddr:      common.IfEmptyStr(rfc2865.FramedIPAddress_Get(acctCtx.Request.Packet).String(), common.NA),
 			FramedNetmask:     common.IfEmptyStr(rfc2865.FramedIPNetmask_Get(acctCtx.Request.Packet).String(), common.NA),
 			MacAddr:           vendorReq.MacAddr,
