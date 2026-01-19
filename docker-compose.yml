@@ -53,8 +53,6 @@ services:
       - toughradius_data:/data
     depends_on:
       - db
-    networks:
-      - toughradius-net
 
   db:
     image: postgres:15-alpine
@@ -69,15 +67,9 @@ services:
     # Expose port to host for debugging or external access
     # ports:
     #   - "5432:5432"
-    networks:
-      - toughradius-net
 
 volumes:
   postgres_data:
     driver: local
   toughradius_data:
     driver: local
-
-networks:
-  toughradius-net:
-    driver: bridge

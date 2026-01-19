@@ -121,7 +121,25 @@ func (a *Application) Init(cfg *config.AppConfig) {
 		cfg.Database.Type = "postgres"
 	}
 	a.gormDB = getDatabase(cfg.Database, cfg.System.Workdir)
-	zap.S().Infof("Database connection successful, type: %s", cfg.Database.Type)
+	// Log database connection details based on the type
+	switch strings.ToLower(cfg.Database.Type) {
+	case "sqlite":
+		dbPath := cfg.Database.Name
+		if dbPath != ":memory:" && !path.IsAbs(dbPath) {
+			dbPath = path.Join(cfg.System.Workdir, "data", dbPath)
+		}
+		zap.S().Infof("Database connected: type=%s, path=%s", cfg.Database.Type, dbPath)
+	case "postgres", "postgresql":
+		dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
+			cfg.Database.Host,
+			cfg.Database.Port,
+			cfg.Database.User,
+			cfg.Database.Name,
+		)
+		zap.S().Infof("Database connected: type=%s, url=%s", cfg.Database.Type, dsn)
+	default:
+		zap.S().Infof("Database connection successful, type: %s", cfg.Database.Type)
+	}
 
 	// Ensure database schema is migrated before loading configs
 	if err := a.MigrateDB(false); err != nil {
