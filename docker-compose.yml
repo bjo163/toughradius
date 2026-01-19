@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  toughradius:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toughradius:latest
+    container_name: toughradius
+    restart: unless-stopped
+    ports:
+      - "1816:1816/tcp"    # Web/Admin API
+      - "1812:1812/udp"    # RADIUS Authentication
+      - "1813:1813/udp"    # RADIUS Accounting
+      - "2083:2083/tcp"    # RadSec (RADIUS over TLS)
+    environment:
+      # ============================================
+      # System & Web Configuration
+      # ============================================
+      - TOUGHRADIUS_SYSTEM_WORKER_DIR=/data
+      - TOUGHRADIUS_SYSTEM_DEBUG=true
+      - TOUGHRADIUS_WEB_HOST=0.0.0.0
+      - TOUGHRADIUS_WEB_PORT=1816
+      - TOUGHRADIUS_WEB_SECRET=9b6de5cc-0731-1203-xxtt-0f568ac9da37
+
+      # ============================================
+      # Database Configuration (PostgreSQL)
+      # ============================================
+      - TOUGHRADIUS_DB_TYPE=postgres
+      - TOUGHRADIUS_DB_HOST=db
+      - TOUGHRADIUS_DB_PORT=5432
+      - TOUGHRADIUS_DB_NAME=toughradius
+      - TOUGHRADIUS_DB_USER=postgres
+      - TOUGHRADIUS_DB_PWD=mypassword
+      - TOUGHRADIUS_DB_DEBUG=false
+
+      # ============================================
+      # RADIUS Service Configuration
+      # ============================================
+      - TOUGHRADIUS_RADIUS_ENABLED=true
+      - TOUGHRADIUS_RADIUS_HOST=0.0.0.0
+      - TOUGHRADIUS_RADIUS_AUTHPORT=1812
+      - TOUGHRADIUS_RADIUS_ACCTPORT=1813
+      - TOUGHRADIUS_RADIUS_RADSEC_PORT=2083
+      - TOUGHRADIUS_RADIUS_DEBUG=true
+
+      # ============================================
+      # Logger Configuration
+      # ============================================
+      - TOUGHRADIUS_LOGGER_MODE=development
+      - TOUGHRADIUS_LOGGER_FILE_ENABLE=true
+    volumes:
+      - toughradius_data:/data
+    depends_on:
+      - db
+    networks:
+      - toughradius-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: toughradius-db
+    restart: always
+    environment:
+      - POSTGRES_DB=toughradius
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mypassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Expose port to host for debugging or external access
+    # ports:
+    #   - "5432:5432"
+    networks:
+      - toughradius-net
+
+volumes:
+  postgres_data:
+    driver: local
+  toughradius_data:
+    driver: local
+
+networks:
+  toughradius-net:
+    driver: bridge

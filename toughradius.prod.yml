@@ -1,0 +1,24 @@
+system:
+  appid: ToughRADIUS
+  location: Asia/Shanghai
+  workdir: ./rundata
+
+database:
+  type: sqlite # or postgres
+  name: toughradius.db
+  # PostgreSQL configuration
+  # host: localhost
+  # port: 5432
+  # user: toughradius
+  # passwd: your_password
+
+radiusd:
+  enabled: true
+  host: 0.0.0.0
+  auth_port: 1812 # RADIUS authentication port
+  acct_port: 1813 # RADIUS accounting port
+  radsec_port: 2083 # RadSec port
+
+web:
+  host: 0.0.0.0
+  port: 1816 # Web management interface port
