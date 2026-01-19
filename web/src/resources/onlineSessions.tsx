@@ -101,15 +101,17 @@ const formatDuration = (seconds?: number): string => {
   return parts.join(' ');
 };
 
-const formatBytes = (bytes?: number): string => {
-  if (bytes === undefined || bytes === null) {
+const formatBytes = (bytes?: number | string): string => {
+  if (bytes === undefined || bytes === null || bytes === '') {
     return '-';
   }
-  if (bytes === 0) {
+  const numBytes = typeof bytes === 'string' ? parseFloat(bytes) : bytes;
+  if (isNaN(numBytes)) return '-';
+  if (numBytes === 0) {
     return '0 B';
   }
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
+  let value = numBytes;
   let index = 0;
   while (value >= 1024 && index < units.length - 1) {
     value /= 1024;
@@ -718,7 +720,7 @@ const SessionHeaderCard = () => {
                   }}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  {sessionTimePercent.toFixed(0)}% / {record.session_timeout}s
+                  {typeof sessionTimePercent === 'number' ? sessionTimePercent.toFixed(0) : '-'}% / {record.session_timeout}s
                 </Typography>
               </Box>
             )}

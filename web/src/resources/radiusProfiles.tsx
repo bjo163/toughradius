@@ -110,12 +110,14 @@ const formatTimestamp = (value?: string | number): string => {
   return date.toLocaleString();
 };
 
-const formatRate = (rate?: number): string => {
-  if (!rate || rate === 0) return '-';
-  if (rate >= 1024) {
-    return `${(rate / 1024).toFixed(1)} Mbps`;
+const formatRate = (rate?: number | string): string => {
+  if (!rate || rate === 0 || rate === '0') return '-';
+  const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
+  if (isNaN(numRate)) return '-';
+  if (numRate >= 1024) {
+    return `${(numRate / 1024).toFixed(1)} Mbps`;
   }
-  return `${rate} Kbps`;
+  return `${numRate} Kbps`;
 };
 
 // ============ 列表加载骨架屏 ============
