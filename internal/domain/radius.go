@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -102,6 +103,20 @@ type RadiusOnline struct {
 // TableName Specify table name
 func (RadiusOnline) TableName() string {
 	return "radius_online"
+}
+
+// MarshalJSON implements json.Marshaler for RadiusOnline to support both acct_input_total and acct_input_octets field names
+func (r RadiusOnline) MarshalJSON() ([]byte, error) {
+	type Alias RadiusOnline
+	return json.Marshal(&struct {
+		*Alias
+		AcctInputOctets  int64 `json:"acct_input_octets,string"`
+		AcctOutputOctets int64 `json:"acct_output_octets,string"`
+	}{
+		Alias:            (*Alias)(&r),
+		AcctInputOctets:  r.AcctInputTotal,
+		AcctOutputOctets: r.AcctOutputTotal,
+	})
 }
 
 // RadiusAccounting
