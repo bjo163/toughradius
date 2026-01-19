@@ -196,7 +196,31 @@ func (a *Application) DropAll() {
 }
 
 func (a *Application) InitDb() {
-	_ = a.gormDB.Migrator().DropTable(domain.Tables...)
+	// Check if tables already exist to avoid dropping existing data
+	hasExistingTables := false
+	for _, table := range domain.Tables {
+		if a.gormDB.Migrator().HasTable(table) {
+			hasExistingTables = true
+			break
+		}
+	}
+
+	// Only drop tables if they exist and we're doing a fresh init
+	if hasExistingTables {
+		// Check if we should preserve existing data by looking for admin account
+		var adminCount int64
+		a.gormDB.Model(&domain.RadiusAdmin{}).Count(&adminCount)
+		if adminCount > 0 {
+			// Database already initialized with data, skip dropping tables
+			zap.S().Info("Database already initialized with data, skipping table recreation",
+				zap.String("namespace", "app"))
+			return
+		}
+		// No admin account found, safe to drop and recreate
+		_ = a.gormDB.Migrator().DropTable(domain.Tables...)
+	}
+
+	// Create/migrate tables
 	err := a.gormDB.Migrator().AutoMigrate(domain.Tables...)
 	if err != nil {
 		zap.S().Error(err)

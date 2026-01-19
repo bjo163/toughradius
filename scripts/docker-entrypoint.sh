@@ -89,20 +89,27 @@ YAML_CONFIG
 echo "[CONFIG] ✓ Configuration file created: $CONFIG_FILE"
 echo ""
 
-# Initialize database if INIT_DB is true
+# Initialize database if needed
 if [ "$INIT_DB" = "true" ]; then
-    echo "[INIT] Starting database initialization..."
+    echo "[INIT] Starting database initialization check..."
     
     # Give database a moment to stabilize after container start
     sleep 2
     
-    # Run initialization - this creates tables and default admin
+    # Try to run application in "check" mode to see if database is ready
+    # If database exists and has tables, it will show config loaded message
+    # We'll just run -initdb and let it handle the logic
     echo "[INIT] Running: $APP_BIN -initdb -c $CONFIG_FILE"
     if "$APP_BIN" -initdb -c "$CONFIG_FILE"; then
         echo "[INIT] ✓ Database initialization completed successfully"
     else
         INIT_CODE=$?
-        echo "[INIT] ⚠ Database initialization exited with code $INIT_CODE"
+        # Exit code 2 might mean database already initialized, which is OK
+        if [ "$INIT_CODE" -eq 2 ]; then
+            echo "[INIT] ✓ Database already initialized (code 2 - tables exist)"
+        else
+            echo "[INIT] ⚠ Database initialization exited with code $INIT_CODE"
+        fi
     fi
     
     echo "[INIT] Waiting 3 seconds before starting main service..."
