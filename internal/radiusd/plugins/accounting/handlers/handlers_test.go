@@ -329,17 +329,18 @@ func TestStopHandler_Handle_NilVendorRequest(t *testing.T) {
 
 func TestNewUpdateHandler(t *testing.T) {
 	sessionRepo := newMockSessionRepo()
-	handler := NewUpdateHandler(sessionRepo)
+	acctRepo := newMockAccountingRepo()
+	handler := NewUpdateHandler(sessionRepo, acctRepo)
 	assert.NotNil(t, handler)
 }
 
 func TestUpdateHandler_Name(t *testing.T) {
-	handler := NewUpdateHandler(nil)
+	handler := NewUpdateHandler(nil, nil)
 	assert.Equal(t, "UpdateHandler", handler.Name())
 }
 
 func TestUpdateHandler_CanHandle(t *testing.T) {
-	handler := NewUpdateHandler(nil)
+	handler := NewUpdateHandler(nil, nil)
 
 	tests := []struct {
 		name       string
@@ -361,11 +362,12 @@ func TestUpdateHandler_CanHandle(t *testing.T) {
 
 func TestUpdateHandler_Handle_Success(t *testing.T) {
 	sessionRepo := newMockSessionRepo()
+	acctRepo := newMockAccountingRepo()
 	sessionRepo.sessions["test-session-123"] = &domain.RadiusOnline{
 		AcctSessionId: "test-session-123",
 		Username:      "testuser",
 	}
-	handler := NewUpdateHandler(sessionRepo)
+	handler := NewUpdateHandler(sessionRepo, acctRepo)
 
 	ctx := createMockAccountingContext(int(rfc2866.AcctStatusType_Value_InterimUpdate))
 	err := handler.Handle(ctx)
@@ -375,8 +377,9 @@ func TestUpdateHandler_Handle_Success(t *testing.T) {
 
 func TestUpdateHandler_Handle_UpdateError(t *testing.T) {
 	sessionRepo := newMockSessionRepo()
+	acctRepo := newMockAccountingRepo()
 	sessionRepo.updateErr = errors.New("update failed")
-	handler := NewUpdateHandler(sessionRepo)
+	handler := NewUpdateHandler(sessionRepo, acctRepo)
 
 	ctx := createMockAccountingContext(int(rfc2866.AcctStatusType_Value_InterimUpdate))
 	err := handler.Handle(ctx)
@@ -386,7 +389,8 @@ func TestUpdateHandler_Handle_UpdateError(t *testing.T) {
 
 func TestUpdateHandler_Handle_NilVendorRequest(t *testing.T) {
 	sessionRepo := newMockSessionRepo()
-	handler := NewUpdateHandler(sessionRepo)
+	acctRepo := newMockAccountingRepo()
+	handler := NewUpdateHandler(sessionRepo, acctRepo)
 
 	ctx := createMockAccountingContext(int(rfc2866.AcctStatusType_Value_InterimUpdate))
 	ctx.VendorReq = nil
@@ -497,7 +501,7 @@ func TestHandlers_ImplementAccountingHandler(t *testing.T) {
 	handlers := []accounting.AccountingHandler{
 		NewStartHandler(sessionRepo, acctRepo),
 		NewStopHandler(sessionRepo, acctRepo),
-		NewUpdateHandler(sessionRepo),
+		NewUpdateHandler(sessionRepo, newMockAccountingRepo()),
 		NewNasStateHandler(sessionRepo),
 	}
 
@@ -510,10 +514,11 @@ func TestHandlers_ImplementAccountingHandler(t *testing.T) {
 func TestBuildOnlineFromRequest(t *testing.T) {
 	// Test the helper function indirectly through UpdateHandler
 	sessionRepo := newMockSessionRepo()
+	acctRepo := newMockAccountingRepo()
 	sessionRepo.sessions["test-session-123"] = &domain.RadiusOnline{
 		AcctSessionId: "test-session-123",
 	}
-	handler := NewUpdateHandler(sessionRepo)
+	handler := NewUpdateHandler(sessionRepo, acctRepo)
 
 	ctx := createMockAccountingContext(int(rfc2866.AcctStatusType_Value_InterimUpdate))
 	err := handler.Handle(ctx)

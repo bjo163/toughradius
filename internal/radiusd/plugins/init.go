@@ -51,7 +51,7 @@ func InitPlugins(appCtx app.ConfigManagerProvider, sessionRepo repository.Sessio
 	// Register accounting handlers (dependency injection required)
 	if sessionRepo != nil && accountingRepo != nil {
 		registry.RegisterAccountingHandler(handlers.NewStartHandler(sessionRepo, accountingRepo))
-		registry.RegisterAccountingHandler(handlers.NewUpdateHandler(sessionRepo))
+		registry.RegisterAccountingHandler(handlers.NewUpdateHandler(sessionRepo, accountingRepo))
 		registry.RegisterAccountingHandler(handlers.NewStopHandler(sessionRepo, accountingRepo))
 		registry.RegisterAccountingHandler(handlers.NewNasStateHandler(sessionRepo))
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/accounting"
 	vendorparserspkg "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
 	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
+	"github.com/talkincode/toughradius/v9/pkg/common"
 	"go.uber.org/zap"
 	"layeh.com/radius/rfc2866"
 	"layeh.com/radius/rfc2869"
@@ -14,12 +15,16 @@ import (
 
 // UpdateHandler Accounting Update handler
 type UpdateHandler struct {
-	sessionRepo repository.SessionRepository
+	sessionRepo    repository.SessionRepository
+	accountingRepo repository.AccountingRepository
 }
 
 // NewUpdateHandler CreateAccounting Update handler
-func NewUpdateHandler(sessionRepo repository.SessionRepository) *UpdateHandler {
-	return &UpdateHandler{sessionRepo: sessionRepo}
+func NewUpdateHandler(sessionRepo repository.SessionRepository, accountingRepo repository.AccountingRepository) *UpdateHandler {
+	return &UpdateHandler{
+		sessionRepo:    sessionRepo,
+		accountingRepo: accountingRepo,
+	}
 }
 
 func (h *UpdateHandler) Name() string {
@@ -39,8 +44,92 @@ func (h *UpdateHandler) Handle(acctCtx *accounting.AccountingContext) error {
 	// Build online session data
 	online := buildOnlineFromRequest(acctCtx, vendorReq)
 
-	// Update the online session record
-	err := h.sessionRepo.Update(acctCtx.Context, &online)
+	// Check if session exists
+	exists, err := h.sessionRepo.Exists(acctCtx.Context, online.AcctSessionId)
+	if err != nil {
+		zap.L().Error("check radius online session existence error",
+			zap.String("namespace", "radius"),
+			zap.String("username", acctCtx.Username),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// If session doesn't exist, create it (handles case where Start packet didn't arrive)
+	if !exists {
+		// Build a complete session record from interim-update packet
+		fullOnline := domain.RadiusOnline{
+			ID:                common.UUIDint64(),
+			Username:          acctCtx.Username,
+			NasId:             acctCtx.NAS.Identifier,
+			NasAddr:           acctCtx.NAS.Ipaddr,
+			NasPaddr:          acctCtx.NASIP,
+			SessionTimeout:    int64(rfc2866.SessionTimeout_Get(acctCtx.Request.Packet)),
+			FramedIpaddr:      rfc2866.FramedIPAddress_GetString(acctCtx.Request.Packet),
+			FramedNetmask:     rfc2866.FramedIPNetmask_GetString(acctCtx.Request.Packet),
+			MacAddr:           vendorReq.MacAddr,
+			NasPort:           int64(rfc2866.NASPort_Get(acctCtx.Request.Packet)),
+			NasClass:          rfc2866.NASClass_GetString(acctCtx.Request.Packet),
+			NasPortId:         rfc2866.NASPortID_GetString(acctCtx.Request.Packet),
+			NasPortType:       int(rfc2866.NASPortType_Get(acctCtx.Request.Packet)),
+			ServiceType:       int(rfc2866.ServiceType_Get(acctCtx.Request.Packet)),
+			AcctSessionId:     online.AcctSessionId,
+			AcctSessionTime:   online.AcctSessionTime,
+			AcctInputTotal:    online.AcctInputTotal,
+			AcctOutputTotal:   online.AcctOutputTotal,
+			AcctInputPackets:  online.AcctInputPackets,
+			AcctOutputPackets: online.AcctOutputPackets,
+			AcctStartTime:     time.Now().Add(-time.Duration(online.AcctSessionTime) * time.Second),
+			LastUpdate:        time.Now(),
+		}
+
+		err := h.sessionRepo.Create(acctCtx.Context, &fullOnline)
+		if err != nil {
+			zap.L().Error("create radius online session from interim-update error",
+				zap.String("namespace", "radius"),
+				zap.String("username", acctCtx.Username),
+				zap.Error(err),
+			)
+			return err
+		}
+
+		// Also create the initial accounting record
+		if h.accountingRepo != nil {
+			accounting := domain.RadiusAccounting{
+				AcctSessionId:     online.AcctSessionId,
+				Username:          acctCtx.Username,
+				NasAddr:           acctCtx.NAS.Ipaddr,
+				NasId:             acctCtx.NAS.Identifier,
+				FramedIpaddr:      fullOnline.FramedIpaddr,
+				MacAddr:           vendorReq.MacAddr,
+				AcctSessionTime:   online.AcctSessionTime,
+				AcctInputTotal:    online.AcctInputTotal,
+				AcctOutputTotal:   online.AcctOutputTotal,
+				AcctInputPackets:  online.AcctInputPackets,
+				AcctOutputPackets: online.AcctOutputPackets,
+				AcctStartTime:     fullOnline.AcctStartTime,
+				LastUpdate:        time.Now(),
+			}
+			if err := h.accountingRepo.Create(acctCtx.Context, &accounting); err != nil {
+				zap.L().Warn("create initial accounting record from interim-update error",
+					zap.String("namespace", "radius"),
+					zap.String("username", acctCtx.Username),
+					zap.Error(err),
+				)
+				// Don't return error for accounting creation, it's not critical
+			}
+		}
+
+		zap.L().Info("created radius online session from interim-update packet",
+			zap.String("namespace", "radius"),
+			zap.String("username", acctCtx.Username),
+			zap.String("acct_session_id", online.AcctSessionId),
+		)
+		return nil
+	}
+
+	// Update the existing online session record
+	err = h.sessionRepo.Update(acctCtx.Context, &online)
 	if err != nil {
 		zap.L().Error("update radius online error",
 			zap.String("namespace", "radius"),
