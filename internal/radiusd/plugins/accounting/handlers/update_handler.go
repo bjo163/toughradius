@@ -9,6 +9,7 @@ import (
 	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
 	"github.com/talkincode/toughradius/v9/pkg/common"
 	"go.uber.org/zap"
+	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2866"
 	"layeh.com/radius/rfc2869"
 )
@@ -64,15 +65,15 @@ func (h *UpdateHandler) Handle(acctCtx *accounting.AccountingContext) error {
 			NasId:             acctCtx.NAS.Identifier,
 			NasAddr:           acctCtx.NAS.Ipaddr,
 			NasPaddr:          acctCtx.NASIP,
-			SessionTimeout:    int64(rfc2866.SessionTimeout_Get(acctCtx.Request.Packet)),
-			FramedIpaddr:      rfc2866.FramedIPAddress_GetString(acctCtx.Request.Packet),
-			FramedNetmask:     rfc2866.FramedIPNetmask_GetString(acctCtx.Request.Packet),
+			SessionTimeout:    int64(rfc2865.SessionTimeout_Get(acctCtx.Request.Packet)),
+			FramedIpaddr:      common.IfEmptyStr(rfc2865.FramedIPAddress_Get(acctCtx.Request.Packet).String(), common.NA),
+			FramedNetmask:     common.IfEmptyStr(rfc2865.FramedIPNetmask_Get(acctCtx.Request.Packet).String(), common.NA),
 			MacAddr:           vendorReq.MacAddr,
-			NasPort:           int64(rfc2866.NASPort_Get(acctCtx.Request.Packet)),
-			NasClass:          rfc2866.NASClass_GetString(acctCtx.Request.Packet),
-			NasPortId:         rfc2866.NASPortID_GetString(acctCtx.Request.Packet),
-			NasPortType:       int(rfc2866.NASPortType_Get(acctCtx.Request.Packet)),
-			ServiceType:       int(rfc2866.ServiceType_Get(acctCtx.Request.Packet)),
+			NasPort:           0, // Not available in accounting requests typically
+			NasClass:          common.NA,
+			NasPortId:         common.IfEmptyStr(rfc2869.NASPortID_GetString(acctCtx.Request.Packet), common.NA),
+			NasPortType:       0, // Not available in accounting requests typically
+			ServiceType:       0, // Not available in accounting requests typically
 			AcctSessionId:     online.AcctSessionId,
 			AcctSessionTime:   online.AcctSessionTime,
 			AcctInputTotal:    online.AcctInputTotal,
