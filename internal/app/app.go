@@ -209,7 +209,7 @@ func (a *Application) InitDb() {
 	if hasExistingTables {
 		// Check if we should preserve existing data by looking for admin account
 		var adminCount int64
-		a.gormDB.Model(&domain.RadiusAdmin{}).Count(&adminCount)
+		a.gormDB.Model(&domain.SysOpr{}).Count(&adminCount)
 		if adminCount > 0 {
 			// Database already initialized with data, skip dropping tables
 			zap.S().Info("Database already initialized with data, skipping table recreation",

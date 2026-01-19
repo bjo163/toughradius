@@ -9,23 +9,16 @@ services:
     container_name: toughradius
     restart: unless-stopped
     ports:
-      - "1816:1816/tcp"    # Web/Admin API
-      - "51812:1812/udp"    # RADIUS Authentication
-      - "51813:1813/udp"    # RADIUS Accounting
-      - "2083:2083/tcp"    # RadSec (RADIUS over TLS)
+      - "1816:1816/tcp"
+      - "51812:1812/udp"
+      - "51813:1813/udp"
+      - "2083:2083/tcp"
     environment:
-      # ============================================
-      # System & Web Configuration
-      # ============================================
       - TOUGHRADIUS_SYSTEM_WORKER_DIR=/data
       - TOUGHRADIUS_SYSTEM_DEBUG=true
       - TOUGHRADIUS_WEB_HOST=0.0.0.0
       - TOUGHRADIUS_WEB_PORT=1816
       - TOUGHRADIUS_WEB_SECRET=9b6de5cc-0731-1203-xxtt-0f568ac9da37
-
-      # ============================================
-      # Database Configuration (PostgreSQL)
-      # ============================================
       - TOUGHRADIUS_DB_TYPE=postgres
       - TOUGHRADIUS_DB_HOST=db
       - TOUGHRADIUS_DB_PORT=5432
@@ -33,27 +26,14 @@ services:
       - TOUGHRADIUS_DB_USER=postgres
       - TOUGHRADIUS_DB_PWD=mypassword
       - TOUGHRADIUS_DB_DEBUG=false
-
-      # ============================================
-      # RADIUS Service Configuration
-      # ============================================
       - TOUGHRADIUS_RADIUS_ENABLED=true
       - TOUGHRADIUS_RADIUS_HOST=0.0.0.0
       - TOUGHRADIUS_RADIUS_AUTHPORT=1812
       - TOUGHRADIUS_RADIUS_ACCTPORT=1813
-      # RadSec requires TLS certificates. Disable with 0 if not using RadSec
       - TOUGHRADIUS_RADIUS_RADSEC_PORT=0
       - TOUGHRADIUS_RADIUS_DEBUG=true
-
-      # ============================================
-      # Logger Configuration
-      # ============================================
       - TOUGHRADIUS_LOGGER_MODE=development
       - TOUGHRADIUS_LOGGER_FILE_ENABLE=true
-
-      # ============================================
-      # Docker Initialization
-      # ============================================
       - INIT_DB=true
       - CONFIG_FILE=/etc/toughradius.yml
     volumes:
@@ -61,12 +41,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1816/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+    networks:
+      xsp-net-31:
+        ipv4_address: 172.31.0.20
 
   db:
     image: postgres:15-alpine
@@ -78,18 +55,16 @@ services:
       - POSTGRES_PASSWORD=mypassword
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Expose port to host for debugging or external access
     ports:
        - "15432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    networks:
+      xsp-net-31:
+        ipv4_address: 172.31.0.21
 
 volumes:
   postgres_data:
-    driver: local
   toughradius_data:
-    driver: local
+
+networks:
+  xsp-net-31:
+    external: true
