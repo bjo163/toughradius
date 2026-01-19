@@ -474,7 +474,7 @@ const SessionHeaderCard = () => {
 
   if (!record) return null;
 
-  const totalTraffic = (record.acct_input_octets ?? 0) + (record.acct_output_octets ?? 0);
+  const totalTraffic = (Number(record.acct_input_octets) ?? 0) + (Number(record.acct_output_octets) ?? 0);
   const sessionTimePercent = record.session_timeout
     ? Math.min(((record.acct_session_time ?? 0) / record.session_timeout) * 100, 100)
     : 0;
@@ -820,7 +820,7 @@ const OnlineSessionDetails = () => {
   }
 
   const totalTraffic =
-    (record.acct_input_octets ?? 0) + (record.acct_output_octets ?? 0);
+    (Number(record.acct_input_octets) ?? 0) + (Number(record.acct_output_octets) ?? 0);
 
   return (
     <>

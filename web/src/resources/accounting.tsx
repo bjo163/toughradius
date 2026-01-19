@@ -455,7 +455,7 @@ const AccountingHeaderCard = () => {
   if (!record) return null;
 
   const isOnline = !record.acct_stop_time;
-  const totalTraffic = (record.acct_input_total ?? 0) + (record.acct_output_total ?? 0);
+  const totalTraffic = (Number(record.acct_input_total) ?? 0) + (Number(record.acct_output_total) ?? 0);
   const terminateInfo = getTerminateCauseInfo(record.acct_terminate_cause);
 
   return (
@@ -754,7 +754,7 @@ const AccountingDetails = () => {
   }
 
   const totalTraffic =
-    (record.acct_input_total ?? 0) + (record.acct_output_total ?? 0);
+    (Number(record.acct_input_total) ?? 0) + (Number(record.acct_output_total) ?? 0);
   const isOnline = !record.acct_stop_time;
 
   return (
