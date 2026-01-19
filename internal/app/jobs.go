@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -9,9 +10,47 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
 	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/talkincode/toughradius/v9/internal/radiusd/qos"
 	"github.com/talkincode/toughradius/v9/pkg/metrics"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
+
+// Simple adapter for NAS repository to implement QoS NasRepository interface
+type GormNasRepository struct {
+	db *gorm.DB
+}
+
+func NewGormNasRepository(db *gorm.DB) *GormNasRepository {
+	return &GormNasRepository{db: db}
+}
+
+func (r *GormNasRepository) GetByID(ctx context.Context, id int64) (*domain.NetNas, error) {
+	var nas domain.NetNas
+	err := r.db.WithContext(ctx).First(&nas, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &nas, nil
+}
+
+// Simple adapter for User repository to implement QoS UserRepository interface
+type GormUserRepository struct {
+	db *gorm.DB
+}
+
+func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
+	return &GormUserRepository{db: db}
+}
+
+func (r *GormUserRepository) GetByID(ctx context.Context, id int64) (*domain.RadiusUser, error) {
+	var user domain.RadiusUser
+	err := r.db.WithContext(ctx).First(&user, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
 
 var cronParser = cron.NewParser(
 	cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
@@ -20,6 +59,9 @@ var cronParser = cron.NewParser(
 func (a *Application) initJob() {
 	loc, _ := time.LoadLocation(a.appConfig.System.Location)
 	a.sched = cron.New(cron.WithLocation(loc), cron.WithParser(cronParser))
+
+	// Initialize QoS sync service
+	a.initQoSService()
 
 	var err error
 	_, err = a.sched.AddFunc("@every 30s", func() {
@@ -109,4 +151,31 @@ func (a *Application) SchedClearExpireData() {
 	a.gormDB.
 		Where("acct_stop_time < ? ", time.Now().
 			Add(-time.Hour*24*time.Duration(idays))).Delete(domain.RadiusAccounting{})
+}
+
+// initQoSService initializes the QoS sync service for bandwidth management
+func (a *Application) initQoSService() {
+	defer func() {
+		if err := recover(); err != nil {
+			zap.S().Error("QoS service initialization panic:", err)
+		}
+	}()
+
+	// Create repository implementations
+	qosRepo := &qos.GormNasQoSRepository{DB: a.gormDB}
+	logRepo := &qos.GormNasQoSLogRepository{DB: a.gormDB}
+	nasRepo := NewGormNasRepository(a.gormDB)
+	userRepo := NewGormUserRepository(a.gormDB)
+
+	// Create and initialize service
+	qosService := qos.NewNasQoSService(a.gormDB, qosRepo, logRepo, nasRepo, userRepo)
+
+	// Start sync background process
+	// Default sync interval: 1 minute
+	qosService.Start(context.Background(), 1*time.Minute)
+
+	// Store reference for graceful shutdown
+	a.qosService = qosService
+
+	zap.L().Info("QoS sync service initialized", zap.String("namespace", "qos"))
 }

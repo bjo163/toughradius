@@ -29,7 +29,7 @@ type Application struct {
 	sched         *cron.Cron
 	configManager *ConfigManager
 	profileCache  *ProfileCache
-}
+	qosService    interface{} // QoS sync service (initialized in initJob)
 
 // Ensure Application implements all interfaces
 var (

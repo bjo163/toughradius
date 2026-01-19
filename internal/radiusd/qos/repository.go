@@ -70,37 +70,37 @@ type NasQoSLogRepository interface {
 
 // GormNasQoSRepository is the GORM implementation of NasQoSRepository
 type GormNasQoSRepository struct {
-	db *gorm.DB
+	DB *gorm.DB
 }
 
 // NewGormNasQoSRepository creates a new GORM-based repository
 func NewGormNasQoSRepository(db *gorm.DB) *GormNasQoSRepository {
-	return &GormNasQoSRepository{db: db}
+	return &GormNasQoSRepository{DB: db}
 }
 
 func (r *GormNasQoSRepository) Create(ctx context.Context, qos *domain.NasQoS) error {
-	return r.db.WithContext(ctx).Create(qos).Error
+	return r.DB.WithContext(ctx).Create(qos).Error
 }
 
 func (r *GormNasQoSRepository) Update(ctx context.Context, qos *domain.NasQoS) error {
-	return r.db.WithContext(ctx).Save(qos).Error
+	return r.DB.WithContext(ctx).Save(qos).Error
 }
 
 func (r *GormNasQoSRepository) GetByID(ctx context.Context, id int64) (*domain.NasQoS, error) {
 	var qos domain.NasQoS
-	err := r.db.WithContext(ctx).First(&qos, id).Error
+	err := r.DB.WithContext(ctx).First(&qos, id).Error
 	return &qos, err
 }
 
 func (r *GormNasQoSRepository) GetByRemoteID(ctx context.Context, remoteID string) (*domain.NasQoS, error) {
 	var qos domain.NasQoS
-	err := r.db.WithContext(ctx).Where("remote_id = ?", remoteID).First(&qos).Error
+	err := r.DB.WithContext(ctx).Where("remote_id = ?", remoteID).First(&qos).Error
 	return &qos, err
 }
 
 func (r *GormNasQoSRepository) GetPending(ctx context.Context, limit int) ([]*domain.NasQoS, error) {
 	var qos []*domain.NasQoS
-	err := r.db.WithContext(ctx).
+	err := r.DB.WithContext(ctx).
 		Where("status = ?", "pending").
 		Order("created_at ASC").
 		Limit(limit).
@@ -110,7 +110,7 @@ func (r *GormNasQoSRepository) GetPending(ctx context.Context, limit int) ([]*do
 
 func (r *GormNasQoSRepository) GetFailed(ctx context.Context, limit int) ([]*domain.NasQoS, error) {
 	var qos []*domain.NasQoS
-	err := r.db.WithContext(ctx).
+	err := r.DB.WithContext(ctx).
 		Where("status = ?", "failed").
 		Where("retry_count < 3").
 		Order("created_at ASC").
@@ -121,22 +121,22 @@ func (r *GormNasQoSRepository) GetFailed(ctx context.Context, limit int) ([]*dom
 
 func (r *GormNasQoSRepository) GetByUserAndNas(ctx context.Context, userID, nasID int64) (*domain.NasQoS, error) {
 	var qos domain.NasQoS
-	err := r.db.WithContext(ctx).
+	err := r.DB.WithContext(ctx).
 		Where("user_id = ? AND nas_id = ?", userID, nasID).
 		First(&qos).Error
 	return &qos, err
 }
 
 func (r *GormNasQoSRepository) Delete(ctx context.Context, id int64) error {
-	return r.db.WithContext(ctx).Delete(&domain.NasQoS{}, id).Error
+	return r.DB.WithContext(ctx).Delete(&domain.NasQoS{}, id).Error
 }
 
 func (r *GormNasQoSRepository) DeleteByRemoteID(ctx context.Context, remoteID string) error {
-	return r.db.WithContext(ctx).Where("remote_id = ?", remoteID).Delete(&domain.NasQoS{}).Error
+	return r.DB.WithContext(ctx).Where("remote_id = ?", remoteID).Delete(&domain.NasQoS{}).Error
 }
 
 func (r *GormNasQoSRepository) UpdateStatus(ctx context.Context, id int64, status, errorMsg string) error {
-	return r.db.WithContext(ctx).
+	return r.DB.WithContext(ctx).
 		Model(&domain.NasQoS{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
@@ -146,7 +146,7 @@ func (r *GormNasQoSRepository) UpdateStatus(ctx context.Context, id int64, statu
 }
 
 func (r *GormNasQoSRepository) IncrementRetry(ctx context.Context, id int64) error {
-	return r.db.WithContext(ctx).
+	return r.DB.WithContext(ctx).
 		Model(&domain.NasQoS{}).
 		Where("id = ?", id).
 		Update("retry_count", gorm.Expr("retry_count + 1")).Error
@@ -156,7 +156,7 @@ func (r *GormNasQoSRepository) List(ctx context.Context, filter map[string]inter
 	var qos []*domain.NasQoS
 	var total int64
 
-	query := r.db.WithContext(ctx)
+	query := r.DB.WithContext(ctx)
 
 	// Apply filters
 	for key, value := range filter {
@@ -183,21 +183,21 @@ func (r *GormNasQoSRepository) List(ctx context.Context, filter map[string]inter
 
 // GormNasQoSLogRepository is the GORM implementation of NasQoSLogRepository
 type GormNasQoSLogRepository struct {
-	db *gorm.DB
+	DB *gorm.DB
 }
 
 // NewGormNasQoSLogRepository creates a new GORM-based log repository
 func NewGormNasQoSLogRepository(db *gorm.DB) *GormNasQoSLogRepository {
-	return &GormNasQoSLogRepository{db: db}
+	return &GormNasQoSLogRepository{DB: db}
 }
 
 func (r *GormNasQoSLogRepository) Create(ctx context.Context, log *domain.NasQoSLog) error {
-	return r.db.WithContext(ctx).Create(log).Error
+	return r.DB.WithContext(ctx).Create(log).Error
 }
 
 func (r *GormNasQoSLogRepository) GetByQoSID(ctx context.Context, qosID int64) ([]*domain.NasQoSLog, error) {
 	var logs []*domain.NasQoSLog
-	err := r.db.WithContext(ctx).
+	err := r.DB.WithContext(ctx).
 		Where("qos_id = ?", qosID).
 		Order("created_at DESC").
 		Find(&logs).Error
@@ -205,7 +205,7 @@ func (r *GormNasQoSLogRepository) GetByQoSID(ctx context.Context, qosID int64) (
 }
 
 func (r *GormNasQoSLogRepository) DeleteOlderThan(ctx context.Context, days int) error {
-	return r.db.WithContext(ctx).
+	return r.DB.WithContext(ctx).
 		Where("created_at < DATE_SUB(NOW(), INTERVAL ? DAY)", days).
 		Delete(&domain.NasQoSLog{}).Error
 }
