@@ -14,63 +14,77 @@ echo "Config: $CONFIG_FILE"
 echo "Init DB: $INIT_DB"
 echo ""
 
+# Read environment variables with defaults
+DB_TYPE="${TOUGHRADIUS_DB_TYPE:-postgres}"
+DB_HOST="${TOUGHRADIUS_DB_HOST:-db}"
+DB_PORT="${TOUGHRADIUS_DB_PORT:-5432}"
+DB_USER="${TOUGHRADIUS_DB_USER:-postgres}"
+DB_PASSWD="${TOUGHRADIUS_DB_PWD:-password}"
+DB_NAME="${TOUGHRADIUS_DB_NAME:-toughradius}"
+DB_DEBUG="${TOUGHRADIUS_DB_DEBUG:-false}"
+
+SYS_DEBUG="${TOUGHRADIUS_SYSTEM_DEBUG:-false}"
+
+WEB_HOST="${TOUGHRADIUS_WEB_HOST:-0.0.0.0}"
+WEB_PORT="${TOUGHRADIUS_WEB_PORT:-1816}"
+WEB_SECRET="${TOUGHRADIUS_WEB_SECRET:-your-secret-key}"
+
+RADIUS_ENABLED="${TOUGHRADIUS_RADIUS_ENABLED:-true}"
+RADIUS_HOST="${TOUGHRADIUS_RADIUS_HOST:-0.0.0.0}"
+RADIUS_AUTHPORT="${TOUGHRADIUS_RADIUS_AUTHPORT:-1812}"
+RADIUS_ACCTPORT="${TOUGHRADIUS_RADIUS_ACCTPORT:-1813}"
+RADIUS_RADSEC_PORT="${TOUGHRADIUS_RADIUS_RADSEC_PORT:-2083}"
+RADIUS_RADSEC_WORKER="${TOUGHRADIUS_RADIUS_RADSEC_WORKER:-2}"
+RADIUS_DEBUG="${TOUGHRADIUS_RADIUS_DEBUG:-false}"
+
+LOGGER_MODE="${TOUGHRADIUS_LOGGER_MODE:-production}"
+LOGGER_FILE_ENABLE="${TOUGHRADIUS_LOGGER_FILE_ENABLE:-true}"
+
+echo "[CONFIG] DB Type: $DB_TYPE"
+echo "[CONFIG] DB Host: $DB_HOST"
+echo ""
+
 # Generate configuration from environment variables
 echo "[CONFIG] Generating configuration from environment variables..."
 
-cat > "$CONFIG_FILE" << 'YAML_CONFIG'
+cat > "$CONFIG_FILE" << YAML_CONFIG
 system:
   appid: ToughRADIUS
   location: Asia/Jakarta
   workdir: /data
-  debug: ${TOUGHRADIUS_SYSTEM_DEBUG:-false}
+  debug: $SYS_DEBUG
 
 database:
-  type: ${TOUGHRADIUS_DB_TYPE:-postgres}
-  host: ${TOUGHRADIUS_DB_HOST:-db}
-  port: ${TOUGHRADIUS_DB_PORT:-5432}
-  user: ${TOUGHRADIUS_DB_USER:-postgres}
-  passwd: ${TOUGHRADIUS_DB_PWD:-password}
-  name: ${TOUGHRADIUS_DB_NAME:-toughradius}
-  debug: ${TOUGHRADIUS_DB_DEBUG:-false}
+  type: $DB_TYPE
+  host: $DB_HOST
+  port: $DB_PORT
+  user: $DB_USER
+  passwd: $DB_PASSWD
+  name: $DB_NAME
+  debug: $DB_DEBUG
 
 web:
-  host: ${TOUGHRADIUS_WEB_HOST:-0.0.0.0}
-  port: ${TOUGHRADIUS_WEB_PORT:-1816}
+  host: $WEB_HOST
+  port: $WEB_PORT
   tlsport: 1817
-  secret: ${TOUGHRADIUS_WEB_SECRET:-your-secret-key}
+  secret: $WEB_SECRET
 
 radiusd:
-  enabled: ${TOUGHRADIUS_RADIUS_ENABLED:-true}
-  host: ${TOUGHRADIUS_RADIUS_HOST:-0.0.0.0}
-  auth_port: ${TOUGHRADIUS_RADIUS_AUTHPORT:-1812}
-  acct_port: ${TOUGHRADIUS_RADIUS_ACCTPORT:-1813}
-  radsec_port: ${TOUGHRADIUS_RADIUS_RADSEC_PORT:-2083}
-  radsec_worker: ${TOUGHRADIUS_RADIUS_RADSEC_WORKER:-2}
-  debug: ${TOUGHRADIUS_RADIUS_DEBUG:-false}
+  enabled: $RADIUS_ENABLED
+  host: $RADIUS_HOST
+  auth_port: $RADIUS_AUTHPORT
+  acct_port: $RADIUS_ACCTPORT
+  radsec_port: $RADIUS_RADSEC_PORT
+  radsec_worker: $RADIUS_RADSEC_WORKER
+  debug: $RADIUS_DEBUG
 
 logger:
-  mode: ${TOUGHRADIUS_LOGGER_MODE:-production}
+  mode: $LOGGER_MODE
   level: info
-  file_enable: ${TOUGHRADIUS_LOGGER_FILE_ENABLE:-true}
+  file_enable: $LOGGER_FILE_ENABLE
   filename: /data/logs/toughradius.log
 
 YAML_CONFIG
-
-# Replace environment variables in the config file
-if command -v envsubst >/dev/null 2>&1; then
-    echo "[CONFIG] Applying environment variable substitution..."
-    envsubst < "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
-    mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-else
-    echo "[CONFIG] Warning: envsubst not available, using basic sed substitution"
-    # Basic sed substitution for key env variables
-    sed -i "s|\${TOUGHRADIUS_DB_TYPE:-postgres}|${TOUGHRADIUS_DB_TYPE:-postgres}|g" "$CONFIG_FILE"
-    sed -i "s|\${TOUGHRADIUS_DB_HOST:-db}|${TOUGHRADIUS_DB_HOST:-db}|g" "$CONFIG_FILE"
-    sed -i "s|\${TOUGHRADIUS_DB_PORT:-5432}|${TOUGHRADIUS_DB_PORT:-5432}|g" "$CONFIG_FILE"
-    sed -i "s|\${TOUGHRADIUS_DB_USER:-postgres}|${TOUGHRADIUS_DB_USER:-postgres}|g" "$CONFIG_FILE"
-    sed -i "s|\${TOUGHRADIUS_DB_PWD:-password}|${TOUGHRADIUS_DB_PWD:-password}|g" "$CONFIG_FILE"
-    sed -i "s|\${TOUGHRADIUS_DB_NAME:-toughradius}|${TOUGHRADIUS_DB_NAME:-toughradius}|g" "$CONFIG_FILE"
-fi
 
 echo "[CONFIG] ✓ Configuration file created: $CONFIG_FILE"
 echo ""
