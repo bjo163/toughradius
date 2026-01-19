@@ -7,8 +7,8 @@ require (
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/glebarez/sqlite v1.11.0
+	github.com/go-routeros/routeros/v3 v3.0.0
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
-	github.com/go-routeros/routeros v0.0.0-20210123202407-b4f67f22eb1d
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo-jwt/v4 v4.3.1

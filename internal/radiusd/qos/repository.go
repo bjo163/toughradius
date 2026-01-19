@@ -1,4 +1,4 @@
-package repository
+package qos
 
 import (
 	"context"
@@ -6,6 +6,16 @@ import (
 	"github.com/talkincode/toughradius/v9/internal/domain"
 	"gorm.io/gorm"
 )
+
+// NasRepository interface for NAS device data access
+type NasRepository interface {
+	GetByID(ctx context.Context, id int64) (*domain.NetNas, error)
+}
+
+// UserRepository interface for user data access
+type UserRepository interface {
+	GetByID(ctx context.Context, id int64) (*domain.RadiusUser, error)
+}
 
 // NasQoSRepository handles database operations for NAS QoS records
 type NasQoSRepository interface {

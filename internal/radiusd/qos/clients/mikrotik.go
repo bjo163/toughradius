@@ -3,17 +3,19 @@ package clients
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 
-	"github.com/go-routeros/routeros"
-	"github.com/go-routeros/routeros/proto"
+	"github.com/go-routeros/routeros/v3"
+	"github.com/go-routeros/routeros/v3/proto"
 	"go.uber.org/zap"
 )
 
 // MikrotikClient implements QoSClient for Mikrotik RouterOS devices
 type MikrotikClient struct {
-	conn *routeros.Conn
-	host string
+	client *routeros.Client
+	host   string
 }
 
 // NewMikrotikClient creates a new Mikrotik RouterOS API client
@@ -31,8 +33,9 @@ func NewMikrotikClient(host, username, password string, port int) (*MikrotikClie
 		port = 8728 // Default RouterOS API port
 	}
 
-	addr := fmt.Sprintf("%s:%d", host, port)
-	conn, err := routeros.Dial(addr, username, password)
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+
+	client, err := routeros.Dial(addr, username, password)
 	if err != nil {
 		zap.L().Error("failed to connect to Mikrotik",
 			zap.String("host", host),
@@ -48,8 +51,8 @@ func NewMikrotikClient(host, username, password string, port int) (*MikrotikClie
 	)
 
 	return &MikrotikClient{
-		conn: conn,
-		host: host,
+		client: client,
+		host:   host,
 	}, nil
 }
 
@@ -72,8 +75,9 @@ func (c *MikrotikClient) CreateQueue(ctx context.Context, config *QoSConfig) (st
 	// Format: "1024k/2048k" for 1Mbps upload / 2Mbps download
 	maxLimit := fmt.Sprintf("%dk/%dk", config.UpRate, config.DownRate)
 
-	// Build command parameters
-	params := []string{
+	// Build command arguments
+	args := []string{
+		"/queue/simple/add",
 		fmt.Sprintf("=name=%s", config.Name),
 		fmt.Sprintf("=max-limit=%s", maxLimit),
 	}
@@ -81,34 +85,20 @@ func (c *MikrotikClient) CreateQueue(ctx context.Context, config *QoSConfig) (st
 	// Add target if specified in extra config
 	if config.Extra != nil {
 		if target, ok := config.Extra["target"].(string); ok && target != "" {
-			params = append(params, fmt.Sprintf("=target=%s", target))
+			args = append(args, fmt.Sprintf("=target=%s", target))
 		}
 	}
 
 	// Execute /queue/simple/add command
-	cmd := &routeros.Command{
-		Path:       "/queue/simple/add",
-		Arguments:  params,
+	reply, err := c.client.RunArgs(args)
+	if err != nil {
+		return "", fmt.Errorf("create queue error: %w", err)
 	}
 
-	reply := make(chan *proto.Sentence)
-	go c.conn.Send(cmd, reply)
-
-	var queueID string
-	for sentence := range reply {
-		if sentence.Tag == "done" {
-			// Extract queue ID from response
-			for _, word := range sentence.Words {
-				if strings.HasPrefix(word, "=.id=") {
-					queueID = strings.TrimPrefix(word, "=.id=")
-					break
-				}
-			}
-		}
-		if sentence.Tag == "trap" {
-			errMsg := getErrorMessage(sentence)
-			return "", fmt.Errorf("create queue error: %s", errMsg)
-		}
+	// Extract queue ID from done sentence
+	queueID := ""
+	if reply.Done != nil {
+		queueID = reply.Done.Map[".id"]
 	}
 
 	if queueID == "" {
@@ -131,19 +121,14 @@ func (c *MikrotikClient) DeleteQueue(ctx context.Context, remoteID string) error
 		return fmt.Errorf("queue ID is required")
 	}
 
-	cmd := &routeros.Command{
-		Path:       "/queue/simple/remove",
-		Arguments:  []string{fmt.Sprintf("=.id=%s", remoteID)},
+	args := []string{
+		"/queue/simple/remove",
+		fmt.Sprintf("=.id=%s", remoteID),
 	}
 
-	reply := make(chan *proto.Sentence)
-	go c.conn.Send(cmd, reply)
-
-	for sentence := range reply {
-		if sentence.Tag == "trap" {
-			errMsg := getErrorMessage(sentence)
-			return fmt.Errorf("delete queue error: %s", errMsg)
-		}
+	_, err := c.client.RunArgs(args)
+	if err != nil {
+		return fmt.Errorf("delete queue error: %w", err)
 	}
 
 	zap.L().Info("queue deleted successfully",
@@ -165,24 +150,15 @@ func (c *MikrotikClient) UpdateQueue(ctx context.Context, remoteID string, confi
 
 	maxLimit := fmt.Sprintf("%dk/%dk", config.UpRate, config.DownRate)
 
-	params := []string{
+	args := []string{
+		"/queue/simple/set",
 		fmt.Sprintf("=.id=%s", remoteID),
 		fmt.Sprintf("=max-limit=%s", maxLimit),
 	}
 
-	cmd := &routeros.Command{
-		Path:       "/queue/simple/set",
-		Arguments:  params,
-	}
-
-	reply := make(chan *proto.Sentence)
-	go c.conn.Send(cmd, reply)
-
-	for sentence := range reply {
-		if sentence.Tag == "trap" {
-			errMsg := getErrorMessage(sentence)
-			return fmt.Errorf("update queue error: %s", errMsg)
-		}
+	_, err := c.client.RunArgs(args)
+	if err != nil {
+		return fmt.Errorf("update queue error: %w", err)
 	}
 
 	zap.L().Info("queue updated successfully",
@@ -198,74 +174,64 @@ func (c *MikrotikClient) GetQueue(ctx context.Context, remoteID string) (*QoSCon
 		return nil, fmt.Errorf("queue ID is required")
 	}
 
-	cmd := &routeros.Command{
-		Path:       "/queue/simple/print",
-		Arguments:  []string{fmt.Sprintf("?=.id=%s", remoteID)},
+	args := []string{
+		"/queue/simple/print",
+		fmt.Sprintf("?.id=%s", remoteID),
 	}
 
-	reply := make(chan *proto.Sentence)
-	go c.conn.Send(cmd, reply)
-
-	var config *QoSConfig
-	for sentence := range reply {
-		if sentence.Tag == "done" {
-			break
-		}
-		if sentence.Tag == "trap" {
-			errMsg := getErrorMessage(sentence)
-			return nil, fmt.Errorf("get queue error: %s", errMsg)
-		}
-
-		// Parse response
-		config = parseQueueResponse(sentence)
+	reply, err := c.client.RunArgs(args)
+	if err != nil {
+		return nil, fmt.Errorf("get queue error: %w", err)
 	}
 
-	if config == nil {
+	if len(reply.Re) == 0 {
 		return nil, fmt.Errorf("queue not found: %s", remoteID)
 	}
 
+	config := parseQueueResponse(reply.Re[0])
 	return config, nil
 }
 
 // Close closes the connection to Mikrotik RouterOS
 func (c *MikrotikClient) Close() error {
-	if c.conn != nil {
-		c.conn.Close()
+	if c.client != nil {
+		err := c.client.Close()
 		zap.L().Info("Mikrotik connection closed", zap.String("host", c.host))
+		return err
 	}
 	return nil
 }
 
 // Helper functions
 
-func getErrorMessage(sentence *proto.Sentence) string {
-	for _, word := range sentence.Words {
-		if strings.HasPrefix(word, "=message=") {
-			return strings.TrimPrefix(word, "=message=")
-		}
-	}
-	return "unknown error"
-}
-
 func parseQueueResponse(sentence *proto.Sentence) *QoSConfig {
 	config := &QoSConfig{Extra: make(map[string]interface{})}
 
-	for _, word := range sentence.Words {
-		if strings.HasPrefix(word, "=name=") {
-			config.Name = strings.TrimPrefix(word, "=name=")
-		} else if strings.HasPrefix(word, "=max-limit=") {
-			// Parse "1024k/2048k" format
-			maxLimit := strings.TrimPrefix(word, "=max-limit=")
+	// Parse from Map
+	if sentence.Map != nil {
+		if name, ok := sentence.Map["name"]; ok {
+			config.Name = name
+		}
+
+		// Parse max-limit: "1024k/2048k" format
+		if maxLimit, ok := sentence.Map["max-limit"]; ok {
 			parts := strings.Split(maxLimit, "/")
 			if len(parts) == 2 {
 				// Remove 'k' suffix and parse
 				upStr := strings.TrimSuffix(parts[0], "k")
 				downStr := strings.TrimSuffix(parts[1], "k")
-				fmt.Sscanf(upStr, "%d", &config.UpRate)
-				fmt.Sscanf(downStr, "%d", &config.DownRate)
+
+				if up, err := strconv.Atoi(upStr); err == nil {
+					config.UpRate = up
+				}
+				if down, err := strconv.Atoi(downStr); err == nil {
+					config.DownRate = down
+				}
 			}
-		} else if strings.HasPrefix(word, "=target=") {
-			config.Extra["target"] = strings.TrimPrefix(word, "=target=")
+		}
+
+		if target, ok := sentence.Map["target"]; ok {
+			config.Extra["target"] = target
 		}
 	}
 
