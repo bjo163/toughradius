@@ -8,6 +8,9 @@ var Tables = []interface{}{
 	// Network
 	&NetNode{},
 	&NetNas{},
+	// QoS Management
+	&NasQoS{},
+	&NasQoSLog{},
 	// Radius
 	&RadiusAccounting{},
 	&RadiusOnline{},

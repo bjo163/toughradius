@@ -34,6 +34,16 @@ type NetNas struct {
 	Status     string    `json:"status" form:"status"`           // Device status
 	Tags       string    `json:"tags" form:"tags"`               // Tags
 	Remark     string    `json:"remark" form:"remark"`           // Remark
+	// QoS Management Fields
+	QoSEnabled    bool   `json:"qos_enabled" form:"qos_enabled"`       // Enable QoS management
+	QoSMethod     string `json:"qos_method" form:"qos_method"`         // "api" | "snmp"
+	QoSConfig     string `json:"qos_config" form:"qos_config"`         // JSON config for connection
+	APIHost       string `json:"api_host" form:"api_host"`             // API host/IP
+	APIPort       int    `json:"api_port" form:"api_port"`             // API port
+	APIUsername   string `json:"api_username" form:"api_username"`     // API username
+	APIPassword   string `json:"api_password" form:"api_password"`     // API password (encrypted)
+	SNMPVersion   string `json:"snmp_version" form:"snmp_version"`     // "v2c" | "v3"
+	SNMPCommunity string `json:"snmp_community" form:"snmp_community"` // SNMP community
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
