@@ -30,11 +30,12 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -ldflags \
 
 FROM alpine:latest
 
-RUN apk add --no-cache curl ca-certificates tzdata
+RUN apk add --no-cache curl ca-certificates tzdata bash
 
 COPY --from=builder /toughradius /usr/local/bin/toughradius
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN chmod +x /usr/local/bin/toughradius
+RUN chmod +x /usr/local/bin/toughradius /usr/local/bin/docker-entrypoint.sh
 
 # Expose required ports:
 # 1816 - Web/Admin API (HTTP)
@@ -46,6 +47,5 @@ EXPOSE 1816/tcp 1812/udp 1813/udp 2083/tcp
 # Create working directory
 WORKDIR /data
 
-# Use CMD instead of ENTRYPOINT to allow easier override
-# If -c flag is not provided, will use default toughradius.yml
-CMD ["/usr/local/bin/toughradius"]
+# Use entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

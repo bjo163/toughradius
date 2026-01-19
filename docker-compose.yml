@@ -49,13 +49,19 @@ services:
       # ============================================
       - TOUGHRADIUS_LOGGER_MODE=development
       - TOUGHRADIUS_LOGGER_FILE_ENABLE=true
+
+      # ============================================
+      # Docker Initialization
+      # ============================================
+      - INIT_DB=true
+      - CONFIG_FILE=/etc/toughradius.yml
     volumes:
       - toughradius_data:/data
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1816/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:1816/ready"]
       interval: 10s
       timeout: 5s
       retries: 3
