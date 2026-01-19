@@ -77,8 +77,10 @@ interface OnlineSession extends RaRecord {
   session_timeout?: number;
   acct_start_time?: string | number;
   acct_session_time?: number;
-  acct_input_octets?: number;
-  acct_output_octets?: number;
+  acct_input_total?: number | string;
+  acct_output_total?: number | string;
+  acct_input_octets?: number | string;
+  acct_output_octets?: number | string;
   acct_input_packets?: number;
   acct_output_packets?: number;
 }
@@ -105,7 +107,7 @@ const formatBytes = (bytes?: number | string): string => {
   if (bytes === undefined || bytes === null || bytes === '') {
     return '-';
   }
-  const numBytes = typeof bytes === 'string' ? parseFloat(bytes) : bytes;
+  let numBytes = typeof bytes === 'string' ? parseFloat(bytes) : bytes;
   if (isNaN(numBytes)) return '-';
   if (numBytes === 0) {
     return '0 B';

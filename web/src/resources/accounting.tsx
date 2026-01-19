@@ -77,8 +77,8 @@ interface AccountingRecord extends RaRecord {
   delegated_ipv6_prefix?: string;
   mac_addr?: string;
   acct_session_time?: number;
-  acct_input_total?: number;
-  acct_output_total?: number;
+  acct_input_total?: number | string;
+  acct_output_total?: number | string;
   acct_input_packets?: number;
   acct_output_packets?: number;
   acct_start_time?: string | number;

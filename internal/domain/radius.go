@@ -110,8 +110,8 @@ func (r RadiusOnline) MarshalJSON() ([]byte, error) {
 	type Alias RadiusOnline
 	return json.Marshal(&struct {
 		*Alias
-		AcctInputOctets  int64 `json:"acct_input_octets,string"`
-		AcctOutputOctets int64 `json:"acct_output_octets,string"`
+		AcctInputOctets  int64 `json:"acct_input_octets"`
+		AcctOutputOctets int64 `json:"acct_output_octets"`
 	}{
 		Alias:            (*Alias)(&r),
 		AcctInputOctets:  r.AcctInputTotal,
