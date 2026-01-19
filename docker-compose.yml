@@ -41,7 +41,8 @@ services:
       - TOUGHRADIUS_RADIUS_HOST=0.0.0.0
       - TOUGHRADIUS_RADIUS_AUTHPORT=1812
       - TOUGHRADIUS_RADIUS_ACCTPORT=1813
-      - TOUGHRADIUS_RADIUS_RADSEC_PORT=2083
+      # RadSec requires TLS certificates. Disable with 0 if not using RadSec
+      - TOUGHRADIUS_RADIUS_RADSEC_PORT=0
       - TOUGHRADIUS_RADIUS_DEBUG=true
 
       # ============================================
