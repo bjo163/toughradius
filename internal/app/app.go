@@ -201,6 +201,18 @@ func (a *Application) InitDb() {
 	if err != nil {
 		zap.S().Error(err)
 	}
+
+	// Create default admin account
+	a.checkSuper()
+	
+	// Initialize default settings
+	a.checkSettings()
+	
+	// Create default node
+	a.checkDefaultPNode()
+
+	zap.S().Info("Database initialization completed successfully",
+		zap.String("namespace", "app"))
 }
 
 // ConfigMgr returns the configuration manager
