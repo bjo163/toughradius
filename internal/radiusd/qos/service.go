@@ -101,10 +101,11 @@ func (s *NasQoSService) syncPendingQueues(ctx context.Context) {
 	}
 
 	if len(pending) == 0 {
+		zap.L().Debug("no pending QoS queues to process")
 		return
 	}
 
-	zap.L().Debug("processing pending queues", zap.Int("count", len(pending)))
+	zap.L().Info("🔄 processing pending QoS queues", zap.Int("count", len(pending)))
 
 	for _, qos := range pending {
 		s.syncQueue(ctx, qos)

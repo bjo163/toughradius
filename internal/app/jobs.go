@@ -161,21 +161,26 @@ func (a *Application) initQoSService() {
 		}
 	}()
 
+	zap.L().Info("Initializing QoS sync service...", zap.String("namespace", "qos"))
+
 	// Create repository implementations
+	zap.L().Debug("Creating QoS repositories", zap.String("namespace", "qos"))
 	qosRepo := &qos.GormNasQoSRepository{DB: a.gormDB}
 	logRepo := &qos.GormNasQoSLogRepository{DB: a.gormDB}
 	nasRepo := NewGormNasRepository(a.gormDB)
 	userRepo := NewGormUserRepository(a.gormDB)
 
 	// Create and initialize service
+	zap.L().Debug("Creating NasQoSService instance", zap.String("namespace", "qos"))
 	qosService := qos.NewNasQoSService(a.gormDB, qosRepo, logRepo, nasRepo, userRepo)
 
 	// Start sync background process
 	// Default sync interval: 1 minute
+	zap.L().Debug("Starting QoS sync service with 1-minute interval", zap.String("namespace", "qos"))
 	qosService.Start(context.Background(), 1*time.Minute)
 
 	// Store reference for graceful shutdown
 	a.qosService = qosService
 
-	zap.L().Info("QoS sync service initialized", zap.String("namespace", "qos"))
+	zap.L().Info("✅ QoS sync service initialized successfully", zap.String("namespace", "qos"))
 }
