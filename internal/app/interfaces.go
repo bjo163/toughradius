@@ -54,3 +54,9 @@ type AppContext interface {
 	ConfigManagerProvider
 	ProfileCacheProvider
 	QoSServiceProvider
+
+	// Application lifecycle methods
+	MigrateDB(track bool) error
+	InitDb()
+	DropAll()
+}
