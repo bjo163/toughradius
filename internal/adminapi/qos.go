@@ -9,6 +9,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/talkincode/toughradius/v9/internal/radiusd/qos"
 	"github.com/talkincode/toughradius/v9/internal/webserver"
 	"go.uber.org/zap"
 )
@@ -62,9 +63,15 @@ func ManualTriggerQoSSync(c echo.Context) error {
 
 	// Get QoS service from app context
 	appCtx := GetAppContext(c)
-	qosService := appCtx.GetQoSService()
-	if qosService == nil {
+	qosServiceIface := appCtx.GetQoSService()
+	if qosServiceIface == nil {
 		return fail(c, http.StatusInternalServerError, "SERVICE_ERROR", "QoS service not initialized", nil)
+	}
+
+	// Type cast to NasQoSService
+	qosService, ok := qosServiceIface.(*qos.NasQoSService)
+	if !ok {
+		return fail(c, http.StatusInternalServerError, "SERVICE_ERROR", "Invalid QoS service type", nil)
 	}
 
 	startTime := time.Now()
@@ -88,8 +95,8 @@ func ManualTriggerQoSSync(c echo.Context) error {
 	processedCount := int64(len(pendingQueues))
 
 	// Manually sync each pending queue
-	for _, qos := range pendingQueues {
-		qosService.SyncQueue(ctx, qos)
+	for _, queueItem := range pendingQueues {
+		qosService.SyncQueue(ctx, queueItem)
 	}
 
 	// Also get and sync failed queues
@@ -97,8 +104,8 @@ func ManualTriggerQoSSync(c echo.Context) error {
 	if err := db.Where("nas_id = ? AND status = ?", nasID, "failed").
 		Limit(50).
 		Find(&failedQueues).Error; err == nil && len(failedQueues) > 0 {
-		for _, qos := range failedQueues {
-			qosService.SyncQueue(ctx, qos)
+		for _, queueItem := range failedQueues {
+			qosService.SyncQueue(ctx, queueItem)
 		}
 		processedCount += int64(len(failedQueues))
 	}
