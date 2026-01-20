@@ -58,6 +58,12 @@ func (s *NasQoSService) Start(ctx context.Context, interval time.Duration) {
 	)
 }
 
+// SyncQueue is a public method to manually sync a single QoS queue
+// This is useful for testing and manual triggering of QoS sync
+func (s *NasQoSService) SyncQueue(ctx context.Context, qos *domain.NasQoS) {
+	s.syncQueue(ctx, qos)
+}
+
 // Stop gracefully stops the QoS sync service
 func (s *NasQoSService) Stop() {
 	if s.syncTicker != nil {

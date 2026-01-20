@@ -277,6 +277,11 @@ func (a *Application) ProfileCache() *ProfileCache {
 	return a.profileCache
 }
 
+// GetQoSService returns the QoS service instance
+func (a *Application) GetQoSService() interface{} {
+	return a.qosService
+}
+
 // checkDefaultPNode check default node
 func (a *Application) checkDefaultPNode() {
 	var pnode domain.NetNode

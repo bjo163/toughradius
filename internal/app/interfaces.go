@@ -39,6 +39,11 @@ type ProfileCacheProvider interface {
 	ProfileCache() *ProfileCache
 }
 
+// QoSServiceProvider provides QoS service access
+type QoSServiceProvider interface {
+	GetQoSService() interface{}
+}
+
 // AppContext combines all provider interfaces for full application context
 // Services should depend on specific providers or this combined interface
 type AppContext interface {
@@ -48,9 +53,4 @@ type AppContext interface {
 	SchedulerProvider
 	ConfigManagerProvider
 	ProfileCacheProvider
-
-	// Application lifecycle methods
-	MigrateDB(track bool) error
-	InitDb()
-	DropAll()
-}
+	QoSServiceProvider

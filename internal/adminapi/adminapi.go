@@ -13,6 +13,7 @@ func Init(appCtx app.AppContext) {
 	registerAccountingRoutes()
 	registerSessionRoutes()
 	registerNASRoutes()
+	registerQoSRoutes()
 	registerSettingsRoutes()
 	registerNodesRoutes()
 	registerOperatorsRoutes()
