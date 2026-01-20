@@ -69,8 +69,8 @@ func ManualTriggerQoSSync(c echo.Context) error {
 	}
 
 	// Type cast to NasQoSService
-	qosService, ok := qosServiceIface.(*qos.NasQoSService)
-	if !ok {
+	qosService, isValidType := qosServiceIface.(*qos.NasQoSService)
+	if !isValidType {
 		return fail(c, http.StatusInternalServerError, "SERVICE_ERROR", "Invalid QoS service type", nil)
 	}
 
