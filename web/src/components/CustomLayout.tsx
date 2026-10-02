@@ -34,7 +34,7 @@ export const CustomLayout = ({ sx, ...rest }: CustomLayoutProps) => (
         },
         // 内容区域样式
         '& .RaLayout-content': {
-          padding: { xs: 2, md: 3, lg: 4 },
+          padding: { xs: 1, md: 1.5, lg: 2 },
           minHeight: 'calc(100vh - 48px)',
           transition: 'background-color 0.3s ease',
         },

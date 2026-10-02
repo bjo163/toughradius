@@ -63,13 +63,14 @@ func regexpCompile(str string) *regexp.Regexp {
 }
 
 var (
-	email    = regexpCompile(emailStr)
-	ip4      = regexpCompile(ip4Str)
-	ip6      = regexpCompile(ip6Str)
-	ip       = regexpCompile(ipStr)
-	url      = regexpCompile(urlStr)
-	cnPhone  = regexpCompile(cnPhoneStr)
-	cnMobile = regexpCompile(cnMobileStr)
+	email     = regexpCompile(emailStr)
+	ip4       = regexpCompile(ip4Str)
+	ip6       = regexpCompile(ip6Str)
+	ip        = regexpCompile(ipStr)
+	url       = regexpCompile(urlStr)
+	cnPhone   = regexpCompile(cnPhoneStr)
+	cnMobile  = regexpCompile(cnMobileStr)
+	e164Phone = regexpCompile(`\+[1-9][0-9]{7,14}`)
 )
 
 // Determine if val can match the regular expression in exp correctly.
@@ -96,6 +97,12 @@ func IsCnPhone(val interface{}) bool {
 // IsCnMobile reports whether val matches a mainland China mobile number.
 func IsCnMobile(val interface{}) bool {
 	return isMatch(cnMobile, val)
+}
+
+// IsE164PhoneNumber reports whether val is a phone number in international E.164 notation.
+// The leading plus sign is required, followed by 8 to 15 digits with a nonzero country code.
+func IsE164PhoneNumber(val interface{}) bool {
+	return isMatch(e164Phone, val)
 }
 
 // IsURL reports whether val matches the accepted URL pattern.

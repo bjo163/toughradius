@@ -7,9 +7,10 @@ import { i18nProvider } from './i18n';
 import Dashboard from './pages/Dashboard';
 import AccountSettings from './pages/AccountSettings';
 import { SystemConfigPage } from './pages/SystemConfigPage';
+import OperationsPage from './pages/OperationsPage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
-import { theme, darkTheme } from './theme';
+import { theme, lightTheme } from './theme';
 import {
   CustomerList, CustomerCreate, CustomerEdit, CustomerShow,
   PackageList, PackageCreate, PackageEdit,
@@ -17,25 +18,25 @@ import {
   InvoiceList, InvoiceShow, PaymentList, PaymentCreate, PaymentShow,
 } from './resources/isp';
 
-// 自定义加载组件，避免闪烁
-const CustomLoading = () => (
-  <Box
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#f8fafc',
-      gap: 2,
-    }}
-  >
-    <CircularProgress size={40} sx={{ color: '#2563eb' }} />
-    <Typography variant="body1" color="text.secondary" sx={{ color: '#64748b' }}>
-      Loading...
-    </Typography>
-  </Box>
-);
+const CustomLoading = () => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        bgcolor: '#07130d',
+        color: '#cbd5e1',
+        gap: 2,
+      }}
+    >
+      <CircularProgress size={36} sx={{ color: '#4ade80' }} />
+      <Typography variant="body2" color="text.secondary">Loading MWX-ISP...</Typography>
+    </Box>
+  );
+};
 
 // 导入资源组件
 import {
@@ -87,8 +88,8 @@ const App = () => (
     loginPage={LoginPage}
     title="MWX-ISP"
     theme={theme}
-    darkTheme={darkTheme}
-    defaultTheme="light"
+    lightTheme={lightTheme}
+    defaultTheme="dark"
     layout={CustomLayout}
     loading={CustomLoading}
     error={CustomError}
@@ -172,6 +173,7 @@ const App = () => (
     <CustomRoutes>
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
+      <Route path="/operations" element={<OperationsPage />} />
     </CustomRoutes>
     </Admin>
 );

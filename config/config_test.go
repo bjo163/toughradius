@@ -103,42 +103,42 @@ func TestAppConfigGetters(t *testing.T) {
 		{
 			name:     "GetLogDir",
 			getter:   cfg.GetLogDir,
-			expected: "/test/workdir/logs",
+			expected: filepath.Join("/test/workdir", "logs"),
 		},
 		{
 			name:     "GetPublicDir",
 			getter:   cfg.GetPublicDir,
-			expected: "/test/workdir/public",
+			expected: filepath.Join("/test/workdir", "public"),
 		},
 		{
 			name:     "GetPrivateDir",
 			getter:   cfg.GetPrivateDir,
-			expected: "/test/workdir/private",
+			expected: filepath.Join("/test/workdir", "private"),
 		},
 		{
 			name:     "GetDataDir",
 			getter:   cfg.GetDataDir,
-			expected: "/test/workdir/data",
+			expected: filepath.Join("/test/workdir", "data"),
 		},
 		{
 			name:     "GetBackupDir",
 			getter:   cfg.GetBackupDir,
-			expected: "/test/workdir/backup",
+			expected: filepath.Join("/test/workdir", "backup"),
 		},
 		{
 			name:     "GetRadsecCaCertPath",
 			getter:   cfg.GetRadsecCaCertPath,
-			expected: "/test/workdir/private/ca.crt",
+			expected: filepath.Join("/test/workdir", "private", "ca.crt"),
 		},
 		{
 			name:     "GetRadsecCertPath",
 			getter:   cfg.GetRadsecCertPath,
-			expected: "/test/workdir/private/radsec.tls.crt",
+			expected: filepath.Join("/test/workdir", "private", "radsec.tls.crt"),
 		},
 		{
 			name:     "GetRadsecKeyPath",
 			getter:   cfg.GetRadsecKeyPath,
-			expected: "/test/workdir/private/radsec.tls.key",
+			expected: filepath.Join("/test/workdir", "private", "radsec.tls.key"),
 		},
 	}
 
@@ -873,28 +873,31 @@ logger:
 }
 
 func TestRadsecCertPathsAbsolute(t *testing.T) {
+	caPath := filepath.Join(t.TempDir(), "certs", "ca.crt")
+	certPath := filepath.Join(t.TempDir(), "certs", "server.crt")
+	keyPath := filepath.Join(t.TempDir(), "private", "server.key")
 	cfg := &AppConfig{
 		System: SysConfig{
 			Workdir: "/test/workdir",
 		},
 		Radiusd: RadiusdConfig{
-			RadsecCaCert: "/etc/ssl/certs/ca.crt",
-			RadsecCert:   "/etc/ssl/certs/server.crt",
-			RadsecKey:    "/etc/ssl/private/server.key",
+			RadsecCaCert: caPath,
+			RadsecCert:   certPath,
+			RadsecKey:    keyPath,
 		},
 	}
 
 	// Test that absolute paths are not modified
-	if cfg.GetRadsecCaCertPath() != "/etc/ssl/certs/ca.crt" {
-		t.Errorf("Expected absolute path '/etc/ssl/certs/ca.crt', got '%s'", cfg.GetRadsecCaCertPath())
+	if cfg.GetRadsecCaCertPath() != cfg.Radiusd.RadsecCaCert {
+		t.Errorf("Expected absolute path '%s', got '%s'", cfg.Radiusd.RadsecCaCert, cfg.GetRadsecCaCertPath())
 	}
 
-	if cfg.GetRadsecCertPath() != "/etc/ssl/certs/server.crt" {
-		t.Errorf("Expected absolute path '/etc/ssl/certs/server.crt', got '%s'", cfg.GetRadsecCertPath())
+	if cfg.GetRadsecCertPath() != cfg.Radiusd.RadsecCert {
+		t.Errorf("Expected absolute path '%s', got '%s'", cfg.Radiusd.RadsecCert, cfg.GetRadsecCertPath())
 	}
 
-	if cfg.GetRadsecKeyPath() != "/etc/ssl/private/server.key" {
-		t.Errorf("Expected absolute path '/etc/ssl/private/server.key', got '%s'", cfg.GetRadsecKeyPath())
+	if cfg.GetRadsecKeyPath() != cfg.Radiusd.RadsecKey {
+		t.Errorf("Expected absolute path '%s', got '%s'", cfg.Radiusd.RadsecKey, cfg.GetRadsecKeyPath())
 	}
 }
 
@@ -911,16 +914,16 @@ func TestRadsecCertPathsRelative(t *testing.T) {
 	}
 
 	// Test that relative paths are joined to the workdir
-	if cfg.GetRadsecCaCertPath() != "/var/toughradius/certs/ca.crt" {
-		t.Errorf("Expected path '/var/toughradius/certs/ca.crt', got '%s'", cfg.GetRadsecCaCertPath())
+	if cfg.GetRadsecCaCertPath() != filepath.Join("/var/toughradius", "certs", "ca.crt") {
+		t.Errorf("Unexpected CA path: %s", cfg.GetRadsecCaCertPath())
 	}
 
-	if cfg.GetRadsecCertPath() != "/var/toughradius/certs/server.crt" {
-		t.Errorf("Expected path '/var/toughradius/certs/server.crt', got '%s'", cfg.GetRadsecCertPath())
+	if cfg.GetRadsecCertPath() != filepath.Join("/var/toughradius", "certs", "server.crt") {
+		t.Errorf("Unexpected cert path: %s", cfg.GetRadsecCertPath())
 	}
 
-	if cfg.GetRadsecKeyPath() != "/var/toughradius/certs/server.key" {
-		t.Errorf("Expected path '/var/toughradius/certs/server.key', got '%s'", cfg.GetRadsecKeyPath())
+	if cfg.GetRadsecKeyPath() != filepath.Join("/var/toughradius", "certs", "server.key") {
+		t.Errorf("Unexpected key path: %s", cfg.GetRadsecKeyPath())
 	}
 }
 

@@ -104,7 +104,8 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 ## Kriteria selesai milestone inti
 
 - [x] Tersedia flow untuk menautkan RadiusProfile ke Internet Package.
-- [x] Flow aplikasi untuk membuat Customer, Subscription, dan RadiusUser serta mengaktifkan layanan sudah tersedia.\r\n- [ ] Verifikasi autentikasi RADIUS end-to-end dengan NAS riil masih perlu dilakukan saat deployment.
+- [x] Flow aplikasi untuk membuat Customer, Subscription, dan RadiusUser serta mengaktifkan layanan sudah tersedia.
+- [ ] Verifikasi autentikasi RADIUS end-to-end dengan NAS riil masih perlu dilakukan saat deployment.
 - [x] Invoice dapat dibuat dan menampilkan total, tanggal jatuh tempo, serta saldo.
 - [x] Overdue + grace habis men-suspend subscription dan menonaktifkan RadiusUser; scheduler mencoba disconnect sesi aktif dengan CoA.
 - [x] Pembayaran penuh menandai invoice paid serta mengaktifkan kembali subscription dan RadiusUser bila setting auto-reactivate aktif.
@@ -115,6 +116,81 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Pertahankan password admin pada restart/upgrade; bootstrap instalasi baru tetap `admin/admin`, sementara password custom dan password bootstrap lama tidak dirotasi diam-diam.
 - [x] Jadikan English satu-satunya locale yang dimuat aplikasi; perbaiki teks fallback UI yang tercampur bahasa.
 - [x] Tambahkan regresi otomatis untuk nomor invoice/payment lintas periode dan kode package otomatis.
-- [ ] Uji RADIUS auth, accounting, CoA/Disconnect, dan reactivation dengan NAS sebenarnya sebelum produksi.
+- [x] Simulasikan CoA/Disconnect melalui fake NAS UDP: ACK, NAK, timeout/retry, serta validasi Message-Authenticator.
+- [x] Simulasikan alur Admin API untuk disconnect dan perubahan authorization dengan fake NAS UDP.
+- [ ] Jalankan acceptance integration lengkap berbasis PostgreSQL/OpenLDAP; jalankan di CI atau mesin Docker karena Docker daemon lokal belum tersedia.
+- [ ] Verifikasi autentikasi dan accounting paket end-to-end pada server RADIUS lokal, selain uji CoA/Admin API yang sudah lulus.
+- [ ] Uji autentikasi ulang pelanggan setelah reactivation dengan NAS nyata sebelum produksi; ini pilot kompatibilitas, bukan penghalang untuk pengembangan lokal.
 
-Catatan: pengujian lokal mengonfirmasi layanan aplikasi, API, SQLite, dan counter billing. Uji NAS nyata memerlukan alamat/secret NAS dan pelanggan uji pada deployment; hasil lokal tidak mewakili interoperabilitas vendor NAS.
+## Grand plan pasca-MVP
+
+### A. Simulator yang bisa diulang
+
+- [ ] Sediakan satu perintah/script simulasi lokal dengan fixture deterministik dan database sementara.
+- [ ] Lengkapi fake NAS untuk auth accept/reject, accounting start/interim/stop, secret salah, paket invalid, dan respons hilang.
+- [ ] Cetak hasil skenario dengan ringkasan pass/fail serta instruksi menjalankan ulang.
+
+### B. Acceptance dan distribusi
+
+- [ ] Jalankan suite integrasi PostgreSQL/OpenLDAP penuh di CI atau host Docker yang berfungsi.
+- [x] Tambahkan acceptance scenario untuk alur customer, paket, subscription/RADIUS user, invoice idempotent, overdue/grace, suspend/reject, accounting start/stop, pembayaran, reactivation, dan auth ulang.
+- [ ] Jalankan acceptance scenario tersebut pada PostgreSQL/OpenLDAP; source sudah dikompilasi, tetapi runtime belum dapat diverifikasi tanpa database integration.
+- [ ] Dokumentasikan serta otomatisasi build EXE Windows dan deployment server dari clean checkout.
+- [ ] Buktikan backup/restore dan upgrade database pada instalasi uji.
+
+### C. Kesiapan operasional
+
+- [ ] Audit kredensial bootstrap, password operator, hak akses, secret, TLS, port, dan audit log untuk deployment produksi.
+- [ ] Verifikasi scheduler tahan restart/idempotent untuk invoice, overdue, suspend, payment, dan reactivation.
+- [ ] Tambahkan health/status scheduler dan runbook pemulihan layanan/database.
+
+### D. Monitoring kesehatan jaringan (TR-F031)
+
+- [x] Tetapkan target dan credential secara eksplisit; utamakan SNMPv3 authPriv dan jangan lakukan network scan otomatis.
+- [x] Implementasikan pemeriksaan reachability/latency/loss dan polling status interface/counter trafik SNMP read-only.
+- [x] Tampilkan riwayat, threshold, perubahan status, dedupe alert; ICMP failed ditampilkan sebagai probe failure, bukan bukti perangkat mati.
+- [ ] Buat fake SNMP agent end-to-end; pengujian saat ini memakai mock Probe dan belum mensimulasikan paket SNMP.
+- [x] Pastikan tidak ada operasi write/provisioning ke router; batasi 500 target, delapan poll bersamaan, 30–3600 detik interval, timeout maksimal 10 detik, dan 30 hari retensi sample.
+- [ ] Uji terhadap router/SNMP agent yang diizinkan saat deployment.
+
+### E. WhatsApp operator via whatsmeow (TR-F030, opsional/eksperimental)
+
+- [x] Buat notification-provider interface dan persistent outbox sebelum adapter transport.
+- [x] Implementasikan QR pairing/status koneksi, kirim satu arah, reconnect, logout, dan penyimpanan sesi pada database aplikasi.
+- [x] Batasi tujuan ke maksimum 20 nomor operator allowlist; tidak ada blast/promosi/chatbot dan pesan tidak memuat password atau data pelanggan.
+- [x] Terapkan retry terbatas, dedupe per event/nomor, audit status pengiriman, pembatalan antrean saat setting/allowlist dicabut, dan pruning histori 30 hari.
+- [x] Uji dengan mock sender; alur pair/send sungguhan masih memerlukan operator untuk memasangkan nomor uji dan menerima risiko library/protokol tidak resmi.
+- [x] Tinjau Terms of Service WhatsApp; untuk kebutuhan produksi dengan dukungan resmi, evaluasi WhatsApp Business Platform sebagai adapter alternatif.
+
+### F. Pilot NAS nyata
+
+- [ ] Catat model/firmware, alamat dan shared secret NAS, port auth/accounting/CoA, routing/firewall, serta atribut vendor.
+- [ ] Jalankan pilot dengan pelanggan internal: auth, accounting, suspend/disconnect, payment, reactivate, dan auth ulang.
+- [ ] Simpan bukti hasil tanpa secret/password dan tutup gap kompatibilitas sebelum cutover pelanggan.
+
+### G. Stabilitas berbasis penggunaan
+
+- [ ] Setelah pilot, kumpulkan gap operasional/performa dan prioritaskan berdasarkan bukti, bukan menambah modul di luar scope.
+- [ ] Tinjau kapasitas, retention, ekspor data, dan jadwal backup terhadap target jumlah pelanggan.
+
+### H. Audit konsistensi UI dan pemadatan informasi
+
+- [x] Samakan label, status badge, referensi relasi, dan format mata uang pada halaman ISP.
+- [x] Hilangkan metrik dashboard yang berulang dan sediakan empty/error state pada grafik.
+- [x] Pastikan chart dashboard, target jaringan, histori probe, metrik interface, insiden, dan riwayat notifikasi terbaca saat fixture simulasi tersedia.
+- [x] Perbaiki pembacaan respons Operations agar target, histori, insiden, dan outbox tidak salah tampil kosong.
+- [x] Pertahankan input allowlist WhatsApp selama polling status berkala.
+- [x] Verifikasi route login tanpa sesi dan route Operations dengan identitas admin simulasi di browser tanpa error JavaScript.
+- [x] Ganti relasi ID mentah pada detail invoice/payment dengan nomor customer, subscription, dan invoice yang dapat dibuka.
+- [x] Pastikan `getMany` memuat record berdasarkan ID yang diminta agar ReferenceField tidak bergantung pada filter list yang tidak didukung semua API.
+- [x] Hubungkan filter Customer, Package, Subscription, Invoice, dan Payment yang sudah didukung backend ke daftar UI.
+- [x] Pastikan filter Customer dan Invoice Status tersedia melalui filter panel Invoice; nomor invoice dapat dicari langsung dari daftar.
+- [x] Hapus locale China yang tidak digunakan serta dukung nomor telepon internasional E.164 pada profil Operator, sambil mempertahankan format nomor tersimpan lama.
+- [x] Rapikan header pada viewport mobile; cek detail payment pada lebar 390 px tanpa wrap/overflow.
+- [ ] Periksa filter status/customer/nomor di semua daftar dan alur form pada browser kedua serta ukuran tablet.
+- [ ] Lakukan inspeksi visual lintas browser, ukuran layar, dan semua resource memakai sesi/data operasional representatif.
+- [ ] Konfirmasi tata letak serta skala informasi dengan operator setelah pilot deployment.
+
+Urutan eksekusi yang disarankan: A → B → C → D → E → F → G → H. Simulator fake network dan mock WhatsApp dapat dipakai tanpa hardware/akun produksi; polling jaringan live memerlukan target yang diizinkan, sementara validasi vendor/cutover pada Gelombang F memerlukan NAS nyata.
+
+Catatan hasil terbaru (2026-10-02): tes CoAService terpilih dan tes Admin API disconnect/authorization berhasil dijalankan lokal dengan fake NAS UDP. Acceptance scenario ISP ditambahkan ke `test/integration/isp_lifecycle_test.go` untuk memeriksa satu siklus customer sampai auth ulang plus accounting start/stop. `go test ./...`, `go vet ./...`, frontend production build, dan kompilasi paket integration bertag berhasil pada putaran sebelumnya; audit ini juga menjalankan `go test` terpilih untuk validasi E.164 dan endpoint Operator, serta frontend production build yang berhasil. Audit UI lokal memakai fixture simulasi untuk dashboard, login, Operations, detail invoice/payment, target jaringan, histori interface, insiden, chart, dan polling WhatsApp; tidak ada error JavaScript, nomor relasi terbaca, dan input allowlist tidak ter-reset. Header mobile dan detail payment diperiksa pada 390 px tanpa horizontal overflow. ESLint belum dapat dijalankan karena plugin `@typescript-eslint` gagal memuat `ts-api-utils` (`Cannot read properties of undefined (reading 'Intrinsic')`). Build masih memperingatkan bundle ECharts 1.14 MB. Eksekusi runtime suite PostgreSQL/OpenLDAP belum dilakukan karena Docker daemon lokal tidak aktif dan `TEST_DATABASE_*` tidak tersedia. Uji SNMP agent/NAS nyata serta pairing WhatsApp sungguhan tetap perlu validasi operasional.

@@ -53,16 +53,19 @@ export const LoginPage = () => {
         minHeight: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'radial-gradient(ellipse at 18% 12%, rgba(74,222,128,0.20), transparent 36%), radial-gradient(ellipse at 85% 88%, rgba(20,184,166,0.15), transparent 36%), linear-gradient(145deg, #07130d 0%, #0e2417 52%, #10251a 100%)',
       }}
     >
-      <Card sx={{ minWidth: 400, maxWidth: 500, borderRadius: 2, boxShadow: 3 }}>
+      <Card sx={{ minWidth: 400, maxWidth: 500, borderRadius: 3, boxShadow: '0 24px 80px rgba(0,0,0,0.38)', border: '1px solid rgba(134,239,172,0.16)', background: 'linear-gradient(145deg, rgba(18,36,25,0.98), rgba(10,25,16,0.98))', color: '#f0fdf4' }}>
         <CardContent sx={{ p: 4 }}>
           <Box sx={{ mb: 4, textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e40af', mb: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Box sx={{ width: 54, height: 54, display: 'grid', placeItems: 'center', borderRadius: 2.5, color: '#07130d', background: 'linear-gradient(135deg, #86efac, #16a34a)', fontSize: 25, fontWeight: 900, letterSpacing: '-0.08em', boxShadow: '0 8px 30px rgba(34,197,94,0.28)' }}>M</Box>
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: '#f0fdf4', mb: 1, letterSpacing: '0.04em' }}>
               {translate('app.title')}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: '#a7c4ae' }}>
               {translate('app.subtitle')}
             </Typography>
           </Box>
@@ -124,9 +127,11 @@ export const LoginPage = () => {
               sx={{
                 mt: 2,
                 py: 1.5,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)',
+                color: '#07130d',
+                boxShadow: '0 8px 24px rgba(34,197,94,0.24)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #5568d3 0%, #6a4291 100%)',
+                  background: 'linear-gradient(135deg, #86efac 0%, #22c55e 100%)',
                 },
               }}
             >

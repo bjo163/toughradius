@@ -820,6 +820,7 @@ func TestOperatorEdgeCases(t *testing.T) {
 			"18612345678",
 			"+8613800138000",
 			"8613800138000",
+			"+628123456789",
 		}
 
 		for _, mobile := range validMobiles {

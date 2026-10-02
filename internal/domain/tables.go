@@ -11,6 +11,11 @@ var Tables = []interface{}{
 	// Network
 	&NetNode{},
 	&NetNas{},
+	&NetMonitorTarget{},
+	&NetMonitorSample{},
+	&NetMonitorIncident{},
+	&NotificationSettings{},
+	&NotificationOutbox{},
 	// Radius
 	&RadiusAccounting{},
 	&RadiusOnline{},

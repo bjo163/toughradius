@@ -1,11 +1,13 @@
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import OnlinePredictionOutlinedIcon from '@mui/icons-material/OnlinePredictionOutlined';
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
 import SwapVertOutlinedIcon from '@mui/icons-material/SwapVertOutlined';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Grid from '@mui/material/GridLegacy';
 import {
+  Alert,
   Box,
   Card,
+  CardActionArea,
   CardContent,
   Chip,
   LinearProgress,
@@ -16,6 +18,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import ReactECharts from 'echarts-for-react';
 import { useMemo } from 'react';
 import { useTranslate } from 'react-admin';
+import { Link as RouterLink } from 'react-router-dom';
 import { useApiQuery } from '../hooks/useApiQuery';
 
 interface DashboardStats {
@@ -100,16 +103,18 @@ const Dashboard = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const translate = useTranslate();
-  const { data: statsPayload, isFetching } = useApiQuery<DashboardStats>({
+  const { data: statsPayload, isFetching, isError: statsError } = useApiQuery<DashboardStats>({
     path: '/dashboard/stats',
     queryKey: ['dashboard', 'stats'],
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
     retry: 1,
+    enabled: Boolean(localStorage.getItem('token')),
   });
-  const { data: ispStats } = useApiQuery<ISPDashboardStats>({
+  const { data: ispStats, isError: ispStatsError } = useApiQuery<ISPDashboardStats>({
     path: '/dashboard/isp-stats',
     queryKey: ['dashboard', 'isp-stats'],
+    enabled: Boolean(localStorage.getItem('token')),
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
     retry: 1,
@@ -167,16 +172,10 @@ const Dashboard = () => {
       icon: <PeopleAltOutlinedIcon fontSize="large" />,
       accent: theme.palette.primary.main,
       highlights: [
+        { label: translate('dashboard.total_profiles'), value: stats.total_profiles },
         { label: translate('dashboard.disabled'), value: stats.disabled_users },
         { label: translate('dashboard.expired'), value: stats.expired_users },
       ],
-    },
-    {
-      title: translate('dashboard.online_users'),
-      value: numberFormatter.format(stats.online_users),
-      icon: <OnlinePredictionOutlinedIcon fontSize="large" />,
-      accent: '#34d399',
-      highlights: [{ label: translate('dashboard.total_profiles'), value: stats.total_profiles }],
     },
     {
       title: translate('dashboard.today_auth'),
@@ -191,18 +190,18 @@ const Dashboard = () => {
       secondaryValue: `↓ ${stats.today_output_gb.toFixed(2)} GB`,
       icon: <SwapVertOutlinedIcon fontSize="large" />,
       accent: '#f97316',
-      highlights: [{ label: translate('dashboard.unit_gb'), value: 'GB' }],
+      highlights: [],
     },
   ];
 
   const ipv6 = stats.ipv6_stats ?? emptyStats.ipv6_stats;
   const ipv6Cards = [
-    { label: translate('dashboard.ipv6_online'), value: ipv6.online_with_ipv6, accent: '#6366f1' },
-    { label: translate('dashboard.ipv6_address'), value: ipv6.online_with_ipv6_address, accent: '#0ea5e9' },
-    { label: translate('dashboard.ipv6_framed_prefix'), value: ipv6.online_with_framed_prefix, accent: '#10b981' },
-    { label: translate('dashboard.ipv6_delegated_prefix'), value: ipv6.online_with_delegated_prefix, accent: '#f59e0b' },
-    { label: translate('dashboard.ipv6_users_static_address'), value: ipv6.users_with_static_address, accent: '#8b5cf6' },
-    { label: translate('dashboard.ipv6_users_delegated_prefix'), value: ipv6.users_with_delegated_prefix, accent: '#ec4899' },
+    { label: translate('dashboard.ipv6_online'), value: ipv6.online_with_ipv6, accent: '#4ade80' },
+    { label: translate('dashboard.ipv6_address'), value: ipv6.online_with_ipv6_address, accent: '#2dd4bf' },
+    { label: translate('dashboard.ipv6_framed_prefix'), value: ipv6.online_with_framed_prefix, accent: '#86efac' },
+    { label: translate('dashboard.ipv6_delegated_prefix'), value: ipv6.online_with_delegated_prefix, accent: '#a3e635' },
+    { label: translate('dashboard.ipv6_users_static_address'), value: ipv6.users_with_static_address, accent: '#34d399' },
+    { label: translate('dashboard.ipv6_users_delegated_prefix'), value: ipv6.users_with_delegated_prefix, accent: '#14b8a6' },
   ];
 
   const authTrendOption = useMemo(
@@ -346,7 +345,7 @@ const Dashboard = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 1760, mx: 'auto' }}>
       {isFetching && (
         <LinearProgress
           sx={{
@@ -358,61 +357,57 @@ const Dashboard = () => {
           }}
         />
       )}
+      {(statsError || ispStatsError) && <Alert severity="warning">Some dashboard data could not be loaded. Values may be incomplete; retry after checking the server connection.</Alert>}
       <Card
         sx={{
-          borderRadius: 4,
+          borderRadius: 2,
           overflow: 'hidden',
-          background: isDark 
-            ? 'linear-gradient(135deg, #1e293b, #334155)' 
-            : 'linear-gradient(135deg, #eef2ff, #fdf2f8)',
-          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(255, 255, 255, 0.6)'}`,
+          position: 'relative',
+          background: isDark
+            ? 'radial-gradient(ellipse at 85% 5%, rgba(34,197,94,0.16), transparent 32%), linear-gradient(112deg, #0e1f15 0%, #10271a 58%, #123321 100%)'
+            : 'radial-gradient(ellipse at 85% 5%, rgba(34,197,94,0.12), transparent 32%), linear-gradient(112deg, #ffffff, #effaf2)',
+          border: `1px solid ${isDark ? 'rgba(74,222,128,0.25)' : 'rgba(22,163,74,0.2)'}`,
+          boxShadow: isDark ? '0 16px 42px rgba(0,0,0,0.2), inset 0 1px rgba(255,255,255,0.035)' : '0 12px 30px rgba(22,101,52,0.08)',
+          '&::after': {
+            content: '""', position: 'absolute', inset: 0, pointerEvents: 'none', opacity: isDark ? 0.28 : 0.18,
+            backgroundImage: 'linear-gradient(rgba(134,239,172,0.11) 1px, transparent 1px), linear-gradient(90deg, rgba(134,239,172,0.11) 1px, transparent 1px)',
+            backgroundSize: '24px 24px', maskImage: 'linear-gradient(90deg, transparent 42%, black 100%)',
+          },
         }}
       >
-        <CardContent>
+        <CardContent sx={{ position: 'relative', zIndex: 1, p: { xs: 1.5, md: 2 } }}>
           <Stack
             direction={{ xs: 'column', md: 'row' }}
-            spacing={3}
-            alignItems="center"
+            spacing={2}
+            alignItems="stretch"
             justifyContent="space-between"
           >
             <Box>
-              <Chip label={translate('dashboard.title')} color="primary" sx={{ mb: 2, fontWeight: 600 }} />
-              <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 520 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.6 }}>
+                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#4ade80', boxShadow: '0 0 12px #4ade80' }} />
+                <Typography variant="overline" sx={{ color: 'primary.light', fontWeight: 800, letterSpacing: '0.15em', lineHeight: 1.3 }}>MWX / NETWORK CONTROL</Typography>
+              </Stack>
+              <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.025em', mb: 0.4 }}>
+                {translate('dashboard.title')}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 520 }}>
                 {translate('dashboard.subtitle')}
               </Typography>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mt: 3 }}>
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    {translate('dashboard.today_auth')}
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    {numberFormatter.format(stats.today_auth_count)}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    {translate('dashboard.today_acct')}
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    {numberFormatter.format(stats.today_acct_count)}
-                  </Typography>
-                </Box>
-              </Stack>
             </Box>
 
-            <Box sx={{ minWidth: 260 }}>
-              <Typography variant="subtitle2" color="text.secondary">
+            <Box sx={{ minWidth: { xs: '100%', md: 260 }, alignSelf: 'center', p: 1.5, borderLeft: { md: '1px solid rgba(134,239,172,0.22)' }, borderTop: { xs: '1px solid rgba(134,239,172,0.22)', md: 'none' } }}>
+              <Typography variant="caption" color="text.secondary">
                 {translate('dashboard.online_ratio')}
               </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 700, my: 1 }}>
+              <Typography variant="h3" sx={{ fontWeight: 800, my: 0.3, color: 'primary.light', fontVariantNumeric: 'tabular-nums', textShadow: '0 0 28px rgba(74,222,128,0.24)' }}>
                 {onlineRatio.toFixed(1)}%
               </Typography>
               <LinearProgress
                 variant="determinate"
                 value={onlineRatio}
                 sx={{
-                  height: 10,
+                  height: 6,
                   borderRadius: 999,
                   backgroundColor: alpha(theme.palette.primary.main, 0.15),
                   '& .MuiLinearProgress-bar': {
@@ -420,11 +415,11 @@ const Dashboard = () => {
                   },
                 }}
               />
-              <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {translate('dashboard.online_count')} {stats.online_users}
+              <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.8 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {translate('dashboard.online_count')} <Box component="span" sx={{ color: '#86efac', fontWeight: 800 }}>{stats.online_users}</Box>
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="caption" color="text.secondary">
                   {translate('dashboard.total_count')} {stats.total_users}
                 </Typography>
               </Stack>
@@ -433,46 +428,55 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={1}>
         {[
-          ['dashboard.customers', ispStats?.customers ?? 0],
-          ['dashboard.active_subscriptions', ispStats?.active_subscriptions ?? 0],
-          ['dashboard.suspended_subscriptions', ispStats?.suspended_subscriptions ?? 0],
-          ['dashboard.online_users', ispStats?.online_users ?? 0],
-          ['dashboard.invoices_this_month', ispStats?.invoices_this_month ?? 0],
-          ['dashboard.payments_this_month', ispStats?.payments_this_month ?? 0],
-          ['dashboard.outstanding', ispStats?.outstanding ?? 0],
-          ['dashboard.overdue', ispStats?.overdue ?? 0],
-        ].map(([label, value]) => (
-          <Grid item xs={6} sm={3} key={label as string}>
-            <Card sx={{ height: '100%', borderRadius: 3 }}><CardContent>
-              <Typography variant="caption" color="text.secondary">{translate(label as string)}</Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, mt: 1 }}>
-                {typeof value === 'number' && (label === 'dashboard.outstanding')
-                  ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
-                  : numberFormatter.format(value as number)}
+          { label: 'dashboard.customers', value: ispStats?.customers ?? 0, to: '/isp/customers' },
+          { label: 'dashboard.active_subscriptions', value: ispStats?.active_subscriptions ?? 0, to: '/isp/subscriptions' },
+          { label: 'dashboard.suspended_subscriptions', value: ispStats?.suspended_subscriptions ?? 0, to: '/isp/subscriptions' },
+          { label: 'dashboard.invoices_this_month', value: ispStats?.invoices_this_month ?? 0, to: '/isp/invoices' },
+          { label: 'dashboard.payments_this_month', value: ispStats?.payments_this_month ?? 0, to: '/isp/payments' },
+          { label: 'dashboard.outstanding', value: ispStats?.outstanding ?? 0, to: '/isp/invoices' },
+          { label: 'dashboard.overdue', value: ispStats?.overdue ?? 0, to: '/isp/invoices' },
+        ].map(({ label, value, to }) => (
+          <Grid item xs={6} sm={3} key={label}>
+            <Card sx={{ height: '100%', borderRadius: 1.5, position: 'relative', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', inset: '0 auto 0 0', width: 2, bgcolor: label === 'dashboard.overdue' ? 'error.main' : 'primary.main', opacity: 0.8 } }}>
+              <CardActionArea component={RouterLink} to={to} sx={{ height: '100%', textAlign: 'left' }}>
+              <CardContent sx={{ p: 1.25, '&:last-child': { pb: 1.25 } }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.5}>
+                <Typography variant="caption" color="text.secondary" noWrap>{translate(label as string)}</Typography>
+                <FiberManualRecordIcon sx={{ fontSize: 7, color: label === 'dashboard.overdue' ? 'error.main' : 'primary.main', opacity: 0.8 }} />
+              </Stack>
+              <Typography variant="h6" sx={{ fontWeight: 800, mt: 0.35, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.025em' }}>
+                  {label === 'dashboard.outstanding'
+                    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
+                    : numberFormatter.format(value)}
               </Typography>
-            </CardContent></Card>
+              </CardContent>
+              </CardActionArea>
+            </Card>
           </Grid>
         ))}
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={1.25}>
         {statCards.map((card) => (
-          <Grid item xs={12} sm={6} lg={3} key={card.title}>
+          <Grid item xs={12} sm={6} lg={4} key={card.title}>
             <Card
               sx={{
                 height: '100%',
-                borderRadius: 4,
+                borderRadius: 1.5,
+                overflow: 'hidden',
+                position: 'relative',
+                '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${card.accent}, transparent 82%)` },
               }}
             >
-              <CardContent>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary">
                       {card.title}
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, my: 1 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.035em' }}>
                       {card.value}
                     </Typography>
                     {card.secondaryValue && (
@@ -483,37 +487,35 @@ const Dashboard = () => {
                   </Box>
                   <Box
                     sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 3,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1.5,
                       display: 'grid',
                       placeItems: 'center',
                       backgroundColor: alpha(card.accent, 0.15),
                       color: card.accent,
                     }}
                   >
-                    {card.icon}
+                    <Box sx={{ '& svg': { fontSize: 24 } }}>{card.icon}</Box>
                   </Box>
                 </Stack>
-                <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap' }}>
-                  {card.highlights.map((item) => (
-                    <Chip key={item.label} label={`${item.label}: ${item.value}`} size="small" />
-                  ))}
-                </Stack>
+                {card.highlights.length > 0 && <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                  {card.highlights.map((item) => <Chip key={item.label} label={`${item.label}: ${item.value}`} size="small" />)}
+                </Stack>}
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      <Card sx={{ borderRadius: 4 }}>
-        <CardContent>
+      <Card sx={{ borderRadius: 1.5 }}>
+        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             justifyContent="space-between"
             alignItems={{ xs: 'flex-start', sm: 'center' }}
-            spacing={2}
-            sx={{ mb: 2 }}
+            spacing={1}
+            sx={{ mb: 1 }}
           >
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -529,14 +531,14 @@ const Dashboard = () => {
               sx={{ fontWeight: 600 }}
             />
           </Stack>
-          <Grid container spacing={2}>
+          <Grid container spacing={0.75}>
             {ipv6Cards.map((item) => (
               <Grid item xs={6} md={3} key={item.label}>
-                <Box sx={{ p: 2, borderRadius: 3, backgroundColor: alpha(item.accent, 0.1) }}>
-                  <Typography variant="subtitle2" color="text.secondary">
+                <Box sx={{ p: 1, borderRadius: 1, backgroundColor: alpha(item.accent, 0.075), border: `1px solid ${alpha(item.accent, 0.12)}` }}>
+                  <Typography variant="caption" color="text.secondary" noWrap>
                     {item.label}
                   </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: item.accent }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: item.accent, fontVariantNumeric: 'tabular-nums' }}>
                     {numberFormatter.format(item.value)}
                   </Typography>
                 </Box>
@@ -546,36 +548,42 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={1.25}>
         <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 4, height: '100%' }}>
-            <CardContent sx={{ height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+          <Card sx={{ borderRadius: 1.5, height: '100%' }}>
+            <CardContent sx={{ height: '100%', p: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
                 {translate('dashboard.auth_trend')}
               </Typography>
-              <ReactECharts option={authTrendOption} style={{ height: 320 }} />
+              {authTrendSeries.some((value) => value > 0)
+                ? <ReactECharts option={authTrendOption} style={{ height: 270 }} />
+                : <Box sx={{ height: 270, display: 'grid', placeItems: 'center', color: 'text.secondary' }}>{translate('dashboard.no_auth_data')}</Box>}
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 4, height: '100%' }}>
-            <CardContent sx={{ height: '100%' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+          <Card sx={{ borderRadius: 1.5, height: '100%' }}>
+            <CardContent sx={{ height: '100%', p: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
                 {translate('dashboard.online_distribution')}
               </Typography>
-              <ReactECharts option={onlineDistributionOption} style={{ height: 320 }} />
+              {profileSlices.length > 0
+                ? <ReactECharts option={onlineDistributionOption} style={{ height: 270 }} />
+                : <Box sx={{ height: 270, display: 'grid', placeItems: 'center', color: 'text.secondary' }}>{translate('dashboard.no_online_data')}</Box>}
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12}>
-          <Card sx={{ borderRadius: 4 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+          <Card sx={{ borderRadius: 1.5 }}>
+            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
                 {translate('dashboard.traffic_stats')}
               </Typography>
-              <ReactECharts option={trafficOption} style={{ height: 360 }} />
+              {trafficData.upload.some((value) => value > 0) || trafficData.download.some((value) => value > 0)
+                ? <ReactECharts option={trafficOption} style={{ height: 290 }} />
+                : <Box sx={{ height: 290, display: 'grid', placeItems: 'center', color: 'text.secondary' }}>{translate('dashboard.no_traffic_data')}</Box>}
             </CardContent>
           </Card>
         </Grid>

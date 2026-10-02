@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -27,6 +28,8 @@ func (a *Application) initJob() {
 	_, err = a.sched.AddFunc("@every 30s", func() {
 		go a.SchedSystemMonitorTask()
 		go a.SchedProcessMonitorTask()
+		go a.SchedNetworkMonitorTask()
+		go a.SchedNotificationOutboxTask()
 	})
 	if err != nil {
 		zap.S().Errorf("init job error %s", err.Error())
@@ -69,6 +72,7 @@ func (a *Application) SchedISPBillingTask() {
 	defer func() {
 		if err := recover(); err != nil {
 			zap.L().Error("ISP billing scheduler panic", zap.Any("error", err))
+			a.enqueueSchedulerFailure("isp-billing", "scheduler recovered from a task error")
 		}
 	}()
 	now := time.Now()
@@ -78,17 +82,23 @@ func (a *Application) SchedISPBillingTask() {
 	}
 	if _, err := billing.GenerateMonthlyInvoices(a.gormDB, now, dueDays); err != nil {
 		zap.S().Error("monthly invoice generation failed", zap.Error(err))
+		a.enqueueSchedulerFailure("isp-billing-invoice", "monthly invoice generation failed")
 		return
+	}
+	if err := a.NotifyBillingEvents(context.Background(), now.Add(-2*time.Minute)); err != nil {
+		zap.S().Warn("billing notification enqueue failed", zap.Error(err))
 	}
 	if !a.GetSettingsBoolValue("isp", "AutoSuspend") {
 		return
 	}
 	if err := billing.ProcessOverdueInvoices(a.gormDB, now); err != nil {
 		zap.S().Error("overdue invoice processing failed", zap.Error(err))
+		a.enqueueSchedulerFailure("isp-billing-overdue", "overdue invoice processing failed")
 		return
 	}
 	if err := billing.SuspendOverdueSubscriptions(a.gormDB, now); err != nil {
 		zap.S().Error("overdue subscription suspension failed", zap.Error(err))
+		a.enqueueSchedulerFailure("isp-billing-suspension", "overdue subscription suspension failed")
 		return
 	}
 	handler := a.sessionDisconnectHandler()
@@ -115,6 +125,46 @@ func (a *Application) SchedISPBillingTask() {
 				zap.S().Warn("billing suspension disconnect failed", zap.String("username", user.Username), zap.Error(err))
 			}
 		}
+	}
+}
+
+func (a *Application) enqueueSchedulerFailure(job, summary string) {
+	if a.notificationOutbox == nil {
+		return
+	}
+	now := time.Now()
+	key := fmt.Sprintf("scheduler:%s:%s", job, now.Format("200601021504"))
+	if err := a.notificationOutbox.Enqueue("scheduler.failure", key, "MWX-ISP: "+summary+". Review the scheduler and application logs."); err != nil {
+		zap.L().Warn("enqueue scheduler failure notification failed", zap.Error(err))
+	}
+}
+
+// SchedNetworkMonitorTask polls explicitly configured network targets.
+func (a *Application) SchedNetworkMonitorTask() {
+	if a.networkMonitor == nil || a.gormDB == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	if err := a.networkMonitor.PollDue(ctx, time.Now()); err != nil {
+		zap.L().Warn("network monitor poll failed", zap.Error(err))
+		a.enqueueSchedulerFailure("network-monitor", "network monitor polling failed")
+	}
+}
+
+// SchedNotificationOutboxTask enqueues recent billing changes and delivers a
+// bounded batch of opt-in operator notifications.
+func (a *Application) SchedNotificationOutboxTask() {
+	if a.notificationOutbox == nil || a.gormDB == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	if err := a.NotifyBillingEvents(ctx, time.Now().Add(-2*time.Minute)); err != nil {
+		zap.L().Warn("billing notification enqueue failed", zap.Error(err))
+	}
+	if err := a.notificationOutbox.ProcessOnce(ctx, time.Now()); err != nil {
+		zap.L().Warn("notification outbox processing failed", zap.Error(err))
 	}
 }
 

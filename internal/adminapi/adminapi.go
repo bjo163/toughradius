@@ -46,4 +46,6 @@ func Init(appCtx app.AppContext) {
 	registerSystemLogRoutes()
 	registerSystemBackupRoutes()
 	registerISPRoutes()
+	registerNetworkMonitorRoutes()
+	registerNotificationRoutes()
 }

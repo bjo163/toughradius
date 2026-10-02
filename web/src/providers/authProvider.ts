@@ -194,6 +194,14 @@ export const authProvider: AuthProvider = {
   // 检查认证Status - 快速同步检查以避免闪烁
   checkAuth: () => {
     const token = localStorage.getItem('token');
+    const route = window.location.hash.replace(/^#/, '').split('?')[0].replace(/\/+$/, '');
+
+    // React Admin can run the auth check while resolving its public login
+    // route. Rejecting repeatedly there leaves the unauthenticated shell in
+    // its loading state; the login route itself grants no access to resources.
+    if (!token && route === '/login') {
+      return Promise.resolve();
+    }
 
     if (!token) {
       return Promise.reject({ message: 'No token found', logoutUser: true });

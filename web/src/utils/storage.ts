@@ -6,6 +6,12 @@
 // 需要在退出登录时保留的 localStorage 键
 const PERSISTENT_KEYS = ['locale', 'theme'];
 
+// New and existing installations should open in the branded dark theme unless
+// an operator has already selected a mode explicitly.
+if (typeof window !== 'undefined' && window.localStorage.getItem('theme') === null) {
+  window.localStorage.setItem('theme', 'dark');
+}
+
 /**
  * 清除认证相关的 localStorage 数据
  * 保留用户偏好设置（如语言、主题等）

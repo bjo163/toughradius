@@ -113,7 +113,7 @@ func updateCurrentOperator(c echo.Context) error {
 		operator.Realname = payload.Realname
 	}
 	if payload.Mobile != "" {
-		if !validutil.IsCnMobile(payload.Mobile) {
+		if !validutil.IsE164PhoneNumber(payload.Mobile) && !validutil.IsCnMobile(payload.Mobile) {
 			return fail(c, http.StatusBadRequest, "INVALID_MOBILE", "Invalid mobile number format", nil)
 		}
 		operator.Mobile = payload.Mobile
@@ -260,7 +260,7 @@ func createOperator(c echo.Context) error {
 	}
 
 	// ValidateMobile numberformat（if provided）
-	if payload.Mobile != "" && !validutil.IsCnMobile(payload.Mobile) {
+	if payload.Mobile != "" && !validutil.IsE164PhoneNumber(payload.Mobile) && !validutil.IsCnMobile(payload.Mobile) {
 		return fail(c, http.StatusBadRequest, "INVALID_MOBILE", "Invalid mobile number format", nil)
 	}
 
@@ -396,7 +396,7 @@ func updateOperator(c echo.Context) error {
 	}
 	if payload.Mobile != "" {
 		// ValidateMobile numberformat
-		if !validutil.IsCnMobile(payload.Mobile) {
+		if !validutil.IsE164PhoneNumber(payload.Mobile) && !validutil.IsCnMobile(payload.Mobile) {
 			return fail(c, http.StatusBadRequest, "INVALID_MOBILE", "Invalid mobile number format", nil)
 		}
 		operator.Mobile = payload.Mobile

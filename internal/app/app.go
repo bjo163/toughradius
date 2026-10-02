@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cast"
 	"github.com/talkincode/toughradius/v9/config"
 	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/talkincode/toughradius/v9/internal/networkmonitor"
+	"github.com/talkincode/toughradius/v9/internal/notify"
 	"github.com/talkincode/toughradius/v9/pkg/metrics"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -27,23 +29,30 @@ const (
 )
 
 type Application struct {
-	appConfig         *config.AppConfig
-	gormDB            *gorm.DB
-	sched             *cron.Cron
-	configManager     *ConfigManager
-	profileCache      *ProfileCache
-	disconnectMu      sync.RWMutex
-	disconnectSession func(context.Context, domain.RadiusOnline) error
+	appConfig          *config.AppConfig
+	gormDB             *gorm.DB
+	sched              *cron.Cron
+	configManager      *ConfigManager
+	profileCache       *ProfileCache
+	disconnectMu       sync.RWMutex
+	disconnectSession  func(context.Context, domain.RadiusOnline) error
+	networkMonitor     *networkmonitor.Monitor
+	notificationOutbox *notify.Dispatcher
+	whatsAppMu         sync.Mutex
+	whatsAppManager    *notify.WhatsAppManager
+	whatsAppInitErr    error
 }
 
 // Ensure Application implements all interfaces
 var (
-	_ DBProvider            = (*Application)(nil)
-	_ ConfigProvider        = (*Application)(nil)
-	_ SettingsProvider      = (*Application)(nil)
-	_ SchedulerProvider     = (*Application)(nil)
-	_ ConfigManagerProvider = (*Application)(nil)
-	_ AppContext            = (*Application)(nil)
+	_ DBProvider             = (*Application)(nil)
+	_ ConfigProvider         = (*Application)(nil)
+	_ SettingsProvider       = (*Application)(nil)
+	_ SchedulerProvider      = (*Application)(nil)
+	_ ConfigManagerProvider  = (*Application)(nil)
+	_ AppContext             = (*Application)(nil)
+	_ NetworkMonitorProvider = (*Application)(nil)
+	_ NotificationProvider   = (*Application)(nil)
 )
 
 func NewApplication(appConfig *config.AppConfig) *Application {
@@ -78,6 +87,61 @@ func (a *Application) sessionDisconnectHandler() func(context.Context, domain.Ra
 // OverrideDB replaces the application's database handle (used in tests).
 func (a *Application) OverrideDB(db *gorm.DB) {
 	a.gormDB = db
+	if a.appConfig != nil {
+		a.initializeOperationalServices(a.appConfig)
+	}
+}
+
+// initializeOperationalServices wires the optional network monitor and
+// persistent notification outbox to the current application database.
+func (a *Application) initializeOperationalServices(cfg *config.AppConfig) {
+	a.networkMonitor = networkmonitor.New(a.gormDB, cfg.Web.Secret, nil)
+	a.notificationOutbox = notify.NewDispatcher(a.gormDB, notify.SenderFunc(func(ctx context.Context, recipient, body string) error {
+		manager, err := a.WhatsAppManager()
+		if err != nil {
+			return err
+		}
+		return manager.Send(ctx, recipient, body)
+	}))
+	a.networkMonitor.SetTransitionHandler(func(target domain.NetMonitorTarget, _, to string, at time.Time) {
+		eventType := "network.down"
+		message := fmt.Sprintf("MWX-ISP: network target %s (%s) is not responding.", target.Name, target.Address)
+		if to == "up" {
+			eventType = "network.recovered"
+			message = fmt.Sprintf("MWX-ISP: network target %s (%s) has recovered.", target.Name, target.Address)
+		}
+		key := fmt.Sprintf("network:%d:%s:%d", target.ID, to, at.Unix())
+		if err := a.notificationOutbox.Enqueue(eventType, key, message); err != nil {
+			zap.L().Warn("enqueue network alert failed", zap.Error(err))
+		}
+	})
+}
+
+// NetworkMonitor returns the registered-target health monitor.
+func (a *Application) NetworkMonitor() *networkmonitor.Monitor { return a.networkMonitor }
+
+// NotificationDispatcher returns the persistent notification outbox service.
+func (a *Application) NotificationDispatcher() *notify.Dispatcher { return a.notificationOutbox }
+
+// WhatsAppManager lazily opens the persistent linked-device store. Delaying
+// initialization keeps WhatsApp optional until an administrator opens settings.
+func (a *Application) WhatsAppManager() (*notify.WhatsAppManager, error) {
+	a.whatsAppMu.Lock()
+	defer a.whatsAppMu.Unlock()
+	if a.whatsAppManager != nil || a.whatsAppInitErr != nil {
+		return a.whatsAppManager, a.whatsAppInitErr
+	}
+	a.whatsAppManager, a.whatsAppInitErr = notify.NewWhatsAppManager(a.gormDB)
+	return a.whatsAppManager, a.whatsAppInitErr
+}
+
+// NotifyBillingEvents queues recent billing lifecycle events to the configured
+// operator allowlist. Disabled integrations produce no outbox rows.
+func (a *Application) NotifyBillingEvents(ctx context.Context, since time.Time) error {
+	if a.notificationOutbox == nil {
+		return nil
+	}
+	return a.notificationOutbox.EnqueueBillingEvents(ctx, since)
 }
 
 func (a *Application) Init(cfg *config.AppConfig) {
@@ -166,8 +230,9 @@ func (a *Application) Init(cfg *config.AppConfig) {
 		a.checkDefaultPNode()
 	}()
 
-	// Initialize the configuration manager
+	// Initialize the configuration manager and optional operational services.
 	a.configManager = NewConfigManager(a)
+	a.initializeOperationalServices(cfg)
 
 	// Initialize profile cache for dynamic profile linking
 	a.profileCache = NewProfileCache(a.gormDB, DefaultProfileCacheTTL)
@@ -386,6 +451,12 @@ func (a *Application) Release() {
 	if a.profileCache != nil {
 		a.profileCache.Stop()
 	}
+	a.whatsAppMu.Lock()
+	if a.whatsAppManager != nil {
+		_ = a.whatsAppManager.Close()
+		a.whatsAppManager = nil
+	}
+	a.whatsAppMu.Unlock()
 
 	_ = metrics.Close()
 	_ = zap.L().Sync()

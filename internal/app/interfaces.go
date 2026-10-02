@@ -1,10 +1,28 @@
 package app
 
 import (
+	"context"
+	"time"
+
 	"github.com/robfig/cron/v3"
 	"github.com/talkincode/toughradius/v9/config"
+	"github.com/talkincode/toughradius/v9/internal/networkmonitor"
+	"github.com/talkincode/toughradius/v9/internal/notify"
 	"gorm.io/gorm"
 )
+
+// NetworkMonitorProvider exposes the optional network health poller without
+// requiring unrelated AppContext implementations to own the service.
+type NetworkMonitorProvider interface {
+	NetworkMonitor() *networkmonitor.Monitor
+}
+
+// NotificationProvider exposes opt-in operator notification services.
+type NotificationProvider interface {
+	WhatsAppManager() (*notify.WhatsAppManager, error)
+	NotificationDispatcher() *notify.Dispatcher
+	NotifyBillingEvents(context.Context, time.Time) error
+}
 
 // DBProvider provides database access
 type DBProvider interface {

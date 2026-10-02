@@ -71,12 +71,10 @@ export const dataProvider: DataProvider = {
   },
 
   getMany: async (resource, params) => {
-    const query = {
-      filter: JSON.stringify({ id: params.ids }),
-    };
-    const url = `${buildApiUrl(resource)}?${fetchUtils.queryParameters(query)}`;
-    const { json } = await httpClient(url);
-    return { data: extractData(json) };
+    const responses = await Promise.all(
+      params.ids.map(id => httpClient(buildApiUrl(resource, `/${id}`)))
+    );
+    return { data: responses.map(({ json }) => extractData(json)) };
   },
 
   getManyReference: async (resource, params) => {

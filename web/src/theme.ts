@@ -1,23 +1,23 @@
 import { alpha, createTheme, PaletteMode } from '@mui/material/styles';
 
-// 浅色主题配色
+// Light theme palette
 const lightPalette = {
   primary: {
-    main: '#2563eb',
-    light: '#60a5fa',
-    dark: '#1e40af',
+    main: '#16a34a',
+    light: '#4ade80',
+    dark: '#15803d',
     contrastText: '#ffffff',
   },
   secondary: {
-    main: '#8b5cf6',
-    light: '#a78bfa',
-    dark: '#7c3aed',
+    main: '#0f766e',
+    light: '#2dd4bf',
+    dark: '#115e59',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#10b981',
-    light: '#34d399',
-    dark: '#059669',
+    main: '#16a34a',
+    light: '#4ade80',
+    dark: '#15803d',
   },
   warning: {
     main: '#f59e0b',
@@ -30,9 +30,9 @@ const lightPalette = {
     dark: '#dc2626',
   },
   info: {
-    main: '#06b6d4',
-    light: '#22d3ee',
-    dark: '#0891b2',
+    main: '#0d9488',
+    light: '#2dd4bf',
+    dark: '#0f766e',
   },
   background: {
     default: '#f8fafc',
@@ -49,21 +49,21 @@ const lightPalette = {
 // 深色主题配色
 const darkPalette = {
   primary: {
-    main: '#3b82f6',
-    light: '#60a5fa',
-    dark: '#2563eb',
+    main: '#4ade80',
+    light: '#86efac',
+    dark: '#22c55e',
     contrastText: '#ffffff',
   },
   secondary: {
-    main: '#a78bfa',
-    light: '#c4b5fd',
-    dark: '#8b5cf6',
+    main: '#2dd4bf',
+    light: '#5eead4',
+    dark: '#14b8a6',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#22c55e',
-    light: '#4ade80',
-    dark: '#16a34a',
+    main: '#4ade80',
+    light: '#86efac',
+    dark: '#22c55e',
   },
   warning: {
     main: '#fbbf24',
@@ -76,25 +76,25 @@ const darkPalette = {
     dark: '#ef4444',
   },
   info: {
-    main: '#22d3ee',
-    light: '#67e8f9',
-    dark: '#06b6d4',
+    main: '#2dd4bf',
+    light: '#5eead4',
+    dark: '#14b8a6',
   },
   background: {
-    default: '#0f172a',
-    paper: '#1e293b',
+    default: '#07130d',
+    paper: '#0e1f15',
   },
   text: {
     primary: '#f1f5f9',
     secondary: '#cbd5e1',
     disabled: '#64748b',
   },
-  divider: 'rgba(148, 163, 184, 0.12)',
+  divider: 'rgba(134, 239, 172, 0.13)',
 };
 
 /**
- * 创建主题配置
- * @param mode 主题模式：'light' | 'dark'
+ * Create a theme configuration.
+ * @param mode Theme mode: 'light' | 'dark'
  */
 export const createAppTheme = (mode: PaletteMode) => {
   const isDark = mode === 'dark';
@@ -106,7 +106,7 @@ export const createAppTheme = (mode: PaletteMode) => {
       ...palette,
     },
     shape: {
-      borderRadius: 8,
+    borderRadius: 5,
     },
     typography: {
       fontFamily: [
@@ -161,22 +161,33 @@ export const createAppTheme = (mode: PaletteMode) => {
             backgroundColor: palette.background.default,
             color: palette.text.primary,
             transition: 'background-color 0.3s ease, color 0.3s ease',
+            backgroundImage: isDark
+              ? 'radial-gradient(ellipse at 8% 0%, rgba(34,197,94,0.075), transparent 32%), radial-gradient(ellipse at 92% 55%, rgba(20,184,166,0.045), transparent 30%)'
+              : 'radial-gradient(ellipse at 8% 0%, rgba(34,197,94,0.055), transparent 34%)',
+            backgroundAttachment: 'fixed',
           },
           '#root': {
             backgroundColor: palette.background.default,
+          },
+          '.RaLayout-content': {
+            backgroundImage: isDark
+              ? 'linear-gradient(rgba(134,239,172,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(134,239,172,0.022) 1px, transparent 1px)'
+              : 'linear-gradient(rgba(22,163,74,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(22,163,74,0.025) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+            backgroundPosition: '-1px -1px',
           },
           '*::-webkit-scrollbar': {
             width: '8px',
             height: '8px',
           },
           '*::-webkit-scrollbar-track': {
-            background: isDark ? '#1e293b' : '#f1f5f9',
+            background: isDark ? '#0e1f15' : '#f1f5f9',
           },
           '*::-webkit-scrollbar-thumb': {
-            background: isDark ? '#475569' : '#cbd5e1',
+            background: isDark ? '#285238' : '#cbd5e1',
             borderRadius: '4px',
             '&:hover': {
-              background: isDark ? '#64748b' : '#94a3b8',
+              background: isDark ? '#3f7a53' : '#94a3b8',
             },
           },
           // 强制菜单图标始终使用浅色
@@ -194,12 +205,14 @@ export const createAppTheme = (mode: PaletteMode) => {
       MuiPaper: {
         styleOverrides: {
           root: {
-            borderRadius: 12,
-            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(100, 116, 139, 0.12)'}`,
+            borderRadius: 8,
+            border: `1px solid ${isDark ? 'rgba(134, 239, 172, 0.1)' : 'rgba(100, 116, 139, 0.12)'}`,
             boxShadow: isDark 
               ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' 
               : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-            backgroundImage: 'none',
+            backgroundImage: isDark
+              ? 'linear-gradient(135deg, rgba(255,255,255,0.018), transparent 62%)'
+              : 'linear-gradient(135deg, rgba(255,255,255,0.8), transparent 62%)',
             transition: 'all 0.3s ease',
           },
           elevation1: {
@@ -215,16 +228,16 @@ export const createAppTheme = (mode: PaletteMode) => {
         },
         styleOverrides: {
           root: {
-            borderRadius: 16,
-            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(100, 116, 139, 0.12)'}`,
+            borderRadius: 9,
+            border: `1px solid ${isDark ? 'rgba(134, 239, 172, 0.14)' : 'rgba(100, 116, 139, 0.12)'}`,
             boxShadow: isDark
               ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)'
               : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
             transition: 'all 0.3s ease',
             '&:hover': {
               boxShadow: isDark
-                ? '0 4px 12px 0 rgba(0, 0, 0, 0.4)'
-                : '0 4px 12px 0 rgba(0, 0, 0, 0.08)',
+                ? '0 8px 26px rgba(0,0,0,0.28), 0 0 0 1px rgba(74,222,128,0.07)'
+                : '0 8px 26px rgba(15,23,42,0.08)',
             },
           },
         },
@@ -235,11 +248,11 @@ export const createAppTheme = (mode: PaletteMode) => {
         },
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 6,
             textTransform: 'none',
             fontWeight: 600,
-            paddingInline: 20,
-            paddingBlock: 10,
+            paddingInline: 14,
+            paddingBlock: 7,
             transition: 'all 0.2s ease',
           },
           contained: {
@@ -267,7 +280,7 @@ export const createAppTheme = (mode: PaletteMode) => {
         styleOverrides: {
           root: {
             '& .MuiOutlinedInput-root': {
-              borderRadius: 8,
+              borderRadius: 6,
               transition: 'all 0.2s ease',
               '&:hover .MuiOutlinedInput-notchedOutline': {
                 borderColor: palette.primary.main,
@@ -279,12 +292,11 @@ export const createAppTheme = (mode: PaletteMode) => {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            // 浅色主题使用纯白背景，深色主题使用深色
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+            backgroundColor: isDark ? '#0e1f15' : '#ffffff',
             color: isDark ? '#f1f5f9' : '#1f2937',
             borderBottom: isDark 
-              ? '1px solid rgba(148, 163, 184, 0.2)' 
-              : '1px solid rgba(229, 231, 235, 0.8)',
+              ? '1px solid rgba(74, 222, 128, 0.18)'
+              : '1px solid rgba(22, 163, 74, 0.18)',
             boxShadow: isDark 
               ? 'none' 
               : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
@@ -295,8 +307,7 @@ export const createAppTheme = (mode: PaletteMode) => {
       MuiDrawer: {
         styleOverrides: {
           paper: {
-            // 浅色主题使用深蓝色系，深色主题保持深灰
-            backgroundColor: isDark ? '#1e293b' : '#1e40af',
+            backgroundColor: isDark ? '#0e2417' : '#14532d',
             borderRight: 'none',
             transition: 'all 0.3s ease',
           },
@@ -306,16 +317,16 @@ export const createAppTheme = (mode: PaletteMode) => {
         styleOverrides: {
           root: {
             borderBottom: `1px solid ${palette.divider}`,
-            padding: '8px 16px',
-            fontSize: '0.875rem',
+            padding: '6px 12px',
+            fontSize: '0.8125rem',
             lineHeight: 1.4,
           },
           head: {
             fontWeight: 600,
-            backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+            backgroundColor: isDark ? '#10251a' : '#f8fafc',
             color: palette.text.primary,
-            padding: '10px 16px',
-            fontSize: '0.8125rem',
+            padding: '8px 12px',
+            fontSize: '0.75rem',
             textTransform: 'none',
             letterSpacing: '0.01em',
             whiteSpace: 'nowrap',
@@ -334,10 +345,10 @@ export const createAppTheme = (mode: PaletteMode) => {
         styleOverrides: {
           root: {
             borderRadius: 8,
-            marginInline: 8,
-            marginBlock: 3,
-            paddingBlock: 8,
-            paddingInline: 12,
+            marginInline: 7,
+            marginBlock: 2,
+            paddingBlock: 6,
+            paddingInline: 10,
             // 菜单项始终使用浅色文字
             color: 'rgba(255, 255, 255, 0.9) !important',
             transition: 'all 0.2s ease',
@@ -362,7 +373,8 @@ export const createAppTheme = (mode: PaletteMode) => {
               },
             },
             '&.RaMenuItemLink-active': {
-              backgroundColor: 'rgba(59, 130, 246, 0.4)',
+              backgroundColor: 'rgba(34, 197, 94, 0.19)',
+              boxShadow: 'inset 2px 0 #4ade80, 0 0 18px rgba(34,197,94,0.08)',
               color: '#ffffff !important',
               fontWeight: 600,
               '& .RaMenuItemLink-label': {
@@ -394,7 +406,7 @@ export const createAppTheme = (mode: PaletteMode) => {
             backgroundColor: palette.background.paper,
             // 统一表格边距
             '& .MuiTableContainer-root': {
-              padding: '0 8px',
+              padding: '0 4px',
             },
             '& .MuiTable-root': {
               borderCollapse: 'separate',
@@ -402,11 +414,11 @@ export const createAppTheme = (mode: PaletteMode) => {
             },
             '& .RaDatagrid-headerCell': {
               fontWeight: 600,
-              backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-              padding: '10px 16px',
-              fontSize: '0.8125rem',
+              backgroundColor: isDark ? '#10251a' : '#f8fafc',
+              padding: '7px 12px',
+              fontSize: '0.75rem',
               color: palette.text.primary,
-              borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(100, 116, 139, 0.15)'}`,
+              borderBottom: `1px solid ${isDark ? 'rgba(74, 222, 128, 0.3)' : 'rgba(100, 116, 139, 0.15)'}`,
               whiteSpace: 'nowrap',
               '&:first-of-type': {
                 paddingLeft: 24,
@@ -416,8 +428,8 @@ export const createAppTheme = (mode: PaletteMode) => {
               },
             },
             '& .RaDatagrid-rowCell': {
-              padding: '8px 16px',
-              fontSize: '0.875rem',
+              padding: '5px 12px',
+              fontSize: '0.8125rem',
               lineHeight: 1.4,
               verticalAlign: 'middle',
               '&:first-of-type': {
@@ -430,8 +442,8 @@ export const createAppTheme = (mode: PaletteMode) => {
             '& .RaDatagrid-row': {
               transition: 'background-color 0.15s ease',
               '&:hover': {
-                backgroundColor: isDark 
-                  ? alpha(palette.primary.main, 0.08)
+                backgroundColor: isDark
+                  ? alpha(palette.primary.main, 0.055)
                   : alpha(palette.primary.main, 0.04),
               },
             },
@@ -454,8 +466,7 @@ export const createAppTheme = (mode: PaletteMode) => {
   });
 };
 
-// 默认导出浅色主题（向后兼容）
-export const theme = createAppTheme('light');
-
-// 深色主题
+// Default theme and optional light mode.
+export const theme = createAppTheme('dark');
 export const darkTheme = createAppTheme('dark');
+export const lightTheme = createAppTheme('light');

@@ -2,7 +2,7 @@ package app
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,8 +34,8 @@ func getDatabase(dbConfig config.DBConfig, workdir string) *gorm.DB {
 func getSqliteDatabase(config config.DBConfig, workdir string) *gorm.DB {
 	// e.g., if the name is not an absolute path and not an in-memory DB, store it under workdir/data
 	dbPath := config.Name
-	if dbPath != ":memory:" && !path.IsAbs(dbPath) {
-		dbPath = path.Join(workdir, "data", dbPath)
+	if dbPath != ":memory:" && !filepath.IsAbs(dbPath) {
+		dbPath = filepath.Join(workdir, "data", dbPath)
 	}
 
 	zap.S().Infof("SQLite database path: %s", dbPath)

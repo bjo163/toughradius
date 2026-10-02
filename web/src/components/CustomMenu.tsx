@@ -26,6 +26,7 @@ const menuItems = [
   { to: '/radius/accounting', labelKey: 'menu.accounting', icon: <ReceiptLongOutlinedIcon /> },
   { to: '/network/nodes', labelKey: 'menu.network_nodes', sectionKey: 'menu.network', icon: <AccountTreeOutlinedIcon /> },
   { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
+  { to: '/operations', labelKey: 'menu.operations', sectionKey: 'menu.network', icon: <SensorsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['super', 'admin'] },
@@ -51,8 +52,10 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        // 侧边栏根据主题使用不同背景色
-        backgroundColor: isDark ? '#1e293b' : '#1e40af',
+        // Keep the navigation anchored to the MWX green brand.
+        background: isDark
+          ? 'linear-gradient(180deg, #0e2417 0%, #0a1910 100%)'
+          : 'linear-gradient(180deg, #14532d 0%, #166534 100%)',
         color: '#ffffff',
         pt: 0,
         transition: 'background-color 0.3s ease',

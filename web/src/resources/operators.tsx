@@ -133,7 +133,7 @@ const useValidationRules = () => {
     validateEmail: [email(translate('resources.system/operators.validation.email_invalid', { _: 'Invalid email format' }))],
     validateMobile: [
       regex(
-        /^(0|\+?86)?(13[0-9]|14[57]|15[0-35-9]|17[0678]|18[0-9])[0-9]{8}$/,
+        /^(?:\+[1-9]\d{7,14}|(?:0|\+?86)?(?:13[0-9]|14[57]|15[0-35-9]|17[0678]|18[0-9])[0-9]{8})$/,
         translate('resources.system/operators.validation.mobile_invalid', { _: 'Invalid mobile number format' })
       ),
     ],
@@ -810,7 +810,7 @@ export const OperatorEdit = () => {
                 source="mobile"
                 label={translate('resources.system/operators.fields.mobile', { _: 'Mobile number' })}
                 validate={validation.validateMobile}
-                helperText={translate('resources.system/operators.helpers.mobile', { _: 'Mainland China mobile number' })}
+                helperText={translate('resources.system/operators.helpers.mobile', { _: 'International format, for example +628123456789' })}
                 fullWidth
                 size="small"
               />
@@ -948,7 +948,7 @@ export const OperatorCreate = () => {
                 source="mobile"
                 label={translate('resources.system/operators.fields.mobile', { _: 'Mobile number' })}
                 validate={validation.validateMobile}
-                helperText={translate('resources.system/operators.helpers.mobile', { _: 'Mainland China mobile number' })}
+                helperText={translate('resources.system/operators.helpers.mobile', { _: 'International format, for example +628123456789' })}
                 fullWidth
                 size="small"
               />

@@ -76,9 +76,11 @@
 
 | 编号 | 功能域 | 功能项 | 标准范围 / 验收口径 | 现有入口 / 模块 | 状态 | 开发边界 |
 | --- | --- | --- | --- | --- | --- | --- |
-| TR-F027 | ISP 管理 | MWX-ISP 客户、套餐与订阅 | 为单 ISP operator 管理客户资料、独立于 RadiusUser 的 Customer、Internet Package（商业价格关联 RadiusProfile）和 Subscription（可关联或创建 RadiusUser）；支持列表、详情、CRUD 和生命周期操作。 | `internal/domain`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已批准 / 待实现 | 仅 operator/admin 使用；复用现有 RADIUS 用户、Profile、NAS、Accounting 和 Disconnect，不重写协议栈；新表采用增量迁移，保留既有 subscriber 数据。 |
-| TR-F028 | ISP Billing | MWX-ISP invoice、payment 与 enforcement | 为订阅生成月度 invoice/item，按整数 IDR 记录手动/部分/全额 payment，处理 due date、overdue、grace period，并按账单原因自动 suspend/disable/disconnect 和付款后 reactivate/enable。 | `internal/domain`, `internal/app`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已批准 / 待实现 | 仅单 ISP、operator-facing MVP；每笔 payment 关联一个 invoice；不含 gateway、ERP、税务或多租户；唯一约束和事务保护重复发票及支付状态。 |
-| TR-F029 | MWX-ISP 运维 | MWX-ISP branding 与 billing dashboard | 将可见产品品牌设为 MWX-ISP，并展示 customers、subscription、online、monthly invoice/payment、outstanding 和 overdue 的 operator dashboard。 | `web/src`, `internal/adminapi/dashboard.go`, `docs` | 已批准 / 待实现 | 保留内部包名和 RADIUS 运维视图；只添加核心 ISP 运维数据，不建设通用 BI/observability。 |
+| TR-F027 | ISP 管理 | MWX-ISP 客户、套餐与订阅 | 为单 ISP operator 管理客户资料、独立于 RadiusUser 的 Customer、Internet Package（商业价格关联 RadiusProfile）和 Subscription（可关联或创建 RadiusUser）；支持列表、详情、CRUD 和生命周期操作。 | `internal/domain`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已实现（MVP） | 仅 operator/admin 使用；复用现有 RADIUS 用户、Profile、NAS、Accounting 和 Disconnect，不重写协议栈；新表采用增量迁移，保留既有 subscriber 数据。 |
+| TR-F028 | ISP Billing | MWX-ISP invoice、payment 与 enforcement | 为订阅生成月度 invoice/item，按整数 IDR 记录手动/部分/全额 payment，处理 due date、overdue、grace period，并按账单原因自动 suspend/disable/disconnect 和付款后 reactivate/enable。 | `internal/domain`, `internal/app`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已实现 (MVP) | 仅单 ISP、operator-facing MVP；每笔 payment 关联一个 invoice；不含 gateway、ERP、税务或多租户；唯一约束和事务保护重复发票及支付状态。 |
+| TR-F029 | MWX-ISP 运维 | MWX-ISP branding 与 billing dashboard | 将可见产品品牌设为 MWX-ISP，并展示 customers、subscription、online、monthly invoice/payment、outstanding 和 overdue 的 operator dashboard。 | `web/src`, `internal/adminapi/dashboard.go`, `docs` | 已实现（MVP） | 保留内部包名和 RADIUS 运维视图；只添加核心 ISP 运维数据，不建设通用 BI/observability。 |
+| TR-F030 | MWX-ISP 运维通知 | WhatsApp operator alerts via whatsmeow | 通过可替换 notification provider 与持久化 outbox，为 allowlist operator 单向发送 target down/recovered、scheduler failure、billing suspend/reactivate 等事件；支持 QR pairing、连接状态、有限 retry/dedupe/logout 与 delivery audit。 | `internal/app`, `internal/adminapi/notifications.go`, `internal/domain/network_monitor.go`, `internal/notify`, `web/src/pages/OperationsPage.tsx` | 已实现（MVP；真实账号 pairing/send 待 operator 验证） | whatsmeow 是非官方 WhatsApp Web multi-device 实现，协议/API 可能变化，账号可用性与适用条款需运营者自行验证；默认关闭、只发给明确 allowlist/opt-in operator；设置变更会取消不再允许的队列项；不做群发、营销、聊天机器人或客户敏感数据。会话数据受部署数据库的访问控制保护；notification interface 需允许换成 WhatsApp Business Platform 或其他 provider。 |
+| TR-F031 | ISP 网络运维 | 已登记网络目标的健康度与只读指标 | 对 operator 明确登记且允许访问的 NAS/router/switch/host 展示 ICMP/TCP reachability、latency/loss、SNMP interface state/counters；支持 30–3600 秒 polling、30 天 sample retention、failure threshold、incident history 与 alert hooks。 | `internal/app`, `internal/domain/network_monitor.go`, `internal/networkmonitor`, `internal/adminapi/network_monitor.go`, `web/src/pages/OperationsPage.tsx` | 已实现（MVP；真实设备/SNMP agent 验证待部署） | 最多登记 500 个 unicast IP target，poll concurrency 最多 8；这是有限的 ISP network health monitoring，不是通用 NMS/BI；不做自动扫描、拓扑发现或设备配置写入；优先 SNMPv3 authPriv，SNMPv2c 仅兼容并加密保存 community。SNMP 密文依赖稳定的 web secret，轮换前需先规划迁移；测试 mock probe 不代替真实设备验收。 |
 
 ## 当前非目标方向
 
@@ -86,7 +88,7 @@
 | --- | --- | --- |
 | TR-N001 | 计费支付 / 订单 / 财务系统 | 除已明确批准的 MWX-ISP 最小 operator-facing 订阅账单闭环（TR-F028）外，不扩展为通用收费系统、payment gateway、订单平台或财务 ERP。 |
 | TR-N002 | CRM / 工单 / 客户自助门户 | MWX-ISP 的基础 operator-facing Customer 与 Subscription 能力仅限 TR-F027；不扩展为 CRM、工单或客户自助门户。 |
-| TR-N003 | 通用可视化监控平台 | 当前 Dashboard 只服务 RADIUS 运维视图，不替代 Prometheus、Grafana 等通用监控系统。 |
+| TR-N003 | 通用可视化监控平台 | TR-F031 允许对已登记 ISP 网络设备做有限健康监控；仍不建设通用 NMS/BI/observability 平台，也不替代 Prometheus、Grafana 等系统。 |
 | TR-N004 | 多租户 SaaS 平台 | 当前模型以单实例管理为基线；多租户需要先完成权限、数据隔离和迁移设计。 |
 | TR-N005 | 重写协议栈或替换管理框架 | 除非有明确缺陷和迁移方案，否则不以重写为开发方向。 |
 | TR-N006 | 托管式 Captive Portal / 访客门户产品 | ToughRADIUS 只作为 RADIUS auth/accounting 后端，不提供、不托管、不运营 Portal 登录页、访客开户、券码、短信/微信/支付 onboarding 或厂商 Portal Server 状态机；这些属于其他产品。 |

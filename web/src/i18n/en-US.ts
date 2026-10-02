@@ -34,6 +34,7 @@ const customEnglishMessages: TranslationMessages = {
     network: 'Network Management',
     nas_devices: 'NAS Devices',
     network_nodes: 'Network Nodes',
+    operations: 'Network & Alerts',
     system: 'System Management',
     operators: 'Operators Management',
     certificates: 'Certificates',
@@ -41,16 +42,11 @@ const customEnglishMessages: TranslationMessages = {
     account_settings: 'Account Settings',
   },
   appbar: {
-    switch_language: 'Switch Language',
     toggle_theme: 'Toggle Theme',
     system_settings: 'System Settings',
     account_settings: 'Account Settings',
     expand_menu: 'Expand Menu',
     collapse_menu: 'Collapse Menu',
-    language: {
-      zh_CN: 'Chinese (Simplified)',
-      en_US: 'English',
-    },
   },
   dashboard: {
     title: 'MWX-ISP Operations',
@@ -99,6 +95,9 @@ const customEnglishMessages: TranslationMessages = {
       sunday: 'Sun',
     },
     profile_unassigned: 'Unassigned Profile',
+    no_auth_data: 'No authentication records for this period.',
+    no_online_data: 'No users are online right now.',
+    no_traffic_data: 'No traffic records for the last 24 hours.',
   },
   resources: {
     'radius/users': {
@@ -171,6 +170,49 @@ const customEnglishMessages: TranslationMessages = {
       empty_text: {
         expire_time: 'Never expire',
         no_remark: 'No remark',
+      },
+    },
+    'isp/customers': {
+      name: 'Customer |||| Customers',
+      fields: {
+        customer_no: 'Customer No.', name: 'Customer Name', phone: 'Phone', email: 'Email', address: 'Address',
+        city: 'City', province: 'Province / State', identity_no: 'Identity No.', status: 'Status', notes: 'Notes',
+        package_name: 'Internet Package', radius_username: 'RADIUS Username', outstanding: 'Outstanding Balance',
+        subscriptions: 'Subscriptions', invoices: 'Invoices', payments: 'Payments', subscription_no: 'Subscription No.',
+        package_price: 'Monthly Price', online: 'Connection', current_ip: 'Current IP', invoice_no: 'Invoice No.',
+        total: 'Total', balance: 'Balance', payment_no: 'Payment No.', amount: 'Amount', method: 'Method', paid_at: 'Paid At',
+        created_at: 'Created At',
+      },
+    },
+    'isp/packages': {
+      name: 'Internet Package |||| Internet Packages',
+      fields: { code: 'Package Code', name: 'Package Name', price: 'Monthly Price', radius_profile_id: 'RADIUS Profile', description: 'Description', billing_cycle: 'Billing Cycle', status: 'Status' },
+    },
+    'isp/subscriptions': {
+      name: 'Subscription |||| Subscriptions',
+      fields: {
+        subscription_no: 'Subscription No.', customer_id: 'Customer', package_id: 'Internet Package', radius_user_id: 'RADIUS User ID',
+        customer_name: 'Customer', package_name: 'Package', package_price: 'Monthly Price', radius_username: 'RADIUS Username',
+        status: 'Service Status', billing_day: 'Billing Day', grace_days: 'Grace Period (Days)', start_date: 'Start Date',
+        suspension_reason: 'Suspension Reason', online: 'Connection', current_ip: 'Current IP', outstanding: 'Outstanding Balance',
+      },
+    },
+    'isp/invoices': {
+      name: 'Invoice |||| Invoices',
+      fields: {
+        invoice_no: 'Invoice No.', customer_name: 'Customer', subscription_no: 'Subscription No.', package_name: 'Package',
+        invoice_date: 'Invoice Date', due_date: 'Due Date', period_start: 'Period Start', period_end: 'Period End',
+        total: 'Total', paid_amount: 'Paid', balance: 'Balance Due', status: 'Invoice Status', items: 'Invoice Items',
+        description: 'Description', quantity: 'Quantity', unit_price: 'Unit Price', payments: 'Payments', payment_no: 'Payment No.',
+        amount: 'Amount', method: 'Method', paid_at: 'Paid At', company_name: 'Company', company_address: 'Company Address',
+        company_phone: 'Company Phone', company_email: 'Company Email', customer_id: 'Customer', subscription_id: 'Subscription',
+      },
+    },
+    'isp/payments': {
+      name: 'Payment |||| Payments',
+      fields: {
+        payment_no: 'Payment No.', customer_id: 'Customer', invoice_id: 'Invoice', invoice_no: 'Invoice No.',
+        amount: 'Amount', method: 'Method', reference: 'Reference', paid_at: 'Paid At', status: 'Payment Status', notes: 'Notes',
       },
     },
     'radius/online': {
@@ -571,7 +613,7 @@ const customEnglishMessages: TranslationMessages = {
         password_optional: 'Leave blank to keep current password, at least 6 characters, must contain letters and numbers',
         cannot_change_super_password: 'Cannot directly modify super admin password, use account settings or command line tool',
         email: 'Please enter a valid email address',
-        mobile: 'Please enter an 11-digit Chinese mobile number',
+        mobile: 'Enter an international phone number, for example +628123456789',
         level: 'Super admin has all permissions',
         cannot_change_own_level: 'Cannot modify your own permission level',
         status: 'Disabled operators cannot login',
@@ -588,7 +630,7 @@ const customEnglishMessages: TranslationMessages = {
         password_max: 'Password must be at most 50 characters',
         password_format: 'Password must contain letters and numbers',
         email_invalid: 'Please enter a valid email address',
-        mobile_invalid: 'Please enter a valid Chinese mobile number',
+        mobile_invalid: 'Please enter a valid international phone number',
         realname_required: 'Real name is required',
         level_required: 'Please select permission level',
         status_required: 'Please select status',
@@ -641,7 +683,7 @@ const customEnglishMessages: TranslationMessages = {
         username_helper: '3-30 characters, only letters, numbers and underscores',
         realname: 'Real Name',
         mobile: 'Mobile',
-        mobile_helper: 'Please enter 11-digit Chinese mobile number',
+        mobile_helper: 'International format, for example +628123456789',
         email: 'Email',
         email_helper: 'Used for notifications and password recovery',
         remark: 'Remark',
