@@ -137,7 +137,7 @@ export const authProvider: AuthProvider = {
       const result = await response.json();
 
       if (response.status < 200 || response.status >= 300) {
-        const errorMessage = result?.message || result?.error || response.statusText || '登录失败';
+        const errorMessage = result?.message || result?.error || response.statusText || 'Login failed';
         throw new Error(errorMessage);
       }
 
@@ -191,7 +191,7 @@ export const authProvider: AuthProvider = {
     return Promise.resolve();
   },
 
-  // 检查认证状态 - 快速同步检查以避免闪烁
+  // 检查认证Status - 快速同步检查以避免闪烁
   checkAuth: () => {
     const token = localStorage.getItem('token');
 

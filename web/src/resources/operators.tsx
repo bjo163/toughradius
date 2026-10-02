@@ -79,7 +79,7 @@ import {
 
 const LARGE_LIST_PER_PAGE = 50;
 
-// ============ 类型定义 ============
+// ============ Type定义 ============
 
 interface Operator extends RaRecord {
   username?: string;
@@ -114,40 +114,40 @@ const useValidationRules = () => {
 
   return {
     validateUsername: [
-      required(translate('resources.system/operators.validation.username_required', { _: '用户名必填' })),
-      minLength(3, translate('resources.system/operators.validation.username_min', { _: '用户名至少3个字符' })),
-      maxLength(30, translate('resources.system/operators.validation.username_max', { _: '用户名最多30个字符' })),
-      regex(/^[a-zA-Z0-9_]+$/, translate('resources.system/operators.validation.username_format', { _: '用户名只能包含字母、数字和下划线' })),
+      required(translate('resources.system/operators.validation.username_required', { _: 'Usernameis required' })),
+      minLength(3, translate('resources.system/operators.validation.username_min', { _: 'Usernameat least 3characters' })),
+      maxLength(30, translate('resources.system/operators.validation.username_max', { _: 'Usernameup to30characters' })),
+      regex(/^[a-zA-Z0-9_]+$/, translate('resources.system/operators.validation.username_format', { _: 'Username may contain only letters, numbers, and underscores' })),
     ],
     validatePassword: [
-      required(translate('resources.system/operators.validation.password_required', { _: '密码必填' })),
-      minLength(6, translate('resources.system/operators.validation.password_min', { _: '密码至少6个字符' })),
-      maxLength(50, translate('resources.system/operators.validation.password_max', { _: '密码最多50个字符' })),
-      regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, translate('resources.system/operators.validation.password_format', { _: '密码必须包含字母和数字' })),
+      required(translate('resources.system/operators.validation.password_required', { _: 'Passwordis required' })),
+      minLength(6, translate('resources.system/operators.validation.password_min', { _: 'Passwordat least 6characters' })),
+      maxLength(50, translate('resources.system/operators.validation.password_max', { _: 'Passwordup to50characters' })),
+      regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, translate('resources.system/operators.validation.password_format', { _: 'Password must include letters and numbers' })),
     ],
     validatePasswordOptional: [
-      minLength(6, translate('resources.system/operators.validation.password_min', { _: '密码至少6个字符' })),
-      maxLength(50, translate('resources.system/operators.validation.password_max', { _: '密码最多50个字符' })),
-      regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, translate('resources.system/operators.validation.password_format', { _: '密码必须包含字母和数字' })),
+      minLength(6, translate('resources.system/operators.validation.password_min', { _: 'Passwordat least 6characters' })),
+      maxLength(50, translate('resources.system/operators.validation.password_max', { _: 'Passwordup to50characters' })),
+      regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, translate('resources.system/operators.validation.password_format', { _: 'Password must include letters and numbers' })),
     ],
-    validateEmail: [email(translate('resources.system/operators.validation.email_invalid', { _: '邮箱格式不正确' }))],
+    validateEmail: [email(translate('resources.system/operators.validation.email_invalid', { _: 'Invalid email format' }))],
     validateMobile: [
       regex(
         /^(0|\+?86)?(13[0-9]|14[57]|15[0-35-9]|17[0678]|18[0-9])[0-9]{8}$/,
-        translate('resources.system/operators.validation.mobile_invalid', { _: '手机号格式不正确' })
+        translate('resources.system/operators.validation.mobile_invalid', { _: 'Invalid mobile number format' })
       ),
     ],
-    validateRealname: [required(translate('resources.system/operators.validation.realname_required', { _: '真实姓名必填' }))],
-    validateLevel: [required(translate('resources.system/operators.validation.level_required', { _: '权限级别必填' }))],
-    validateStatus: [required(translate('resources.system/operators.validation.status_required', { _: '状态必填' }))],
+    validateRealname: [required(translate('resources.system/operators.validation.realname_required', { _: 'Full nameis required' }))],
+    validateLevel: [required(translate('resources.system/operators.validation.level_required', { _: 'Permission levelis required' }))],
+    validateStatus: [required(translate('resources.system/operators.validation.status_required', { _: 'Statusis required' }))],
   };
 };
 
-// ============ 列表加载骨架屏 ============
+// ============ List loading placeholder ============
 
 const OperatorListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   <Box sx={{ width: '100%' }}>
-    {/* 搜索区域骨架屏 */}
+    {/* Search loading placeholder */}
     <Card
       elevation={0}
       sx={{
@@ -188,7 +188,7 @@ const OperatorListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         overflow: 'hidden',
       }}
     >
-      {/* 表头 */}
+      {/* Header */}
       <Box
         sx={{
           display: 'grid',
@@ -205,7 +205,7 @@ const OperatorListSkeleton = ({ rows = 10 }: { rows?: number }) => (
         ))}
       </Box>
 
-      {/* 表格行 */}
+      {/* Table row */}
       {[...Array(rows)].map((_, rowIndex) => (
         <Box
           key={rowIndex}
@@ -248,7 +248,7 @@ const OperatorListSkeleton = ({ rows = 10 }: { rows?: number }) => (
   </Box>
 );
 
-// ============ 空状态组件 ============
+// ============ Empty-state component ============
 
 const OperatorEmptyState = () => {
   const translate = useTranslate();
@@ -265,16 +265,16 @@ const OperatorEmptyState = () => {
     >
       <AdminIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
       <Typography variant="h6" sx={{ opacity: 0.6, mb: 1 }}>
-        {translate('resources.system/operators.empty.title', { _: '暂无操作员' })}
+        {translate('resources.system/operators.empty.title', { _: 'No Operator' })}
       </Typography>
       <Typography variant="body2" sx={{ opacity: 0.5 }}>
-        {translate('resources.system/operators.empty.description', { _: '点击"新建"按钮添加第一个操作员' })}
+        {translate('resources.system/operators.empty.description', { _: 'Click"Create"buttonAdd the firstOperator' })}
       </Typography>
     </Box>
   );
 };
 
-// ============ 搜索表头区块组件 ============
+// ============ Search header section ============
 
 const OperatorSearchHeaderCard = () => {
   const translate = useTranslate();
@@ -325,9 +325,9 @@ const OperatorSearchHeaderCard = () => {
   );
 
   const filterFields = [
-    { key: 'username', label: translate('resources.system/operators.fields.username', { _: '用户名' }) },
-    { key: 'realname', label: translate('resources.system/operators.fields.realname', { _: '真实姓名' }) },
-    { key: 'email', label: translate('resources.system/operators.fields.email', { _: '邮箱' }) },
+    { key: 'username', label: translate('resources.system/operators.fields.username', { _: 'Username' }) },
+    { key: 'realname', label: translate('resources.system/operators.fields.realname', { _: 'Full name' }) },
+    { key: 'email', label: translate('resources.system/operators.fields.email', { _: 'Email' }) },
   ];
 
   return (
@@ -354,7 +354,7 @@ const OperatorSearchHeaderCard = () => {
       >
         <FilterIcon sx={{ color: 'primary.main', fontSize: 20 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-          {translate('resources.system/operators.filter.title', { _: '筛选条件' })}
+          {translate('resources.system/operators.filter.title', { _: 'Filters' })}
         </Typography>
       </Box>
 
@@ -388,9 +388,9 @@ const OperatorSearchHeaderCard = () => {
             />
           ))}
 
-          {/* 操作按钮 */}
+          {/* Action buttons */}
           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-            <Tooltip title={translate('ra.action.clear_filters', { _: '清除筛选' })}>
+            <Tooltip title={translate('ra.action.clear_filters', { _: 'Clear filters' })}>
               <IconButton
                 onClick={handleClear}
                 size="small"
@@ -404,7 +404,7 @@ const OperatorSearchHeaderCard = () => {
                 <ClearIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title={translate('ra.action.search', { _: '搜索' })}>
+            <Tooltip title={translate('ra.action.search', { _: 'Search' })}>
               <IconButton
                 onClick={handleSearch}
                 color="primary"
@@ -425,14 +425,14 @@ const OperatorSearchHeaderCard = () => {
   );
 };
 
-// ============ 状态和级别组件 ============
+// ============ Status和级别组件 ============
 
 const StatusIndicator = ({ isEnabled }: { isEnabled: boolean }) => {
   const translate = useTranslate();
   return (
     <Chip
       icon={isEnabled ? <EnabledIcon sx={{ fontSize: '0.85rem !important' }} /> : <DisabledIcon sx={{ fontSize: '0.85rem !important' }} />}
-      label={isEnabled ? translate('resources.system/operators.status.enabled', { _: '启用' }) : translate('resources.system/operators.status.disabled', { _: '禁用' })}
+      label={isEnabled ? translate('resources.system/operators.status.enabled', { _: 'Enabled' }) : translate('resources.system/operators.status.disabled', { _: 'Disabled' })}
       size="small"
       color={isEnabled ? 'success' : 'default'}
       variant={isEnabled ? 'filled' : 'outlined'}
@@ -443,11 +443,11 @@ const StatusIndicator = ({ isEnabled }: { isEnabled: boolean }) => {
 
 const LevelChip = ({ level }: { level?: string }) => {
   const translate = useTranslate();
-  
+
   const levelConfig: Record<string, { color: 'error' | 'warning' | 'info'; label: string }> = {
-    super: { color: 'error', label: translate('resources.system/operators.levels.super', { _: '超级管理员' }) },
-    admin: { color: 'warning', label: translate('resources.system/operators.levels.admin', { _: '管理员' }) },
-    operator: { color: 'info', label: translate('resources.system/operators.levels.operator', { _: '操作员' }) },
+    super: { color: 'error', label: translate('resources.system/operators.levels.super', { _: 'Super admin' }) },
+    admin: { color: 'warning', label: translate('resources.system/operators.levels.admin', { _: 'Admin' }) },
+    operator: { color: 'info', label: translate('resources.system/operators.levels.operator', { _: 'Operator' }) },
   };
 
   const config = levelConfig[level || ''] || { color: 'info', label: level || '-' };
@@ -502,7 +502,7 @@ const LevelField = () => {
   return <LevelChip level={record.level} />;
 };
 
-// ============ 列表操作栏组件 ============
+// ============ List action toolbar ============
 
 const OperatorListActions = () => {
   const translate = useTranslate();
@@ -510,7 +510,7 @@ const OperatorListActions = () => {
     <TopToolbar>
       <SortButton
         fields={['created_at', 'username', 'last_login']}
-        label={translate('ra.action.sort', { _: '排序' })}
+        label={translate('ra.action.sort', { _: 'Sort' })}
       />
       <CreateButton />
       <ExportButton />
@@ -518,7 +518,7 @@ const OperatorListActions = () => {
   );
 };
 
-// ============ 内部列表内容组件 ============
+// ============ List content ============
 
 const OperatorListContent = () => {
   const translate = useTranslate();
@@ -528,28 +528,28 @@ const OperatorListContent = () => {
 
   const fieldLabels = useMemo(
     () => ({
-      username: translate('resources.system/operators.fields.username', { _: '用户名' }),
-      realname: translate('resources.system/operators.fields.realname', { _: '真实姓名' }),
-      email: translate('resources.system/operators.fields.email', { _: '邮箱' }),
-      status: translate('resources.system/operators.fields.status', { _: '状态' }),
-      level: translate('resources.system/operators.fields.level', { _: '权限级别' }),
+      username: translate('resources.system/operators.fields.username', { _: 'Username' }),
+      realname: translate('resources.system/operators.fields.realname', { _: 'Full name' }),
+      email: translate('resources.system/operators.fields.email', { _: 'Email' }),
+      status: translate('resources.system/operators.fields.status', { _: 'Status' }),
+      level: translate('resources.system/operators.fields.level', { _: 'Permission level' }),
     }),
     [translate],
   );
 
   const statusLabels = useMemo(
     () => ({
-      enabled: translate('resources.system/operators.status.enabled', { _: '启用' }),
-      disabled: translate('resources.system/operators.status.disabled', { _: '禁用' }),
+      enabled: translate('resources.system/operators.status.enabled', { _: 'Enabled' }),
+      disabled: translate('resources.system/operators.status.disabled', { _: 'Disabled' }),
     }),
     [translate],
   );
 
   const levelLabels = useMemo(
     () => ({
-      super: translate('resources.system/operators.levels.super', { _: '超级管理员' }),
-      admin: translate('resources.system/operators.levels.admin', { _: '管理员' }),
-      operator: translate('resources.system/operators.levels.operator', { _: '操作员' }),
+      super: translate('resources.system/operators.levels.super', { _: 'Super admin' }),
+      admin: translate('resources.system/operators.levels.admin', { _: 'Admin' }),
+      operator: translate('resources.system/operators.levels.operator', { _: 'Operator' }),
     }),
     [translate],
   );
@@ -577,13 +577,13 @@ const OperatorListContent = () => {
 
   return (
     <Box>
-      {/* 搜索区块 */}
+      {/* Search区块 */}
       <OperatorSearchHeaderCard />
 
-      {/* 活动筛选标签 */}
+      {/* 活动筛选Tags */}
       <ActiveFilters fieldLabels={fieldLabels} valueLabels={{ status: statusLabels, level: levelLabels }} />
 
-      {/* 表格容器 */}
+      {/* Table container */}
       <Card
         elevation={0}
         sx={{
@@ -592,7 +592,7 @@ const OperatorListContent = () => {
           overflow: 'hidden',
         }}
       >
-        {/* 表格统计信息 */}
+        {/* 表格Statistics */}
         <Box
           sx={{
             px: 2,
@@ -606,11 +606,11 @@ const OperatorListContent = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            共 <strong>{total?.toLocaleString() || 0}</strong> 个操作员
+            Total <strong>{total?.toLocaleString() || 0}</strong> Operator
           </Typography>
         </Box>
 
-        {/* 响应式表格 */}
+        {/* Responsive table */}
         <Box
           sx={{
             overflowX: 'auto',
@@ -661,34 +661,34 @@ const OperatorListContent = () => {
           <Datagrid rowClick="show" bulkActionButtons={false}>
             <FunctionField
               source="username"
-              label={translate('resources.system/operators.fields.username', { _: '用户名' })}
+              label={translate('resources.system/operators.fields.username', { _: 'Username' })}
               render={() => <OperatorNameField />}
             />
             <TextField
               source="realname"
-              label={translate('resources.system/operators.fields.realname', { _: '真实姓名' })}
+              label={translate('resources.system/operators.fields.realname', { _: 'Full name' })}
             />
             <EmailField
               source="email"
-              label={translate('resources.system/operators.fields.email', { _: '邮箱' })}
+              label={translate('resources.system/operators.fields.email', { _: 'Email' })}
             />
             <TextField
               source="mobile"
-              label={translate('resources.system/operators.fields.mobile', { _: '手机号' })}
+              label={translate('resources.system/operators.fields.mobile', { _: 'Mobile number' })}
             />
             <FunctionField
               source="level"
-              label={translate('resources.system/operators.fields.level', { _: '权限级别' })}
+              label={translate('resources.system/operators.fields.level', { _: 'Permission level' })}
               render={() => <LevelField />}
             />
             <DateField
               source="last_login"
-              label={translate('resources.system/operators.fields.last_login', { _: '最后登录' })}
+              label={translate('resources.system/operators.fields.last_login', { _: 'Last sign-in' })}
               showTime
             />
             <DateField
               source="created_at"
-              label={translate('resources.system/operators.fields.created_at', { _: '创建时间' })}
+              label={translate('resources.system/operators.fields.created_at', { _: 'Created at' })}
               showTime
             />
           </Datagrid>
@@ -698,7 +698,7 @@ const OperatorListContent = () => {
   );
 };
 
-// 操作员列表
+// Operator列表
 export const OperatorList = () => {
   return (
     <List
@@ -713,63 +713,63 @@ export const OperatorList = () => {
   );
 };
 
-// ============ 密码输入框组件 ============
+// ============ PasswordInput field component ============
 
 const PasswordInputWithRecord = () => {
   const record = useRecordContext<Operator>();
   const translate = useTranslate();
   const validation = useValidationRules();
-  
+
   if (record?.level === 'super') {
     return null;
   }
-  
+
   return (
-    <PasswordInput 
-      source="password" 
-      label={translate('resources.system/operators.fields.password', { _: '密码' })} 
+    <PasswordInput
+      source="password"
+      label={translate('resources.system/operators.fields.password', { _: 'Password' })}
       validate={validation.validatePasswordOptional}
-      helperText={translate('resources.system/operators.helpers.password_optional', { _: '留空则不修改密码' })} 
+      helperText={translate('resources.system/operators.helpers.password_optional', { _: 'Leave blank to keep the current password' })}
       fullWidth
       size="small"
     />
   );
 };
 
-// ============ 编辑页面 ============
+// ============ Edit页面 ============
 
 export const OperatorEdit = () => {
   const { identity } = useGetIdentity();
   const record = useRecordContext<Operator>();
   const translate = useTranslate();
   const validation = useValidationRules();
-  
+
   const isEditingSelf = identity && record && String(identity.id) === String(record.id);
   const canManagePermissions = identity?.level === 'super' || identity?.level === 'admin';
-  
+
   return (
     <Edit>
       <SimpleForm sx={formLayoutSx}>
-        <FormSection 
-          title={translate('resources.system/operators.sections.basic.title', { _: '账号信息' })} 
-          description={translate('resources.system/operators.sections.basic.description', { _: '操作员的登录账号和密码' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.basic.title', { _: 'Account information' })}
+          description={translate('resources.system/operators.sections.basic.description', { _: 'Operator login account and password' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
-              <TextInput 
-                source="id" 
-                label={translate('resources.system/operators.fields.id', { _: '操作员ID' })} 
-                disabled 
-                fullWidth 
+              <TextInput
+                source="id"
+                label={translate('resources.system/operators.fields.id', { _: 'OperatorID' })}
+                disabled
+                fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <TextInput 
-                source="username" 
-                label={translate('resources.system/operators.fields.username', { _: '用户名' })} 
+              <TextInput
+                source="username"
+                label={translate('resources.system/operators.fields.username', { _: 'Username' })}
                 validate={validation.validateUsername}
-                helperText={translate('resources.system/operators.helpers.username', { _: '3-30个字符，只能包含字母、数字和下划线' })}
+                helperText={translate('resources.system/operators.helpers.username', { _: '3–30 characters; letters, numbers, and underscores only' })}
                 fullWidth
                 size="small"
               />
@@ -780,37 +780,37 @@ export const OperatorEdit = () => {
           </FieldGrid>
         </FormSection>
 
-        <FormSection 
-          title={translate('resources.system/operators.sections.personal.title', { _: '个人信息' })} 
-          description={translate('resources.system/operators.sections.personal.description', { _: '联系方式和个人资料' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.personal.title', { _: 'Personal information' })}
+          description={translate('resources.system/operators.sections.personal.description', { _: 'Contact details and profile' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
-              <TextInput 
-                source="realname" 
-                label={translate('resources.system/operators.fields.realname', { _: '真实姓名' })} 
+              <TextInput
+                source="realname"
+                label={translate('resources.system/operators.fields.realname', { _: 'Full name' })}
                 validate={validation.validateRealname}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <TextInput 
-                source="email" 
-                label={translate('resources.system/operators.fields.email', { _: '邮箱' })} 
-                type="email" 
+              <TextInput
+                source="email"
+                label={translate('resources.system/operators.fields.email', { _: 'Email' })}
+                type="email"
                 validate={validation.validateEmail}
-                helperText={translate('resources.system/operators.helpers.email', { _: '用于接收系统通知' })}
+                helperText={translate('resources.system/operators.helpers.email', { _: 'Use this page toreceive system notifications' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem span={{ xs: 1, sm: 2 }}>
-              <TextInput 
-                source="mobile" 
-                label={translate('resources.system/operators.fields.mobile', { _: '手机号' })} 
+              <TextInput
+                source="mobile"
+                label={translate('resources.system/operators.fields.mobile', { _: 'Mobile number' })}
                 validate={validation.validateMobile}
-                helperText={translate('resources.system/operators.helpers.mobile', { _: '中国大陆手机号' })}
+                helperText={translate('resources.system/operators.helpers.mobile', { _: 'Mainland China mobile number' })}
                 fullWidth
                 size="small"
               />
@@ -819,23 +819,23 @@ export const OperatorEdit = () => {
         </FormSection>
 
         {canManagePermissions && (
-          <FormSection 
-            title={translate('resources.system/operators.sections.permissions.title', { _: '权限设置' })} 
-            description={translate('resources.system/operators.sections.permissions.description', { _: '账号权限和状态配置' })}
+          <FormSection
+            title={translate('resources.system/operators.sections.permissions.title', { _: 'Permission settings' })}
+            description={translate('resources.system/operators.sections.permissions.description', { _: 'Account permissions and status settings' })}
           >
             <FieldGrid columns={{ xs: 1, sm: 2 }}>
               <FieldGridItem>
                 <SelectInput
                   source="level"
-                  label={translate('resources.system/operators.fields.level', { _: '权限级别' })}
+                  label={translate('resources.system/operators.fields.level', { _: 'Permission level' })}
                   validate={validation.validateLevel}
                   disabled={isEditingSelf}
                   choices={[
-                    { id: 'super', name: translate('resources.system/operators.levels.super', { _: '超级管理员' }) },
-                    { id: 'admin', name: translate('resources.system/operators.levels.admin', { _: '管理员' }) },
-                    { id: 'operator', name: translate('resources.system/operators.levels.operator', { _: '操作员' }) },
+                    { id: 'super', name: translate('resources.system/operators.levels.super', { _: 'Super admin' }) },
+                    { id: 'admin', name: translate('resources.system/operators.levels.admin', { _: 'Admin' }) },
+                    { id: 'operator', name: translate('resources.system/operators.levels.operator', { _: 'Operator' }) },
                   ]}
-                  helperText={isEditingSelf ? translate('resources.system/operators.helpers.cannot_change_own_level', { _: '不能修改自己的权限级别' }) : translate('resources.system/operators.helpers.level', { _: '选择操作员的权限级别' })}
+                  helperText={isEditingSelf ? translate('resources.system/operators.helpers.cannot_change_own_level', { _: 'You cannot change your own Permission level' }) : translate('resources.system/operators.helpers.level', { _: 'Select the operator permission level' })}
                   fullWidth
                   size="small"
                 />
@@ -843,14 +843,14 @@ export const OperatorEdit = () => {
               <FieldGridItem>
                 <SelectInput
                   source="status"
-                  label={translate('resources.system/operators.fields.status', { _: '状态' })}
+                  label={translate('resources.system/operators.fields.status', { _: 'Status' })}
                   validate={validation.validateStatus}
                   disabled={isEditingSelf}
                   choices={[
-                    { id: 'enabled', name: translate('resources.system/operators.status.enabled', { _: '启用' }) },
-                    { id: 'disabled', name: translate('resources.system/operators.status.disabled', { _: '禁用' }) },
+                    { id: 'enabled', name: translate('resources.system/operators.status.enabled', { _: 'Enabled' }) },
+                    { id: 'disabled', name: translate('resources.system/operators.status.disabled', { _: 'Disabled' }) },
                   ]}
-                  helperText={isEditingSelf ? translate('resources.system/operators.helpers.cannot_change_own_status', { _: '不能修改自己的状态' }) : translate('resources.system/operators.helpers.status', { _: '禁用后无法登录系统' })}
+                  helperText={isEditingSelf ? translate('resources.system/operators.helpers.cannot_change_own_status', { _: 'You cannot change your own Status' }) : translate('resources.system/operators.helpers.status', { _: 'Disabled accounts cannot sign in' })}
                   fullWidth
                   size="small"
                 />
@@ -859,19 +859,19 @@ export const OperatorEdit = () => {
           </FormSection>
         )}
 
-        <FormSection 
-          title={translate('resources.system/operators.sections.remark.title', { _: '备注信息' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.remark.title', { _: 'Notes' })}
         >
           <FieldGrid columns={{ xs: 1 }}>
             <FieldGridItem>
-              <TextInput 
-                source="remark" 
-                label={translate('resources.system/operators.fields.remark', { _: '备注' })} 
-                multiline 
-                minRows={3} 
+              <TextInput
+                source="remark"
+                label={translate('resources.system/operators.fields.remark', { _: 'Notes' })}
+                multiline
+                minRows={3}
                 fullWidth
                 size="small"
-                helperText={translate('resources.system/operators.helpers.remark', { _: '可选的备注信息' })}
+                helperText={translate('resources.system/operators.helpers.remark', { _: 'Optional notes' })}
               />
             </FieldGridItem>
           </FieldGrid>
@@ -881,36 +881,36 @@ export const OperatorEdit = () => {
   );
 };
 
-// ============ 创建页面 ============
+// ============ Create页面 ============
 
 export const OperatorCreate = () => {
   const translate = useTranslate();
   const validation = useValidationRules();
-  
+
   return (
     <Create>
       <SimpleForm sx={formLayoutSx}>
-        <FormSection 
-          title={translate('resources.system/operators.sections.basic.title', { _: '账号信息' })} 
-          description={translate('resources.system/operators.sections.basic.description', { _: '操作员的登录账号和密码' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.basic.title', { _: 'Account information' })}
+          description={translate('resources.system/operators.sections.basic.description', { _: 'Operator login account and password' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
-              <TextInput 
-                source="username" 
-                label={translate('resources.system/operators.fields.username', { _: '用户名' })} 
+              <TextInput
+                source="username"
+                label={translate('resources.system/operators.fields.username', { _: 'Username' })}
                 validate={validation.validateUsername}
-                helperText={translate('resources.system/operators.helpers.username', { _: '3-30个字符，只能包含字母、数字和下划线' })}
+                helperText={translate('resources.system/operators.helpers.username', { _: '3–30 characters; letters, numbers, and underscores only' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <PasswordInput 
-                source="password" 
-                label={translate('resources.system/operators.fields.password', { _: '密码' })} 
+              <PasswordInput
+                source="password"
+                label={translate('resources.system/operators.fields.password', { _: 'Password' })}
                 validate={validation.validatePassword}
-                helperText={translate('resources.system/operators.helpers.password', { _: '6-50个字符，必须包含字母和数字' })}
+                helperText={translate('resources.system/operators.helpers.password', { _: '6–50 characters; must include letters and numbers' })}
                 fullWidth
                 size="small"
               />
@@ -918,37 +918,37 @@ export const OperatorCreate = () => {
           </FieldGrid>
         </FormSection>
 
-        <FormSection 
-          title={translate('resources.system/operators.sections.personal.title', { _: '个人信息' })} 
-          description={translate('resources.system/operators.sections.personal.description', { _: '联系方式和个人资料' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.personal.title', { _: 'Personal information' })}
+          description={translate('resources.system/operators.sections.personal.description', { _: 'Contact details and profile' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
-              <TextInput 
-                source="realname" 
-                label={translate('resources.system/operators.fields.realname', { _: '真实姓名' })} 
+              <TextInput
+                source="realname"
+                label={translate('resources.system/operators.fields.realname', { _: 'Full name' })}
                 validate={validation.validateRealname}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem>
-              <TextInput 
-                source="email" 
-                label={translate('resources.system/operators.fields.email', { _: '邮箱' })} 
-                type="email" 
+              <TextInput
+                source="email"
+                label={translate('resources.system/operators.fields.email', { _: 'Email' })}
+                type="email"
                 validate={validation.validateEmail}
-                helperText={translate('resources.system/operators.helpers.email', { _: '用于接收系统通知' })}
+                helperText={translate('resources.system/operators.helpers.email', { _: 'Use this page toreceive system notifications' })}
                 fullWidth
                 size="small"
               />
             </FieldGridItem>
             <FieldGridItem span={{ xs: 1, sm: 2 }}>
-              <TextInput 
-                source="mobile" 
-                label={translate('resources.system/operators.fields.mobile', { _: '手机号' })} 
+              <TextInput
+                source="mobile"
+                label={translate('resources.system/operators.fields.mobile', { _: 'Mobile number' })}
                 validate={validation.validateMobile}
-                helperText={translate('resources.system/operators.helpers.mobile', { _: '中国大陆手机号' })}
+                helperText={translate('resources.system/operators.helpers.mobile', { _: 'Mainland China mobile number' })}
                 fullWidth
                 size="small"
               />
@@ -956,23 +956,23 @@ export const OperatorCreate = () => {
           </FieldGrid>
         </FormSection>
 
-        <FormSection 
-          title={translate('resources.system/operators.sections.permissions.title', { _: '权限设置' })} 
-          description={translate('resources.system/operators.sections.permissions.description', { _: '账号权限和状态配置' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.permissions.title', { _: 'Permission settings' })}
+          description={translate('resources.system/operators.sections.permissions.description', { _: 'Account permissions and status settings' })}
         >
           <FieldGrid columns={{ xs: 1, sm: 2 }}>
             <FieldGridItem>
               <SelectInput
                 source="level"
-                label={translate('resources.system/operators.fields.level', { _: '权限级别' })}
+                label={translate('resources.system/operators.fields.level', { _: 'Permission level' })}
                 validate={validation.validateLevel}
                 defaultValue="operator"
                 choices={[
-                  { id: 'super', name: translate('resources.system/operators.levels.super', { _: '超级管理员' }) },
-                  { id: 'admin', name: translate('resources.system/operators.levels.admin', { _: '管理员' }) },
-                  { id: 'operator', name: translate('resources.system/operators.levels.operator', { _: '操作员' }) },
+                  { id: 'super', name: translate('resources.system/operators.levels.super', { _: 'Super admin' }) },
+                  { id: 'admin', name: translate('resources.system/operators.levels.admin', { _: 'Admin' }) },
+                  { id: 'operator', name: translate('resources.system/operators.levels.operator', { _: 'Operator' }) },
                 ]}
-                helperText={translate('resources.system/operators.helpers.level', { _: '选择操作员的权限级别' })}
+                helperText={translate('resources.system/operators.helpers.level', { _: 'Select the operator permission level' })}
                 fullWidth
                 size="small"
               />
@@ -980,14 +980,14 @@ export const OperatorCreate = () => {
             <FieldGridItem>
               <SelectInput
                 source="status"
-                label={translate('resources.system/operators.fields.status', { _: '状态' })}
+                label={translate('resources.system/operators.fields.status', { _: 'Status' })}
                 validate={validation.validateStatus}
                 defaultValue="enabled"
                 choices={[
-                  { id: 'enabled', name: translate('resources.system/operators.status.enabled', { _: '启用' }) },
-                  { id: 'disabled', name: translate('resources.system/operators.status.disabled', { _: '禁用' }) },
+                  { id: 'enabled', name: translate('resources.system/operators.status.enabled', { _: 'Enabled' }) },
+                  { id: 'disabled', name: translate('resources.system/operators.status.disabled', { _: 'Disabled' }) },
                 ]}
-                helperText={translate('resources.system/operators.helpers.status', { _: '禁用后无法登录系统' })}
+                helperText={translate('resources.system/operators.helpers.status', { _: 'Disabled accounts cannot sign in' })}
                 fullWidth
                 size="small"
               />
@@ -995,19 +995,19 @@ export const OperatorCreate = () => {
           </FieldGrid>
         </FormSection>
 
-        <FormSection 
-          title={translate('resources.system/operators.sections.remark.title', { _: '备注信息' })}
+        <FormSection
+          title={translate('resources.system/operators.sections.remark.title', { _: 'Notes' })}
         >
           <FieldGrid columns={{ xs: 1 }}>
             <FieldGridItem>
-              <TextInput 
-                source="remark" 
-                label={translate('resources.system/operators.fields.remark', { _: '备注' })} 
-                multiline 
-                minRows={3} 
+              <TextInput
+                source="remark"
+                label={translate('resources.system/operators.fields.remark', { _: 'Notes' })}
+                multiline
+                minRows={3}
                 fullWidth
                 size="small"
-                helperText={translate('resources.system/operators.helpers.remark', { _: '可选的备注信息' })}
+                helperText={translate('resources.system/operators.helpers.remark', { _: 'Optional notes' })}
               />
             </FieldGridItem>
           </FieldGrid>
@@ -1017,7 +1017,7 @@ export const OperatorCreate = () => {
   );
 };
 
-// ============ 详情页顶部概览卡片 ============
+// ============ 详情页Overview card ============
 
 const OperatorHeaderCard = () => {
   const record = useRecordContext<Operator>();
@@ -1027,12 +1027,12 @@ const OperatorHeaderCard = () => {
 
   const handleCopy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    notify(`${label} 已复制到剪贴板`, { type: 'info' });
+    notify(`${label} Copied to clipboard`, { type: 'info' });
   }, [notify]);
 
   const handleRefresh = useCallback(() => {
     refresh();
-    notify('数据已刷新', { type: 'info' });
+    notify('Data refreshed', { type: 'info' });
   }, [refresh, notify]);
 
   if (!record) return null;
@@ -1057,7 +1057,7 @@ const OperatorHeaderCard = () => {
         position: 'relative',
       }}
     >
-      {/* 装饰背景 */}
+      {/* Decorative background */}
       <Box
         sx={{
           position: 'absolute',
@@ -1073,7 +1073,7 @@ const OperatorHeaderCard = () => {
 
       <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          {/* 左侧：操作员信息 */}
+          {/* Left side：Operator信息 */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               sx={{
@@ -1090,7 +1090,7 @@ const OperatorHeaderCard = () => {
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  {record.username || <EmptyValue message="未知用户" />}
+                  {record.username || <EmptyValue message="Unknown user" />}
                 </Typography>
                 <StatusIndicator isEnabled={isEnabled} />
                 <LevelChip level={record.level} />
@@ -1107,10 +1107,10 @@ const OperatorHeaderCard = () => {
                   <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
                     ID: {record.id}
                   </Typography>
-                  <Tooltip title="复制用户名">
+                  <Tooltip title="CopyUsername">
                     <IconButton
                       size="small"
-                      onClick={() => handleCopy(record.username!, '用户名')}
+                      onClick={() => handleCopy(record.username!, 'Username')}
                       sx={{ p: 0.5 }}
                     >
                       <CopyIcon sx={{ fontSize: '0.75rem' }} />
@@ -1121,9 +1121,9 @@ const OperatorHeaderCard = () => {
             </Box>
           </Box>
 
-          {/* 右侧：操作按钮 */}
+          {/* Right side：Action buttons */}
           <Box className="no-print" sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="打印详情">
+            <Tooltip title="Print details">
               <IconButton
                 onClick={() => window.print()}
                 sx={{
@@ -1136,7 +1136,7 @@ const OperatorHeaderCard = () => {
                 <PrintIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="刷新数据">
+            <Tooltip title="Refresh data">
               <IconButton
                 onClick={handleRefresh}
                 sx={{
@@ -1163,7 +1163,7 @@ const OperatorHeaderCard = () => {
           </Box>
         </Box>
 
-        {/* 快速统计 */}
+        {/* Quick statistics */}
         <Box
           sx={{
             display: 'grid',
@@ -1185,7 +1185,7 @@ const OperatorHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <EmailIcon sx={{ fontSize: '1.1rem', color: 'info.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.system/operators.fields.email', { _: '邮箱' })}
+                {translate('resources.system/operators.fields.email', { _: 'Email' })}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all' }}>
@@ -1204,7 +1204,7 @@ const OperatorHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <PhoneIcon sx={{ fontSize: '1.1rem', color: 'success.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.system/operators.fields.mobile', { _: '手机号' })}
+                {translate('resources.system/operators.fields.mobile', { _: 'Mobile number' })}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -1223,7 +1223,7 @@ const OperatorHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <SecurityIcon sx={{ fontSize: '1.1rem', color: 'warning.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.system/operators.fields.level', { _: '权限级别' })}
+                {translate('resources.system/operators.fields.level', { _: 'Permission level' })}
               </Typography>
             </Box>
             <LevelChip level={record.level} />
@@ -1240,7 +1240,7 @@ const OperatorHeaderCard = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <TimeIcon sx={{ fontSize: '1.1rem', color: 'primary.main' }} />
               <Typography variant="caption" color="text.secondary">
-                {translate('resources.system/operators.fields.last_login', { _: '最后登录' })}
+                {translate('resources.system/operators.fields.last_login', { _: 'Last sign-in' })}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -1275,12 +1275,12 @@ const printStyles = `
   }
 `;
 
-// ============ 操作员详情内容 ============
+// ============ OperatorDetails ============
 
 const OperatorDetails = () => {
   const record = useRecordContext<Operator>();
   const translate = useTranslate();
-  
+
   if (!record) {
     return null;
   }
@@ -1290,13 +1290,13 @@ const OperatorDetails = () => {
       <style>{printStyles}</style>
       <Box className="printable-content" sx={{ width: '100%', p: { xs: 2, sm: 3, md: 4 } }}>
         <Stack spacing={3}>
-          {/* 顶部概览卡片 */}
+          {/* Overview card */}
           <OperatorHeaderCard />
 
-          {/* 时间信息 */}
+          {/* Timestamps */}
           <DetailSectionCard
-            title={translate('resources.system/operators.sections.other.title', { _: '时间信息' })}
-            description={translate('resources.system/operators.sections.other.description', { _: '创建和更新时间' })}
+            title={translate('resources.system/operators.sections.other.title', { _: 'Timestamps' })}
+            description={translate('resources.system/operators.sections.other.description', { _: 'Created and updated timestamps' })}
             icon={<TimeIcon />}
             color="info"
           >
@@ -1311,19 +1311,19 @@ const OperatorDetails = () => {
               }}
             >
               <DetailItem
-                label={translate('resources.system/operators.fields.created_at', { _: '创建时间' })}
+                label={translate('resources.system/operators.fields.created_at', { _: 'Created at' })}
                 value={formatTimestamp(record.created_at)}
               />
               <DetailItem
-                label={translate('resources.system/operators.fields.updated_at', { _: '更新时间' })}
+                label={translate('resources.system/operators.fields.updated_at', { _: 'Updated at' })}
                 value={formatTimestamp(record.updated_at)}
               />
             </Box>
           </DetailSectionCard>
 
-          {/* 备注信息 */}
+          {/* Notes */}
           <DetailSectionCard
-            title={translate('resources.system/operators.sections.remark.title', { _: '备注信息' })}
+            title={translate('resources.system/operators.sections.remark.title', { _: 'Notes' })}
             icon={<NoteIcon />}
             color="primary"
           >
@@ -1348,7 +1348,7 @@ const OperatorDetails = () => {
                   fontStyle: record.remark ? 'normal' : 'italic',
                 }}
               >
-                {record.remark || translate('resources.system/operators.empty.no_remark', { _: '无备注信息' })}
+                {record.remark || translate('resources.system/operators.empty.no_remark', { _: 'No notes' })}
               </Typography>
             </Box>
           </DetailSectionCard>
@@ -1358,7 +1358,7 @@ const OperatorDetails = () => {
   );
 };
 
-// 操作员详情
+// Operator详情
 export const OperatorShow = () => {
   return (
     <Show>

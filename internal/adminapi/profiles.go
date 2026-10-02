@@ -487,6 +487,15 @@ func DeleteProfile(c echo.Context) error {
 			"user_count": userCount,
 		})
 	}
+	var packageCount int64
+	if GetDB(c).Migrator().HasTable(&domain.InternetPackage{}) {
+		if err := GetDB(c).Model(&domain.InternetPackage{}).Where("radius_profile_id = ?", id).Count(&packageCount).Error; err != nil {
+			return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to check internet package links", err.Error())
+		}
+	}
+	if packageCount > 0 {
+		return fail(c, http.StatusConflict, "IN_USE", "Profile is linked to an internet package and cannot be deleted", map[string]int64{"package_count": packageCount})
+	}
 
 	if err := GetDB(c).Delete(&domain.RadiusProfile{}, id).Error; err != nil {
 		return fail(c, http.StatusInternalServerError, "DELETE_FAILED", "Failed to delete profile", err.Error())

@@ -9,7 +9,7 @@ export interface FieldGridItemProps {
 
 /**
  * 字段网格项组件
- * 支持跨列配置，用于控制表单字段在网格中的宽度
+ * 支持跨列Settings，Use this page to控制表单字段在网格中的宽度
  */
 export const FieldGridItem = ({
   children,

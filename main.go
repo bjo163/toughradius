@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"runtime"
+	"time"
 	_ "time/tzdata"
 
 	"github.com/talkincode/toughradius/v9/config"
 	"github.com/talkincode/toughradius/v9/internal/adminapi"
 	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/talkincode/toughradius/v9/internal/domain"
 	"github.com/talkincode/toughradius/v9/internal/radiusd"
 	"github.com/talkincode/toughradius/v9/internal/webserver"
 	"github.com/talkincode/toughradius/v9/pkg/common"
@@ -43,7 +47,7 @@ var (
 )
 
 func PrintVersion() {
-	_, _ = fmt.Fprintf(os.Stdout, "ToughRADIUS %s\n", Version)                         //nolint:errcheck
+	_, _ = fmt.Fprintf(os.Stdout, "MWX-ISP %s\n", Version)                             //nolint:errcheck
 	_, _ = fmt.Fprintf(os.Stdout, "Build Time: %s\n", BuildTime)                       //nolint:errcheck
 	_, _ = fmt.Fprintf(os.Stdout, "Git Commit: %s\n", GitCommit)                       //nolint:errcheck
 	_, _ = fmt.Fprintf(os.Stdout, "Go Version: %s\n", runtime.Version())               //nolint:errcheck
@@ -77,6 +81,35 @@ func main() {
 
 	// Create and initialize application context
 	application := app.NewApplication(_config)
+	coaService := radiusd.NewCoAService(nil, radiusd.WithCoATimeout(3*time.Second), radiusd.WithCoARetries(1))
+	application.SetSessionDisconnectHandler(func(ctx context.Context, session domain.RadiusOnline) error {
+		var nas domain.NetNas
+		if err := application.DB().Where("ipaddr = ?", session.NasAddr).First(&nas).Error; err != nil {
+			return err
+		}
+		result, err := coaService.Disconnect(ctx, radiusd.CoATargetFromNas(&nas), radiusd.SessionIdentityFromOnline(&session))
+		if err != nil {
+			return err
+		}
+		if !result.Success {
+			if result.Err != "" {
+				return errors.New(result.Err)
+			}
+			return fmt.Errorf("disconnect was not acknowledged: %s", result.ResponseCode)
+		}
+		return application.DB().Create(&domain.RadiusSessionActionAudit{
+			AcctSessionID: result.AcctSessionID,
+			Action:        string(result.Action),
+			Username:      result.Username,
+			NasAddr:       session.NasAddr,
+			Target:        result.Target,
+			Success:       result.Success,
+			ResponseCode:  result.ResponseCode,
+			Attempts:      result.Attempts,
+			RTTMillis:     result.RTT.Milliseconds(),
+			TriggeredAt:   result.SentAt,
+		}).Error
+	})
 	application.Init(_config)
 
 	if *initdb {

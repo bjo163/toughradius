@@ -43,15 +43,15 @@ export default function AuthTest() {
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(data.data.user));
         setToken(newToken);
-        setResult(`登录成功，获得token: ${newToken.substring(0, 20)}...`);
-        notify('登录成功', { type: 'success' });
+        setResult(`Sign-in succeeded; token received: ${newToken.substring(0, 20)}...`);
+        notify('Login successful', { type: 'success' });
       } else {
-        setResult(`登录失败: ${data.message || '未知错误'}`);
-        notify('登录失败', { type: 'error' });
+        setResult(`Login failed: ${data.message || 'Unknown error'}`);
+        notify('Login failed', { type: 'error' });
       }
     } catch (error) {
       console.error('Login error:', error);
-      setResult(`登录异常: ${error instanceof Error ? error.message : '未知错误'}`);
+      setResult(`Sign-in error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export default function AuthTest() {
 
   const testApiCall = async () => {
     if (!token) {
-      notify('请先登录获取token', { type: 'error' });
+      notify('Sign in first to obtain a token', { type: 'error' });
       return;
     }
 
@@ -82,15 +82,15 @@ export default function AuthTest() {
       console.log('API Response data:', data);
       
       if (response.ok && data.data && !data.error) {
-        setResult(`API调用成功: ${JSON.stringify(data.data, null, 2)}`);
-        notify('API调用成功', { type: 'success' });
+        setResult(`API requestSuccess: ${JSON.stringify(data.data, null, 2)}`);
+        notify('API requestSuccess', { type: 'success' });
       } else {
-        setResult(`API调用失败: ${data.message || '未知错误'}`);
-        notify('API调用失败', { type: 'error' });
+        setResult(`API requestFailed: ${data.message || 'Unknown error'}`);
+        notify('API requestFailed', { type: 'error' });
       }
     } catch (error) {
       console.error('API error:', error);
-      setResult(`API异常: ${error instanceof Error ? error.message : '未知错误'}`);
+      setResult(`API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -98,14 +98,14 @@ export default function AuthTest() {
 
   const testCurl = () => {
     if (!token) {
-      notify('请先登录获取token', { type: 'error' });
+      notify('Sign in first to obtain a token', { type: 'error' });
       return;
     }
     
     const curlCommand = `curl -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" http://localhost:1816/api/v1/system/operators/me`;
     navigator.clipboard.writeText(curlCommand);
-    notify('curl命令已复制到剪贴板', { type: 'info' });
-    setResult(`curl命令:\n${curlCommand}`);
+    notify('curl commandCopied to clipboard', { type: 'info' });
+    setResult(`curl command:\n${curlCommand}`);
   };
 
   return (
@@ -113,22 +113,22 @@ export default function AuthTest() {
       <Card>
         <CardContent>
           <Typography variant="h5" gutterBottom>
-            认证测试页面
+            Authentication test page
           </Typography>
           
           <Alert severity="info" sx={{ mb: 3 }}>
-            用于测试登录和API调用的认证流程
+            Test the sign-in and API authentication flow
           </Alert>
           
           <Box sx={{ mb: 3 }}>
             <TextField
               fullWidth
-              label="当前Token"
+              label="CurrentToken"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               multiline
               rows={3}
-              helperText="当前存储的认证token"
+              helperText="Currently stored authentication token"
             />
           </Box>
           
@@ -138,25 +138,25 @@ export default function AuthTest() {
               onClick={testLogin}
               disabled={loading}
             >
-              {loading ? '登录中...' : '测试登录'}
+              {loading ? 'Signing in...' : 'Test Login'}
             </Button>
             <Button 
               variant="outlined" 
               onClick={testApiCall}
               disabled={loading}
             >
-              {loading ? '调用中...' : '测试API调用'}
+              {loading ? 'Request in progress...' : 'Test API request'}
             </Button>
             <Button 
               variant="text" 
               onClick={testCurl}
             >
-              生成curl命令
+              Generate curl command
             </Button>
           </Box>
           
           <Typography variant="h6" sx={{ mb: 2 }}>
-            测试结果:
+            Test result:
           </Typography>
           
           <Box 
@@ -170,7 +170,7 @@ export default function AuthTest() {
               whiteSpace: 'pre-wrap'
             }}
           >
-            {result || '等待测试...'}
+            {result || 'Waiting for test...'}
           </Box>
         </CardContent>
       </Card>

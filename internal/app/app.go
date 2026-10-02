@@ -1,11 +1,13 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 	_ "time/tzdata"
 
@@ -25,11 +27,13 @@ const (
 )
 
 type Application struct {
-	appConfig     *config.AppConfig
-	gormDB        *gorm.DB
-	sched         *cron.Cron
-	configManager *ConfigManager
-	profileCache  *ProfileCache
+	appConfig         *config.AppConfig
+	gormDB            *gorm.DB
+	sched             *cron.Cron
+	configManager     *ConfigManager
+	profileCache      *ProfileCache
+	disconnectMu      sync.RWMutex
+	disconnectSession func(context.Context, domain.RadiusOnline) error
 }
 
 // Ensure Application implements all interfaces
@@ -52,6 +56,23 @@ func (a *Application) Config() *config.AppConfig {
 
 func (a *Application) DB() *gorm.DB {
 	return a.gormDB
+}
+
+// SetSessionDisconnectHandler installs the RADIUS session disconnect callback
+// used by billing enforcement. The callback is invoked for each matching online
+// session after billing suspension. Replacing or reading the callback is safe
+// while the scheduler is running. The application package accepts this function
+// instead of importing the protocol service, which would create an import cycle.
+func (a *Application) SetSessionDisconnectHandler(handler func(context.Context, domain.RadiusOnline) error) {
+	a.disconnectMu.Lock()
+	a.disconnectSession = handler
+	a.disconnectMu.Unlock()
+}
+
+func (a *Application) sessionDisconnectHandler() func(context.Context, domain.RadiusOnline) error {
+	a.disconnectMu.RLock()
+	defer a.disconnectMu.RUnlock()
+	return a.disconnectSession
 }
 
 // OverrideDB replaces the application's database handle (used in tests).

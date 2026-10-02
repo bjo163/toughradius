@@ -71,7 +71,7 @@ func getSqliteDatabase(config config.DBConfig, workdir string) *gorm.DB {
 
 // getPgDatabase returns a PostgreSQL database connection
 func getPgDatabase(config config.DBConfig) *gorm.DB {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Jakarta",
 		config.Host,
 		config.User,
 		config.Passwd,

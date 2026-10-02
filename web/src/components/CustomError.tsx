@@ -99,8 +99,8 @@ export const CustomError = ({
           )}
           <Typography variant="h5" fontWeight={600}>
             {title || (isConnectivityError 
-              ? translate('error.connectivity_title', { _: '连接问题' })
-              : translate('error.general_title', { _: '出错了' })
+              ? translate('error.connectivity_title', { _: 'Connection problem' })
+              : translate('error.general_title', { _: 'Something went wrong' })
             )}
           </Typography>
         </Box>
@@ -110,13 +110,13 @@ export const CustomError = ({
             {isConnectivityError ? (
               <Alert severity="warning">
                 {translate('error.connectivity_message', {
-                  _: '无法连接到服务器。请检查您的网络连接或后端服务是否正常运行。',
+                  _: 'Cannot connect to the server。Check your network connectionand confirm the backend serviceYesNorunning。',
                 })}
               </Alert>
             ) : (
               <Alert severity="error">
                 {translate('error.general_message', {
-                  _: '加载数据时发生错误。请稍后重试。',
+                  _: 'An error occurred while loading data。Please try again later。',
                 })}
               </Alert>
             )}
@@ -140,12 +140,12 @@ export const CustomError = ({
             {isConnectivityError && (
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  {translate('error.troubleshooting_title', { _: '故障排除建议：' })}
+                  {translate('error.troubleshooting_title', { _: 'Troubleshooting suggestions：' })}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" component="ul" sx={{ pl: 2 }}>
-                  <li>{translate('error.troubleshooting_network', { _: '检查您的网络连接是否正常' })}</li>
-                  <li>{translate('error.troubleshooting_server', { _: '确认后端服务正在运行' })}</li>
-                  <li>{translate('error.troubleshooting_refresh', { _: '刷新页面重试' })}</li>
+                  <li>{translate('error.troubleshooting_network', { _: 'Check that your network connection is working' })}</li>
+                  <li>{translate('error.troubleshooting_server', { _: 'Confirm the backend service is running' })}</li>
+                  <li>{translate('error.troubleshooting_refresh', { _: 'Refresh the page and try again' })}</li>
                 </Typography>
               </Box>
             )}
@@ -156,7 +156,7 @@ export const CustomError = ({
                 startIcon={<HomeIcon />}
                 onClick={handleGoHome}
               >
-                {translate('error.go_home', { _: '返回首页' })}
+                {translate('error.go_home', { _: 'Go home' })}
               </Button>
               <Button
                 variant="contained"
@@ -164,7 +164,7 @@ export const CustomError = ({
                 onClick={handleRetry}
                 color={isConnectivityError ? 'warning' : 'primary'}
               >
-                {translate('error.retry', { _: '重试' })}
+                {translate('error.retry', { _: 'Retry' })}
               </Button>
             </Stack>
           </Stack>

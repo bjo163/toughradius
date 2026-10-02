@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
+	"github.com/talkincode/toughradius/v9/internal/billing"
 	"github.com/talkincode/toughradius/v9/internal/domain"
 	"github.com/talkincode/toughradius/v9/pkg/metrics"
 	"go.uber.org/zap"
@@ -48,7 +50,72 @@ func (a *Application) initJob() {
 		zap.S().Errorf("init job error %s", err.Error())
 	}
 
+	_, err = a.sched.AddFunc("@daily", func() {
+		a.SchedISPBillingTask()
+	})
+	if err != nil {
+		zap.S().Errorf("init ISP billing job error %s", err.Error())
+	}
+
 	a.sched.Start()
+}
+
+// SchedISPBillingTask creates due monthly invoices, processes overdue invoices
+// when automatic suspension is enabled, and disconnects sessions for accounts
+// suspended by billing enforcement. It logs failures and returns without
+// stopping the application scheduler; the next scheduled run retries unfinished
+// work. Database errors are not returned to the cron runner.
+func (a *Application) SchedISPBillingTask() {
+	defer func() {
+		if err := recover(); err != nil {
+			zap.L().Error("ISP billing scheduler panic", zap.Any("error", err))
+		}
+	}()
+	now := time.Now()
+	dueDays := int(a.GetSettingsInt64Value("isp", "DefaultDueDays"))
+	if dueDays < 0 || dueDays > 90 {
+		dueDays = 10
+	}
+	if _, err := billing.GenerateMonthlyInvoices(a.gormDB, now, dueDays); err != nil {
+		zap.S().Error("monthly invoice generation failed", zap.Error(err))
+		return
+	}
+	if !a.GetSettingsBoolValue("isp", "AutoSuspend") {
+		return
+	}
+	if err := billing.ProcessOverdueInvoices(a.gormDB, now); err != nil {
+		zap.S().Error("overdue invoice processing failed", zap.Error(err))
+		return
+	}
+	if err := billing.SuspendOverdueSubscriptions(a.gormDB, now); err != nil {
+		zap.S().Error("overdue subscription suspension failed", zap.Error(err))
+		return
+	}
+	handler := a.sessionDisconnectHandler()
+	if handler == nil {
+		return
+	}
+	var subs []domain.Subscription
+	if err := a.gormDB.Where("status = ? AND suspension_reason = ?", domain.SubscriptionSuspended, domain.SuspensionBillingOverdue).Find(&subs).Error; err != nil {
+		zap.S().Error("billing-suspended subscription query failed", zap.Error(err))
+		return
+	}
+	for _, sub := range subs {
+		var user domain.RadiusUser
+		if sub.RadiusUserID == 0 || a.gormDB.First(&user, sub.RadiusUserID).Error != nil {
+			continue
+		}
+		var sessions []domain.RadiusOnline
+		if err := a.gormDB.Where("username = ?", user.Username).Find(&sessions).Error; err != nil {
+			zap.S().Warn("could not load online sessions for billing suspension", zap.Error(err))
+			continue
+		}
+		for _, session := range sessions {
+			if err := handler(context.Background(), session); err != nil {
+				zap.S().Warn("billing suspension disconnect failed", zap.String("username", user.Username), zap.Error(err))
+			}
+		}
+	}
 }
 
 // SchedSystemMonitorTask system monitor

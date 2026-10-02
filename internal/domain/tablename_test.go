@@ -99,6 +99,14 @@ func TestTableNameUniqueness(t *testing.T) {
 		"radius_online":               true,
 		"radius_session_action_audit": true,
 		"radius_accounting":           true,
+		"isp_customer":                true,
+		"isp_package":                 true,
+		"isp_subscription":            true,
+		"isp_invoice":                 true,
+		"isp_invoice_item":            true,
+		"isp_payment":                 true,
+		"isp_billing_event":           true,
+		"isp_document_sequence":       true,
 	}
 
 	assert.Equal(t, len(expectedNames), len(tableNames), "Table name count should match")

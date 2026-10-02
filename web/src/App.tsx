@@ -10,6 +10,12 @@ import { SystemConfigPage } from './pages/SystemConfigPage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
 import { theme, darkTheme } from './theme';
+import {
+  CustomerList, CustomerCreate, CustomerEdit, CustomerShow,
+  PackageList, PackageCreate, PackageEdit,
+  SubscriptionList, SubscriptionCreate, SubscriptionShow,
+  InvoiceList, InvoiceShow, PaymentList, PaymentCreate, PaymentShow,
+} from './resources/isp';
 
 // 自定义加载组件，避免闪烁
 const CustomLoading = () => (
@@ -26,7 +32,7 @@ const CustomLoading = () => (
   >
     <CircularProgress size={40} sx={{ color: '#2563eb' }} />
     <Typography variant="body1" color="text.secondary" sx={{ color: '#64748b' }}>
-      正在加载...
+      Loading...
     </Typography>
   </Box>
 );
@@ -79,7 +85,7 @@ const App = () => (
     i18nProvider={i18nProvider}
     dashboard={Dashboard}
     loginPage={LoginPage}
-    title="TOUGHRADIUS v9"
+    title="MWX-ISP"
     theme={theme}
     darkTheme={darkTheme}
     defaultTheme="light"
@@ -88,7 +94,12 @@ const App = () => (
     error={CustomError}
     requireAuth
   >
-    {/* RADIUS 用户管理 */}
+    <Resource name="isp/customers" list={CustomerList} create={CustomerCreate} edit={CustomerEdit} show={CustomerShow} />
+    <Resource name="isp/packages" list={PackageList} create={PackageCreate} edit={PackageEdit} />
+    <Resource name="isp/subscriptions" list={SubscriptionList} create={SubscriptionCreate} show={SubscriptionShow} />
+    <Resource name="isp/invoices" list={InvoiceList} show={InvoiceShow} />
+    <Resource name="isp/payments" list={PaymentList} create={PaymentCreate} show={PaymentShow} />
+    {/* RADIUS User management */}
     <Resource
       name="radius/users"
       list={RadiusUserList}
@@ -97,21 +108,21 @@ const App = () => (
       show={RadiusUserShow}
     />
 
-    {/* 在线会话 */}
+    {/* OnlineSession */}
     <Resource
       name="radius/online"
       list={OnlineSessionList}
       show={OnlineSessionShow}
     />
 
-    {/* 计费记录 */}
+    {/* Accounting records */}
     <Resource
       name="radius/accounting"
       list={AccountingList}
       show={AccountingShow}
     />
 
-    {/* RADIUS 配置 */}
+    {/* RADIUS Settings */}
     <Resource
       name="radius/profiles"
       list={RadiusProfileList}
@@ -120,7 +131,7 @@ const App = () => (
       show={RadiusProfileShow}
     />
 
-    {/* NAS 设备管理 */}
+    {/* NAS device management */}
     <Resource
       name="network/nas"
       list={NASList}
@@ -129,7 +140,7 @@ const App = () => (
       show={NASShow}
     />
 
-    {/* 网络节点 */}
+    {/* Network node */}
     <Resource
       name="network/nodes"
       list={NodeList}
@@ -138,7 +149,7 @@ const App = () => (
       show={NodeShow}
     />
 
-    {/* 操作员管理 */}
+    {/* Operator management */}
     <Resource
       name="system/operators"
       list={OperatorList}
@@ -147,7 +158,7 @@ const App = () => (
       show={OperatorShow}
     />
 
-    {/* 证书管理 */}
+    {/* Certificate management */}
     <Resource
       name="system/certificate"
       list={CertificateList}
@@ -157,7 +168,7 @@ const App = () => (
       icon={CertificateIcon}
     />
 
-    {/* 自定义路由 */}
+    {/* Custom routes */}
     <CustomRoutes>
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />

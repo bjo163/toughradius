@@ -113,7 +113,7 @@ export const ActiveFilters = ({
         color="text.secondary"
         sx={{ fontWeight: 500, mr: 1 }}
       >
-        {translate('filter.active_filters', { _: '当前筛选' })}:
+        {translate('filter.active_filters', { _: 'Active filters' })}:
       </Typography>
 
       {activeFilters.map(({ field, label, displayValue }) => (
@@ -134,7 +134,7 @@ export const ActiveFilters = ({
       ))}
 
       {activeFilters.length > 1 && (
-        <Tooltip title={translate('filter.clear_all', { _: '清除全部' })}>
+        <Tooltip title={translate('filter.clear_all', { _: 'Clear all' })}>
           <IconButton
             size="small"
             onClick={handleClearAll}

@@ -24,7 +24,7 @@ const defaultColumns: Required<Pick<ColumnConfig, 'xs' | 'sm' | 'md' | 'lg'>> = 
 
 /**
  * 响应式字段网格组件
- * 用于在表单和详情页中创建响应式多列布局
+ * Use this page to在表单和详情页中Create响应式多列布局
  */
 export const FieldGrid = ({
   children,

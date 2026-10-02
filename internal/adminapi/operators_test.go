@@ -346,14 +346,14 @@ func TestCreateOperator(t *testing.T) {
 			expectedError:  "WEAK_PASSWORD",
 		},
 		{
-			name: "Historical default password is rejected",
+			name: "Short bootstrap password is rejected for additional operators",
 			requestBody: `{
 				"username": "testuser",
 				"password": "` + app.WellKnownBootstrapPassword + `",
 				"realname": "Test"
 			}`,
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "INSECURE_DEFAULT_PASSWORD",
+			expectedError:  "INVALID_PASSWORD",
 		},
 		{
 			name: "Invalid email format",

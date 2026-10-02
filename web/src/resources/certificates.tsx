@@ -258,7 +258,7 @@ const CertificateListActions = () => {
   const translate = useTranslate();
   return (
     <TopToolbar>
-      <SortButton fields={['created_at', 'name', 'not_after']} label={translate('ra.action.sort', { _: '排序' })} />
+      <SortButton fields={['created_at', 'name', 'not_after']} label={translate('ra.action.sort', { _: 'Sort' })} />
       <CreateButton />
     </TopToolbar>
   );

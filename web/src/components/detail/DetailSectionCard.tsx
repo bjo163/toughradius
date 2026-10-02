@@ -11,7 +11,7 @@ export interface DetailSectionCardProps {
 
 /**
  * 详情分区卡片组件
- * 用于在详情页中将相关字段分组展示，带有图标和颜色主题
+ * Use this page to在详情页中将相关字段分组展示，带有图标和颜色主题
  */
 export const DetailSectionCard = ({
   title,

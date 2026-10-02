@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Building ToughRADIUS v9 Web UI..."
+echo "Building MWX-ISP Web UI..."
 
 # 进入 web 目录
 cd "$(dirname "$0")"

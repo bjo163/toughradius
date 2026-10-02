@@ -9,7 +9,7 @@ export interface DetailItemProps {
 
 /**
  * 详情项组件
- * 用于在详情页中展示单个字段的标签和值
+ * Use this page to在详情页中展示单字段的Tags和值
  */
 export const DetailItem = ({ label, value, highlight = false }: DetailItemProps) => (
   <Box

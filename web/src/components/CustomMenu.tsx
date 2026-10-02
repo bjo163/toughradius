@@ -8,18 +8,25 @@ import RouterOutlinedIcon from '@mui/icons-material/RouterOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
-import { Box, useTheme } from '@mui/material';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
+import { Box, Typography, useTheme } from '@mui/material';
 import { MenuItemLink, MenuProps, useGetIdentity, useTranslate } from 'react-admin';
 
 const menuItems = [
   { to: '/', labelKey: 'menu.dashboard', icon: <DashboardOutlinedIcon /> },
-  { to: '/network/nodes', labelKey: 'menu.network_nodes', icon: <AccountTreeOutlinedIcon /> },
-  { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
-  { to: '/radius/users', labelKey: 'menu.radius_users', icon: <PeopleAltOutlinedIcon /> },
+  { to: '/isp/customers', labelKey: 'menu.customers', sectionKey: 'menu.isp', icon: <PeopleAltOutlinedIcon /> },
+  { to: '/isp/packages', labelKey: 'menu.packages', sectionKey: 'menu.services', icon: <Inventory2OutlinedIcon /> },
+  { to: '/isp/subscriptions', labelKey: 'menu.subscriptions', icon: <AutorenewOutlinedIcon /> },
+  { to: '/isp/invoices', labelKey: 'menu.invoices', sectionKey: 'menu.billing', icon: <ReceiptLongOutlinedIcon /> },
+  { to: '/isp/payments', labelKey: 'menu.payments', icon: <ReceiptLongOutlinedIcon /> },
+  { to: '/radius/users', labelKey: 'menu.radius_users', sectionKey: 'menu.radius', icon: <PeopleAltOutlinedIcon /> },
   { to: '/radius/profiles', labelKey: 'menu.radius_profiles', icon: <SettingsSuggestOutlinedIcon /> },
   { to: '/radius/online', labelKey: 'menu.online_sessions', icon: <SensorsOutlinedIcon /> },
   { to: '/radius/accounting', labelKey: 'menu.accounting', icon: <ReceiptLongOutlinedIcon /> },
-  { to: '/system/config', labelKey: 'menu.system_config', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/network/nodes', labelKey: 'menu.network_nodes', sectionKey: 'menu.network', icon: <AccountTreeOutlinedIcon /> },
+  { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
+  { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['super', 'admin'] },
 ];
@@ -31,11 +38,11 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
   const { data: identity } = useGetIdentity();
   const translate = useTranslate();
 
-  // 根据用户权限过滤菜单项
+  // Filter menu items by user permissions
   const filteredMenuItems = menuItems.filter(item => {
-    if (!item.permissions) return true; // 无权限限制的菜单项对所有人可见
-    if (!identity?.level) return false; // 未登录用户不显示需要权限的菜单
-    return item.permissions.includes(identity.level); // 检查用户权限是否在允许列表中
+    if (!item.permissions) return true; // No permissions restriction
+    if (!identity?.level) return false; // User is not signed in
+    return item.permissions.includes(identity.level); // Check user permissions
   });
 
   return (
@@ -53,14 +60,18 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
     >
       <Box sx={{ flexGrow: 1, overflowY: 'auto', pt: 1, marginTop: 2 }}>
         {filteredMenuItems.map((item) => (
-          <MenuItemLink
-            key={item.to}
-            to={item.to}
-            primaryText={translate(item.labelKey)}
-            leftIcon={item.icon}
-            dense={dense}
-            onClick={onMenuClick}
-          />
+          <Box key={item.to}>
+            {item.sectionKey && <Typography variant="overline" sx={{ display: 'block', px: 2.5, pt: 1.5, color: 'rgba(255,255,255,0.62)' }}>
+              {translate(item.sectionKey)}
+            </Typography>}
+            <MenuItemLink
+              to={item.to}
+              primaryText={translate(item.labelKey)}
+              leftIcon={item.icon}
+              dense={dense}
+              onClick={onMenuClick}
+            />
+          </Box>
         ))}
       </Box>
 
@@ -75,7 +86,7 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
           transition: 'all 0.3s ease',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>TOUGHRADIUS v9</div>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>MWX-ISP</div>
         <div>© {currentYear} ALL RIGHTS RESERVED</div>
         {logout && <Box sx={{ mt: 2 }}>{logout}</Box>}
       </Box>

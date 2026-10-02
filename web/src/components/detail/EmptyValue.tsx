@@ -6,9 +6,9 @@ export interface EmptyValueProps {
 
 /**
  * 空态组件
- * 用于在详情页中显示空值占位符
+ * Use this page to在详情页中显示空值占位符
  */
-export const EmptyValue = ({ message = '暂无数据' }: EmptyValueProps) => (
+export const EmptyValue = ({ message = 'No data available' }: EmptyValueProps) => (
   <Box
     sx={{
       display: 'flex',

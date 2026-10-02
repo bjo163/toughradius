@@ -612,6 +612,15 @@ func deleteRadiusUser(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusBadRequest, "INVALID_ID", "Invalid user ID", nil)
 	}
+	var subscriptionCount int64
+	if GetDB(c).Migrator().HasTable(&domain.Subscription{}) {
+		if err := GetDB(c).Model(&domain.Subscription{}).Where("radius_user_id = ?", id).Count(&subscriptionCount).Error; err != nil {
+			return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to check subscription links", err.Error())
+		}
+	}
+	if subscriptionCount > 0 {
+		return fail(c, http.StatusConflict, "RADIUS_USER_LINKED", "RADIUS user is linked to an ISP subscription", map[string]int64{"subscription_count": subscriptionCount})
+	}
 	if err := GetDB(c).Where("id = ?", id).Delete(&domain.RadiusUser{}).Error; err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to delete user", err.Error())
 	}

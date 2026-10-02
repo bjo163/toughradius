@@ -31,6 +31,10 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -ldflags \
 FROM alpine:latest
 
 RUN apk add --no-cache curl ca-certificates tzdata
+ENV TZ=Asia/Jakarta
+LABEL org.opencontainers.image.title="MWX-ISP" \
+      org.opencontainers.image.description="ISP Management, RADIUS, and Billing" \
+      org.opencontainers.image.source="local"
 
 COPY --from=builder /toughradius /usr/local/bin/toughradius
 

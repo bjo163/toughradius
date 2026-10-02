@@ -34,6 +34,17 @@ interface DashboardStats {
   ipv6_stats: DashboardIPv6Stats;
 }
 
+interface ISPDashboardStats {
+  customers: number;
+  active_subscriptions: number;
+  suspended_subscriptions: number;
+  online_users: number;
+  invoices_this_month: number;
+  payments_this_month: number;
+  outstanding: number;
+  overdue: number;
+}
+
 interface DashboardIPv6Stats {
   online_with_ipv6: number;
   online_with_ipv6_address: number;
@@ -92,6 +103,13 @@ const Dashboard = () => {
   const { data: statsPayload, isFetching } = useApiQuery<DashboardStats>({
     path: '/dashboard/stats',
     queryKey: ['dashboard', 'stats'],
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+    retry: 1,
+  });
+  const { data: ispStats } = useApiQuery<ISPDashboardStats>({
+    path: '/dashboard/isp-stats',
+    queryKey: ['dashboard', 'isp-stats'],
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
     retry: 1,
@@ -414,6 +432,30 @@ const Dashboard = () => {
           </Stack>
         </CardContent>
       </Card>
+
+      <Grid container spacing={2}>
+        {[
+          ['dashboard.customers', ispStats?.customers ?? 0],
+          ['dashboard.active_subscriptions', ispStats?.active_subscriptions ?? 0],
+          ['dashboard.suspended_subscriptions', ispStats?.suspended_subscriptions ?? 0],
+          ['dashboard.online_users', ispStats?.online_users ?? 0],
+          ['dashboard.invoices_this_month', ispStats?.invoices_this_month ?? 0],
+          ['dashboard.payments_this_month', ispStats?.payments_this_month ?? 0],
+          ['dashboard.outstanding', ispStats?.outstanding ?? 0],
+          ['dashboard.overdue', ispStats?.overdue ?? 0],
+        ].map(([label, value]) => (
+          <Grid item xs={6} sm={3} key={label as string}>
+            <Card sx={{ height: '100%', borderRadius: 3 }}><CardContent>
+              <Typography variant="caption" color="text.secondary">{translate(label as string)}</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, mt: 1 }}>
+                {typeof value === 'number' && (label === 'dashboard.outstanding')
+                  ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
+                  : numberFormatter.format(value as number)}
+              </Typography>
+            </CardContent></Card>
+          </Grid>
+        ))}
+      </Grid>
 
       <Grid container spacing={3}>
         {statCards.map((card) => (

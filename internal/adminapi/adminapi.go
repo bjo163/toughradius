@@ -45,4 +45,5 @@ func Init(appCtx app.AppContext) {
 	registerCertificateRoutes()
 	registerSystemLogRoutes()
 	registerSystemBackupRoutes()
+	registerISPRoutes()
 }

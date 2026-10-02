@@ -51,7 +51,7 @@ export default function DebugAccountSettings() {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        notify('没有找到认证令牌', { type: 'error' });
+        notify('Authentication token not found', { type: 'error' });
         return;
       }
       
@@ -69,7 +69,7 @@ export default function DebugAccountSettings() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API Error:', errorText);
-        notify(`API调用失败: ${response.status} ${response.statusText}`, { type: 'error' });
+        notify(`API request failed: ${response.status} ${response.statusText}`, { type: 'error' });
         return;
       }
       
@@ -77,20 +77,20 @@ export default function DebugAccountSettings() {
       console.log('API Response:', result);
       
       if (result.success) {
-        notify('API调用成功');
+        notify('API request succeeded');
         setDebugInfo({
           ...debugInfo,
           apiResponse: result,
           lastApiCall: new Date().toISOString()
         });
       } else {
-        notify(`API返回错误: ${result.message}`, { type: 'error' });
+        notify(`API returned an error: ${result.message}`, { type: 'error' });
       }
       
     } catch (error) {
       console.error('API Call Error:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      notify(`API调用异常: ${errorMessage}`, { type: 'error' });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      notify(`API request error: ${errorMessage}`, { type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -105,28 +105,28 @@ export default function DebugAccountSettings() {
       <Card>
         <CardContent>
           <Typography variant="h5" gutterBottom>
-            账号设置调试页面
+            Account settings debug page
           </Typography>
           
           <Alert severity="info" sx={{ mb: 3 }}>
-            此页面用于调试账号设置功能的问题
+            Use this page to troubleshoot account settings issues.
           </Alert>
           
           <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
             <Button variant="outlined" onClick={checkAuth}>
-              检查认证状态
+              Check authentication status
             </Button>
             <Button 
               variant="contained" 
               onClick={testAPI} 
               disabled={loading}
             >
-              {loading ? '测试中...' : '测试API调用'}
+              {loading ? 'Testing...' : 'Test API request'}
             </Button>
           </Box>
           
           <Typography variant="h6" sx={{ mb: 2 }}>
-            调试信息:
+            Debug information:
           </Typography>
           
           <Box 

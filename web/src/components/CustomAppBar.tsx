@@ -52,7 +52,7 @@ export const CustomAppBar = (props: AppBarProps) => {
           ? 'none' 
           : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
         transition: 'all 0.3s ease',
-        // 隐藏默认的汉堡菜单按钮，我们自己添加
+        // 隐藏默认的汉堡菜单button，我们自己添加
         '& .RaAppBar-menuButton': {
           display: 'none',
         },
@@ -70,7 +70,7 @@ export const CustomAppBar = (props: AppBarProps) => {
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
-          {/* 侧边栏展开/收起按钮 */}
+          {/* 侧边栏展开/收起button */}
           <Tooltip title={sidebarOpen ? translate('appbar.collapse_menu') : translate('appbar.expand_menu')}>
             <IconButton 
               size="medium"
@@ -97,7 +97,7 @@ export const CustomAppBar = (props: AppBarProps) => {
               letterSpacing: '0.5px',
             }}
           >
-            TOUGHRADIUS
+              MWX-ISP
           </Typography>
         </Stack>
 
@@ -134,15 +134,6 @@ export const CustomAppBar = (props: AppBarProps) => {
             }}
           >
             <MenuItem 
-              onClick={() => handleLanguageSelect('zh-CN')}
-              selected={locale === 'zh-CN'}
-            >
-              <ListItemIcon>
-                {locale === 'zh-CN' && '✓'}
-              </ListItemIcon>
-              <ListItemText>{translate('appbar.language.zh_CN')}</ListItemText>
-            </MenuItem>
-            <MenuItem 
               onClick={() => handleLanguageSelect('en-US')}
               selected={locale === 'en-US'}
             >
@@ -176,7 +167,7 @@ export const CustomAppBar = (props: AppBarProps) => {
             </Box>
           </Tooltip>
           
-          {/* 只对超级管理员和管理员显示系统设置按钮 */}
+          {/* 只对Super admin和Admin显示系统设置button */}
           {identity?.level === 'super' || identity?.level === 'admin' ? (
             <Tooltip title={translate('appbar.system_settings')}>
               <IconButton 
@@ -198,7 +189,7 @@ export const CustomAppBar = (props: AppBarProps) => {
             </Tooltip>
           ) : null}
 
-          {/* 账号设置按钮 - 所有用户都可见 */}
+          {/* Account settingsbutton - 所有User都可见 */}
           <Tooltip title={translate('appbar.account_settings')}>
             <IconButton 
               size="large" 

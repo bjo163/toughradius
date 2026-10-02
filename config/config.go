@@ -1,4 +1,4 @@
-// Package config provides application configuration management for ToughRADIUS.
+// Package config provides application configuration management for MWX-ISP.
 //
 // This package handles loading configuration from YAML files and environment variables,
 // with support for both PostgreSQL and SQLite databases. Configuration can be loaded
@@ -463,11 +463,11 @@ func setEnvIntValue(name string, val *int) {
 //   - System.Debug to false
 //   - Logger.Mode to "production"
 //   - TOUGHRADIUS_ADMIN_PASSWORD for a chosen first-start admin password
-//     (otherwise a random password is written to {workdir}/private/admin-bootstrap-password)
+//     (the local default is admin/admin)
 var DefaultAppConfig = &AppConfig{
 	System: SysConfig{
-		Appid:    "ToughRADIUS",
-		Location: "Asia/Shanghai",
+		Appid:    "MWX-ISP",
+		Location: "Asia/Jakarta",
 		Workdir:  "/var/toughradius",
 		Debug:    true,
 	},

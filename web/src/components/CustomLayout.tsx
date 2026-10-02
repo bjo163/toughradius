@@ -25,7 +25,7 @@ export const CustomLayout = ({ sx, ...rest }: CustomLayoutProps) => (
         '& .RaLayout-appFrame': {
           marginTop: '48px',
         },
-        // 固定左侧菜单（滚动时不跟随移动）
+        // 固定Left side菜单（滚动时不跟随移动）
         '& .RaSidebar-fixed': {
           position: 'fixed',
           top: '48px',

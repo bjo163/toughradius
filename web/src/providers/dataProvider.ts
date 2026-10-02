@@ -25,6 +25,11 @@ const resourcePathMap: Record<string, string> = {
   'radius/accounting': 'accounting',
   'radius/profiles': 'radius-profiles',
   'system/config/schemas': 'system/config/schemas',
+  'isp/customers': 'isp/customers',
+  'isp/packages': 'isp/packages',
+  'isp/subscriptions': 'isp/subscriptions',
+  'isp/invoices': 'isp/invoices',
+  'isp/payments': 'isp/payments',
 };
 
 const resolveResource = (resource: string) =>

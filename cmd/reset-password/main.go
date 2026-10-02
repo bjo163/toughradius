@@ -17,7 +17,6 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
 	"github.com/talkincode/toughradius/v9/internal/domain"
 	"github.com/talkincode/toughradius/v9/pkg/common"
 	"gorm.io/driver/postgres"
@@ -43,11 +42,6 @@ func main() {
 		fmt.Println("Error: -p new password is required")
 		os.Exit(1)
 	}
-	if app.IsWellKnownBootstrapPassword(password) {
-		fmt.Println("Error: the historical default password cannot be used; choose a unique password")
-		os.Exit(1)
-	}
-
 	// Load configuration
 	cfg := config.LoadConfig(configFile)
 	if cfg == nil {

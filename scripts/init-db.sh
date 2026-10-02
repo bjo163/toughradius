@@ -77,8 +77,8 @@ case "$DB_TYPE" in
         TEMP_CONFIG="/tmp/toughradius-sqlite.yml"
         cat > "$TEMP_CONFIG" <<EOF
 system:
-  appid: ToughRADIUS
-  location: Asia/Shanghai
+  appid: MWX-ISP
+  location: Asia/Jakarta
   workdir: /var/toughradius
   debug: true
 
@@ -184,8 +184,8 @@ EOF
         TEMP_CONFIG="/tmp/toughradius-postgres.yml"
         cat > "$TEMP_CONFIG" <<EOF
 system:
-  appid: ToughRADIUS
-  location: Asia/Shanghai
+  appid: MWX-ISP
+  location: Asia/Jakarta
   workdir: /var/toughradius
   debug: true
 

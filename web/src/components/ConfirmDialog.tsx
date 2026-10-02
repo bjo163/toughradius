@@ -60,18 +60,18 @@ export const ConfirmDialog = ({
   }, [onConfirm]);
 
   const defaultTitle = isDelete
-    ? translate('confirm.delete_title', { _: '确认删除' })
-    : translate('confirm.title', { _: '确认操作' });
+    ? translate('confirm.delete_title', { _: 'ConfirmDelete' })
+    : translate('confirm.title', { _: 'Confirm action' });
 
   const defaultContent = isDelete
-    ? translate('confirm.delete_message', { _: '您确定要删除此项吗？此操作无法撤销。' })
-    : translate('confirm.message', { _: '您确定要执行此操作吗？' });
+    ? translate('confirm.delete_message', { _: 'Are you sure you want to delete this item? This action cannot be undone.' })
+    : translate('confirm.message', { _: 'Are you sure you want to perform this action?' });
 
   const defaultConfirmLabel = isDelete
-    ? translate('confirm.delete', { _: '删除' })
-    : translate('confirm.confirm', { _: '确认' });
+    ? translate('confirm.delete', { _: 'Delete' })
+    : translate('confirm.confirm', { _: 'Confirm' });
 
-  const defaultCancelLabel = translate('confirm.cancel', { _: '取消' });
+  const defaultCancelLabel = translate('confirm.cancel', { _: 'Cancel' });
 
   return (
     <Dialog
@@ -121,7 +121,7 @@ export const ConfirmDialog = ({
           autoFocus
         >
           {loading
-            ? translate('confirm.processing', { _: '处理中...' })
+            ? translate('confirm.processing', { _: 'Processing...' })
             : confirmLabel || defaultConfirmLabel}
         </Button>
       </DialogActions>

@@ -4,8 +4,8 @@ import englishMessages from 'ra-language-english';
 const customEnglishMessages: TranslationMessages = {
   ...englishMessages,
   app: {
-    title: 'TOUGHRADIUS v9',
-    subtitle: 'Enterprise-grade RADIUS Server Management Platform',
+    title: 'MWX-ISP',
+    subtitle: 'ISP Management + RADIUS + Billing',
     loading: 'Loading...',
   },
   auth: {
@@ -18,6 +18,14 @@ const customEnglishMessages: TranslationMessages = {
   },
   menu: {
     dashboard: 'Dashboard',
+    isp: 'ISP Management',
+    services: 'Services',
+    billing: 'Billing',
+    customers: 'Customers',
+    packages: 'Internet Packages',
+    subscriptions: 'Subscriptions',
+    invoices: 'Invoices',
+    payments: 'Payments',
     radius: 'RADIUS Management',
     radius_users: 'Users Management',
     online_sessions: 'Online Sessions',
@@ -40,13 +48,20 @@ const customEnglishMessages: TranslationMessages = {
     expand_menu: 'Expand Menu',
     collapse_menu: 'Collapse Menu',
     language: {
-      zh_CN: '简体中文',
+      zh_CN: 'Chinese (Simplified)',
       en_US: 'English',
     },
   },
   dashboard: {
-    title: 'RADIUS System Overview',
-    subtitle: 'Get real-time insight into users, sessions, and policies to keep the network stable.',
+    title: 'MWX-ISP Operations',
+    subtitle: 'Manage customers, internet access, and billing from one place.',
+    customers: 'Customers',
+    active_subscriptions: 'Active Subscriptions',
+    suspended_subscriptions: 'Suspended Subscriptions',
+    invoices_this_month: 'Invoices This Month',
+    payments_this_month: 'Payments This Month',
+    outstanding: 'Outstanding',
+    overdue: 'Overdue Invoices',
     total_users: 'Total Users',
     online_users: 'Online Users',
     today_auth: 'Authentications Today',
@@ -667,6 +682,14 @@ const customEnglishMessages: TranslationMessages = {
       no_config_warning: 'No configuration items found. Please check if backend API is working properly.',
       success_message: 'Successfully loaded %{schemaCount} configuration definitions, %{configCount} configuration values',
       groups: {
+        isp_company: {
+          title: 'ISP Company',
+          description: 'Company details and billing currency',
+        },
+        isp_billing: {
+          title: 'ISP Billing',
+          description: 'Subscription invoice and overdue enforcement defaults',
+        },
         radius: {
           title: 'RADIUS Configuration',
           description: 'RADIUS authentication and accounting related configuration',
@@ -697,6 +720,18 @@ const customEnglishMessages: TranslationMessages = {
     },
   },
   config: {
+    isp: {
+      company_name: { title: 'Company Name', description: 'ISP name displayed on billing pages.' },
+      company_address: { title: 'Company Address', description: 'Business address for billing information.' },
+      company_phone: { title: 'Company Phone', description: 'Contact phone for billing information.' },
+      company_email: { title: 'Company Email', description: 'Contact email for billing information.' },
+      currency: { title: 'Currency', description: 'The initial release supports Indonesian Rupiah (IDR).' },
+      default_billing_day: { title: 'Default Billing Day', description: 'Monthly billing day for new subscriptions, from 1 to 28.' },
+      default_due_days: { title: 'Default Invoice Due Days', description: 'Days between invoice date and due date.' },
+      default_grace_days: { title: 'Default Grace Days', description: 'Grace period after an invoice due date before suspension.' },
+      auto_suspend: { title: 'Automatic Billing Suspension', description: 'Suspend overdue subscriptions after the grace period.' },
+      auto_reactivate: { title: 'Automatic Reactivation after Payment', description: 'Reactivate billing-suspended subscriptions after all overdue invoices are paid.' },
+    },
     radius: {
       eap_method: {
         title: 'EAP Method',

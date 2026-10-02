@@ -72,12 +72,20 @@
 | P2 | TR-F023 | 双语文档站点（mdbook） | 已交付（M13） | 用 mdbook 搭建中英文双语文档站点，收编 README / AGENT / SECURITY / RFC 索引等散落文档，并以交叉链接暴露功能清单与路线图，提供统一导航、本地构建与 CI 产物校验。 | 文档不替代以代码与测试为准的口径；中英文目录结构对应、同步维护；功能清单与路线图作为 living docs 保持在 `docs/`，由专用技能维护。 |
 | P2 | TR-F024 | Go API 文档与注释规范（标准库风格） | 已交付（M4） | 制定并落地 godoc / 标准库风格注释规范：导出标识符注释齐全、包注释、`Example`、错误与并发语义说明；提供配套技能与可度量门禁。 | 规范已纳入 lint / CI ratchet；新增或变更导出 API 必须继续满足标准库 godoc 风格。 |
 
+## MWX-ISP 批准的扩展范围
+
+| 编号 | 功能域 | 功能项 | 标准范围 / 验收口径 | 现有入口 / 模块 | 状态 | 开发边界 |
+| --- | --- | --- | --- | --- | --- | --- |
+| TR-F027 | ISP 管理 | MWX-ISP 客户、套餐与订阅 | 为单 ISP operator 管理客户资料、独立于 RadiusUser 的 Customer、Internet Package（商业价格关联 RadiusProfile）和 Subscription（可关联或创建 RadiusUser）；支持列表、详情、CRUD 和生命周期操作。 | `internal/domain`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已批准 / 待实现 | 仅 operator/admin 使用；复用现有 RADIUS 用户、Profile、NAS、Accounting 和 Disconnect，不重写协议栈；新表采用增量迁移，保留既有 subscriber 数据。 |
+| TR-F028 | ISP Billing | MWX-ISP invoice、payment 与 enforcement | 为订阅生成月度 invoice/item，按整数 IDR 记录手动/部分/全额 payment，处理 due date、overdue、grace period，并按账单原因自动 suspend/disable/disconnect 和付款后 reactivate/enable。 | `internal/domain`, `internal/app`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已批准 / 待实现 | 仅单 ISP、operator-facing MVP；每笔 payment 关联一个 invoice；不含 gateway、ERP、税务或多租户；唯一约束和事务保护重复发票及支付状态。 |
+| TR-F029 | MWX-ISP 运维 | MWX-ISP branding 与 billing dashboard | 将可见产品品牌设为 MWX-ISP，并展示 customers、subscription、online、monthly invoice/payment、outstanding 和 overdue 的 operator dashboard。 | `web/src`, `internal/adminapi/dashboard.go`, `docs` | 已批准 / 待实现 | 保留内部包名和 RADIUS 运维视图；只添加核心 ISP 运维数据，不建设通用 BI/observability。 |
+
 ## 当前非目标方向
 
 | 编号 | 非目标方向 | 说明 |
 | --- | --- | --- |
-| TR-N001 | 计费支付 / 订单 / 财务系统 | 当前项目只维护 RADIUS 计费记录与审计，不默认扩展为完整收费系统。 |
-| TR-N002 | CRM / 工单 / 客户自助门户 | 当前管理后台面向 RADIUS 运维管理，不默认扩展为客户运营平台。 |
+| TR-N001 | 计费支付 / 订单 / 财务系统 | 除已明确批准的 MWX-ISP 最小 operator-facing 订阅账单闭环（TR-F028）外，不扩展为通用收费系统、payment gateway、订单平台或财务 ERP。 |
+| TR-N002 | CRM / 工单 / 客户自助门户 | MWX-ISP 的基础 operator-facing Customer 与 Subscription 能力仅限 TR-F027；不扩展为 CRM、工单或客户自助门户。 |
 | TR-N003 | 通用可视化监控平台 | 当前 Dashboard 只服务 RADIUS 运维视图，不替代 Prometheus、Grafana 等通用监控系统。 |
 | TR-N004 | 多租户 SaaS 平台 | 当前模型以单实例管理为基线；多租户需要先完成权限、数据隔离和迁移设计。 |
 | TR-N005 | 重写协议栈或替换管理框架 | 除非有明确缺陷和迁移方案，否则不以重写为开发方向。 |

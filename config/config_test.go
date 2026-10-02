@@ -11,12 +11,12 @@ func TestDefaultAppConfig(t *testing.T) {
 	cfg := DefaultAppConfig
 
 	// TestSystem configuration
-	if cfg.System.Appid != "ToughRADIUS" {
-		t.Errorf("Expected Appid 'ToughRADIUS', got '%s'", cfg.System.Appid)
+	if cfg.System.Appid != "MWX-ISP" {
+		t.Errorf("Expected Appid 'MWX-ISP', got '%s'", cfg.System.Appid)
 	}
 
-	if cfg.System.Location != "Asia/Shanghai" {
-		t.Errorf("Expected Location 'Asia/Shanghai', got '%s'", cfg.System.Location)
+	if cfg.System.Location != "Asia/Jakarta" {
+		t.Errorf("Expected Location 'Asia/Jakarta', got '%s'", cfg.System.Location)
 	}
 
 	if cfg.System.Workdir != "/var/toughradius" {

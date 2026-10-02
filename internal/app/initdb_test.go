@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -12,9 +12,6 @@ import (
 	"github.com/talkincode/toughradius/v9/config"
 	"github.com/talkincode/toughradius/v9/internal/domain"
 	"github.com/talkincode/toughradius/v9/pkg/common"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 	"gorm.io/gorm"
 )
 
@@ -52,10 +49,10 @@ func TestCheckSuperCreatesBootstrapAdmin(t *testing.T) {
 	assert.Equal(t, "super", admin.Level)
 	assert.Equal(t, common.ENABLED, admin.Status)
 	assert.NotEmpty(t, admin.Password)
-	assert.False(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
+	assert.True(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
 }
 
-func TestCheckSuperUsesEnvPassword(t *testing.T) {
+func TestCheckSuperUsesEnvPasswordOnCreation(t *testing.T) {
 	t.Setenv(AdminPasswordEnv, "EnvPass123")
 	app := newTestApplication(t)
 
@@ -64,10 +61,9 @@ func TestCheckSuperUsesEnvPassword(t *testing.T) {
 	var admin domain.SysOpr
 	require.NoError(t, app.gormDB.Where("username = ?", "admin").First(&admin).Error)
 	assert.True(t, common.VerifyPassword("EnvPass123", admin.Password))
-	assert.False(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
 }
 
-func TestCheckSuperIgnoresWellKnownEnvPassword(t *testing.T) {
+func TestCheckSuperUsesAdminEnvPasswordOnCreation(t *testing.T) {
 	t.Setenv(AdminPasswordEnv, WellKnownBootstrapPassword)
 	app := newTestApplication(t)
 
@@ -75,7 +71,7 @@ func TestCheckSuperIgnoresWellKnownEnvPassword(t *testing.T) {
 
 	var admin domain.SysOpr
 	require.NoError(t, app.gormDB.Where("username = ?", "admin").First(&admin).Error)
-	assert.False(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
+	assert.True(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
 	assert.NotEmpty(t, admin.Password)
 }
 
@@ -100,29 +96,19 @@ func TestCheckSuperDoesNotReenableOrPromote(t *testing.T) {
 	assert.True(t, common.VerifyPassword("CustomPass123", admin.Password))
 }
 
-func TestCheckSuperRotatesWellKnownPassword(t *testing.T) {
+func TestCheckSuperPreservesBootstrapPassword(t *testing.T) {
 	app := newTestApplication(t)
 	password, err := common.HashPassword(WellKnownBootstrapPassword)
 	require.NoError(t, err)
-	require.NoError(t, app.gormDB.Create(&domain.SysOpr{
-		ID:       common.UUIDint64(),
-		Username: defaultSuperUsername,
-		Password: password,
-		Level:    "super",
-		Status:   common.ENABLED,
-	}).Error)
-	core, logs := observer.New(zapcore.WarnLevel)
-	undo := zap.ReplaceGlobals(zap.New(core))
-	defer undo()
+	require.NoError(t, app.gormDB.Create(&domain.SysOpr{ID: common.UUIDint64(), Username: defaultSuperUsername, Password: password, Level: "super", Status: common.ENABLED}).Error)
+	t.Setenv(AdminPasswordEnv, "ChangedBootstrap123")
 
 	app.checkSuper()
 
 	var admin domain.SysOpr
 	require.NoError(t, app.gormDB.Where("username = ?", defaultSuperUsername).First(&admin).Error)
-	assert.False(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
-	assert.Equal(t, 1, logs.FilterMessage("rotated insecure super admin password").Len())
+	assert.True(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
 }
-
 func TestCheckSuperRotatesEmptyPassword(t *testing.T) {
 	app := newTestApplication(t)
 	require.NoError(t, app.gormDB.Create(&domain.SysOpr{
@@ -140,7 +126,7 @@ func TestCheckSuperRotatesEmptyPassword(t *testing.T) {
 	assert.Equal(t, "operator", admin.Level)
 	assert.Equal(t, common.DISABLED, admin.Status)
 	assert.NotEmpty(t, admin.Password)
-	assert.False(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
+	assert.True(t, common.VerifyPassword(WellKnownBootstrapPassword, admin.Password))
 }
 
 func TestCheckSuperDoesNotCreateWhenOtherSuperExists(t *testing.T) {
@@ -162,56 +148,43 @@ func TestCheckSuperDoesNotCreateWhenOtherSuperExists(t *testing.T) {
 	assert.Zero(t, count)
 }
 
-func TestCheckSuperWritesGeneratedPasswordFile(t *testing.T) {
+func TestCheckSuperUsesDefaultPasswordWithoutWritingFile(t *testing.T) {
 	app := newTestApplication(t)
-	core, logs := observer.New(zapcore.InfoLevel)
-	undo := zap.ReplaceGlobals(zap.New(core))
-	defer undo()
-
 	app.checkSuper()
-
-	entries := logs.FilterMessage("initialized bootstrap super admin account")
-	require.Equal(t, 1, entries.Len())
-	ctx := entries.All()[0].ContextMap()
-	assert.Empty(t, ctx["password"])
-	credFile, _ := ctx["credential_file"].(string)
-	require.NotEmpty(t, credFile)
-
-	plain, err := os.ReadFile(credFile) //nolint:gosec // G304: path is the test workdir helper output
-	require.NoError(t, err)
-	password := strings.TrimSpace(string(plain))
-	assert.False(t, IsWellKnownBootstrapPassword(password))
 
 	var admin domain.SysOpr
 	require.NoError(t, app.gormDB.Where("username = ?", "admin").First(&admin).Error)
-	assert.True(t, common.VerifyPassword(password, admin.Password))
-}
-
-func TestCheckSuperEnvPasswordDoesNotWriteFile(t *testing.T) {
-	t.Setenv(AdminPasswordEnv, "EnvPass123")
-	app := newTestApplication(t)
-
-	app.checkSuper()
-
+	assert.True(t, common.VerifyPassword("admin", admin.Password))
 	_, err := os.Stat(app.bootstrapPasswordFile())
 	assert.True(t, os.IsNotExist(err))
 }
 
-func TestGenerateBootstrapAdminPassword(t *testing.T) {
-	password, err := generateBootstrapAdminPassword()
+func TestCheckSuperPreservesPreviousGeneratedBootstrapPassword(t *testing.T) {
+	app := newTestApplication(t)
+	legacyPassword := "OldGenerated98765"
+	hashed, err := common.HashPassword(legacyPassword)
 	require.NoError(t, err)
-	assert.Len(t, password, bootstrapPasswordLen)
-	assert.False(t, IsWellKnownBootstrapPassword(password))
+	require.NoError(t, app.gormDB.Create(&domain.SysOpr{
+		ID: common.UUIDint64(), Username: defaultSuperUsername, Password: hashed,
+		Level: "super", Status: common.ENABLED,
+	}).Error)
+	path := app.bootstrapPasswordFile()
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	require.NoError(t, os.WriteFile(path, []byte(legacyPassword+"\n"), 0o600))
 
-	hasLetter, hasDigit := false, false
-	for _, r := range password {
-		switch {
-		case r >= 'A' && r <= 'Z', r >= 'a' && r <= 'z':
-			hasLetter = true
-		case r >= '0' && r <= '9':
-			hasDigit = true
-		}
-	}
-	assert.True(t, hasLetter)
-	assert.True(t, hasDigit)
+	app.checkSuper()
+
+	var admin domain.SysOpr
+	require.NoError(t, app.gormDB.Where("username = ?", defaultSuperUsername).First(&admin).Error)
+	assert.True(t, common.VerifyPassword(legacyPassword, admin.Password))
+}
+
+func TestCheckSuperEnvPassword(t *testing.T) {
+	t.Setenv(AdminPasswordEnv, "EnvPass123")
+	app := newTestApplication(t)
+	app.checkSuper()
+
+	var admin domain.SysOpr
+	require.NoError(t, app.gormDB.Where("username = ?", "admin").First(&admin).Error)
+	assert.True(t, common.VerifyPassword("EnvPass123", admin.Password))
 }
