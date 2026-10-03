@@ -174,3 +174,133 @@ Fake NAS berbicara lewat UDP sungguhan sehingga menguji encoding paket, secret/s
 - **TR-F030 MVP tersedia dan default off:** opt-in/risk acknowledgement, maksimal 20 nomor operator, event allowlist, QR pairing/status, pesan satu arah, persistent outbox, dedupe, maksimal lima percobaan, pembatalan antrean saat izin dicabut, histori pengiriman 30 hari, dan UI admin. Login, pair/reconnect/send/revoke WhatsApp sungguhan perlu dilakukan operator dengan nomor uji.
 - File database WhatsApp mengikuti kontrol akses dan perlindungan deployment database. Kredensial SNMP memakai AES-GCM dengan `web.secret`; mengganti secret tanpa migrasi membuat kredensial yang telah tersimpan tidak dapat didekripsi.
 - Sebelum memakai whatsmeow, tinjau [Terms of Service WhatsApp](https://www.whatsapp.com/legal/terms-of-service). whatsmeow adalah implementasi tidak resmi; untuk dukungan produksi resmi, evaluasi [WhatsApp Business Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api/overview).
+
+## 12. Rencana onboarding dan panduan operator (TR-F013 / TR-F015)
+
+### Masalah yang hendak diselesaikan
+
+Dashboard saat ini langsung menampilkan metrik RADIUS/ISP dan navigasi modul. Instalasi baru dapat terlihat kosong tanpa memberi tahu operator urutan konfigurasi, hubungan antara RadiusProfile/package/subscription/RadiusUser, kapan layanan benar-benar siap, dan bagian mana yang opsional. Dokumentasi README/blueprint berguna untuk setup teknis, tetapi bukan panduan kerja harian di dalam aplikasi.
+
+### Keputusan produk
+
+Bangun tiga lapisan yang saling melengkapi di dalam satu React Admin app, bukan onboarding modal wajib:
+
+1. **Getting Started di Dashboard:** checklist setup yang ringkas dan dapat dilanjutkan. Tampilkan untuk instalasi yang belum siap; sediakan tautan `Open setup guide` bila operator menyembunyikannya.
+2. **User Guide yang selalu tersedia:** route internal `/help` atau `/guide`, ditautkan dari AppBar Help dan Dashboard. Berisi alur, istilah, prasyarat, prosedur, hasil yang harus dilihat, dan batas simulasi/produksi.
+3. **Quick tour opsional:** rangkaian maksimal lima langkah, bisa dilewati, diulang dari Help, dan hanya memperkenalkan dashboard, sidebar, alur layanan, billing, serta Operations. Gunakan dialog/stepper yang accessible dengan tautan ke halaman; jangan mengunci operator dalam tooltip coach-mark yang rapuh.
+
+Panduan hanya menjelaskan dan menautkan fitur yang sudah ada. Ia tidak membuat Customer/Package/Invoice sampel otomatis, tidak menguji NAS, tidak memasangkan WhatsApp, dan tidak mengubah konfigurasi saat tour berjalan. Instalasi produksi tidak boleh tampak sudah tervalidasi hanya karena record konfigurasi ada.
+
+### Alur Getting Started untuk Admin
+
+Urutan utama dibuat sebagai setup dari fondasi sampai pelanggan uji:
+
+1. **Amankan akun dan instalasi:** ubah kredensial bootstrap, setujui penggunaan pada jaringan yang tepat, konfigurasi database dan secret aplikasi, serta siapkan backup. Tautkan ke Account Settings/System Configuration; rahasia tidak pernah ditampilkan di guide.
+2. **Lengkapi identitas dan billing defaults:** nama perusahaan, IDR, zona waktu `Asia/Jakarta`, due/grace days, auto-suspend, dan auto-reactivate. Jelaskan bahwa auto-suspend dapat memutus akses setelah overdue dan grace habis.
+3. **Siapkan RADIUS:** periksa atau buat RadiusProfile; daftarkan NAS dengan alamat, shared secret, port auth/accounting dan CoA yang sesuai. UI hanya mengelola data ToughRADIUS; kebijakan/perintah sisi router tetap diterapkan oleh admin perangkat.
+4. **Buat Internet Package:** tetapkan harga komersial dan tautkan ke RadiusProfile yang benar. Terangkan bahwa harga package tidak membuat atau mengubah policy perangkat.
+5. **Daftarkan Customer dan Subscription:** pilih Customer, Package, billing day/grace, lalu buat RadiusUser baru atau tautkan user lama. Status `pending` perlu diaktifkan; username/password layanan tidak boleh sama dengan akun operator.
+6. **Verifikasi akses pada client uji:** lakukan autentikasi dan accounting menggunakan NAS yang memang dikendalikan/diizinkan, kemudian lihat Online Sessions dan Accounting. Tandai sebagai verifikasi manual hanya setelah operator melihat hasil di NAS dan aplikasi.
+7. **Kenali siklus billing:** jelaskan pembuatan invoice bulanan oleh scheduler, due date/grace, pencatatan pembayaran manual/parsial, serta kondisi yang dapat memicu suspend/reactivate. Jangan menganjurkan pembayaran sungguhan sebagai demo.
+8. **Opsional — monitoring dan alert:** daftarkan target jaringan yang secara eksplisit disetujui; jelaskan ICMP/TCP/SNMP dan secret SNMP. WhatsApp tetap default off, perlu risk acknowledgement, allowlist operator dan pairing nomor uji.
+
+### Alur untuk Operator harian
+
+Tour singkat memperkenalkan Dashboard → Customers/Subscriptions → Online Sessions/Accounting → Invoices/Payments. Setiap langkah menandai apakah tindakan hanya bisa dilakukan Admin. Bila route menolak akses tulis, teks panduan menjelaskan peran yang diperlukan dan memberi tautan baca yang tetap tersedia; panduan tidak menjanjikan aksi yang tidak diizinkan role tersebut.
+
+### Status progres dan penyimpanan
+
+- Status yang dapat dihitung dari endpoint existing—misalnya adanya profile, NAS, package, customer, atau subscription—ditampilkan sebagai **Not configured / Configured**. Ini hanya menunjukkan record ada, bukan bahwa RADIUS atau vendor telah lolos uji.
+- Hal yang memerlukan observasi perangkat—auth/accounting sukses, CoA/NAS behavior, autentikasi ulang—ditandai **Operator verification required**. Tidak ada klaim otomatis berdasarkan jumlah record atau fake test.
+- Monitoring dan WhatsApp diberi label **Optional**. Langkah ini tidak menahan penyelesaian setup inti.
+- Simpan hanya pilihan UI `tour seen`, `guide collapsed`, dan centang manual progres pada localStorage per identitas operator. Jangan simpan password, shared secret, data pelanggan, atau bukti produksi di sana. Beri keterangan bahwa progres manual hanya berlaku di browser/perangkat tersebut; jangan menambah tabel backend hanya untuk checklist awal.
+- Bila endpoint status gagal dimuat, tampilkan **Unable to check** dengan retry, bukan angka nol yang memberi kesan data kosong.
+
+### Struktur halaman User Guide
+
+1. **Start here:** diagram Customer → Package/Profile → Subscription/RADIUS User → Invoice/Payment.
+2. **Configure RADIUS and NAS:** prasyarat, field yang diperlukan, port/secret, apa yang diatur dalam ToughRADIUS vs router, serta titik verifikasi.
+3. **Customer and service lifecycle:** Package/Profile, Customer, Subscription, status, user lama vs user baru, suspend/reactivate/terminate.
+4. **Billing operations:** invoice otomatis, format nomor otomatis, status invoice, pembayaran parsial/penuh, grace period dan dampak auto-suspend.
+5. **Daily operations:** online sessions, accounting, current IP, disconnect/CoA, log/status, Network & Alerts.
+6. **Optional integrations:** monitoring yang read-only dan target eksplisit; WhatsApp eksperimental/default-off beserta pairing, allowlist, risiko dan cara unlink.
+7. **Production readiness and troubleshooting:** checklist pilot NAS, kesalahan secret/port/routing/time, backup/restore, log, batas simulator, dan kapan eskalasi ke admin.
+
+### Tahap pelaksanaan
+
+- **I.1 — Audit konten dan permission:** tautkan setiap panduan ke route/field/role yang benar; identifikasi label status dan aturan billing yang harus tetap identik dengan backend.
+- **I.2 — Bangun panduan internal:** satu halaman English dengan sidebar/anchor per bab, search sederhana bila konten cukup panjang, tautan ke modul dan layout responsif.
+- **I.3 — Dashboard checklist:** tampilkan tahap setup, badge state dengan definisi jelas, aksi lanjut, retry/error/empty state, serta collapse/reopen.
+- **I.4 — Quick tour:** lima langkah maksimum, keyboard accessible, bisa skip/close/replay, dan tidak menutupi form atau mengeksekusi mutation.
+- **I.5 — Copy/visual pass:** screenshot review dark default, light preference, desktop, tablet, mobile; pastikan tidak membanjiri dashboard padat data.
+- **I.6 — Verifikasi:** simulasi fresh install, instalasi parsial, konfigurasi lengkap tanpa NAS, dan role operator/admin; validasi link, state, no fake completion, dan tidak ada error console.
+
+### Kriteria penerimaan
+
+- Admin baru dapat mengikuti langkah dari Dashboard tanpa harus menebak urutan modul; tiap langkah membuka route yang sudah ada.
+- Operator lama dapat menutup checklist/tour dan membukanya kembali tanpa mengubah data bisnis.
+- Progress konfigurasi tidak menyamakan record NAS dengan autentikasi live yang berhasil.
+- Semua aksi berisiko—default password, suspend, secret, WhatsApp pairing dan konfigurasi NAS—menyebut dampaknya dan tetap memerlukan aksi operator yang sesuai.
+- Panduan menandai WhatsApp/monitoring sebagai opsional dan fake/synthetic data sebagai simulasi, bukan validasi NAS produksi.
+- Konten konsisten dengan blueprint, English UI, permission existing, format nomor otomatis, serta aturan IDR/timezone/grace period.
+- Quick tour dan halaman guide bisa digunakan dengan keyboard, pada ukuran layar kecil, tanpa overlay yang memblokir navigasi.
+
+### Batas ruang lingkup
+
+Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigurasi otomatis, integrasi telemetry/help analytics, backend progress API, knowledge base eksternal, atau sistem ticketing. Bila kelak dibutuhkan progres lintas perangkat atau data demo, ajukan scope terpisah melalui feature checklist.
+
+## 13. Audit konsistensi visual dan rencana branding per instalasi
+
+### Temuan audit kode saat ini (2026-10-04)
+
+- `web/src/theme.ts` sudah menyediakan tema gelap default, palet hijau, token status, dan gaya global MUI; ini fondasi yang baik untuk mempertahankan karakter MWX yang teknis dan padat data.
+- Sejumlah halaman/resource masih mendefinisikan warna, gradient, radius, shadow, dan aksen secara lokal. Beberapa contoh mencampur nilai biru Material (`#1976d2`, `#0288d1`), merah/hijau status literal, aksen oranye/teal/lime, dan radius dari 1 sampai 4. Akibatnya halaman tidak seluruhnya mengikuti token tema dan branding warna tidak bisa diterapkan seragam.
+- Permukaan merek menggandakan nilai tetap: nama/monogram pada AppBar, nama footer sidebar, halaman Login, `Admin title`, `index.html` title, favicon dan label loading. Mengubah satu tempat saat ini tidak mengubah semuanya.
+- Nama perusahaan dan informasi invoice memang dapat dikonfigurasi melalui `isp.company_*`, tetapi itu adalah identitas penagih. Nilai tersebut belum mengubah nama produk, logo, aksen UI, atau favicon dan tidak boleh diam-diam digunakan sebagai pengganti merek aplikasi.
+- Tema MUI dibangun dari preset dark/light statis. Belum ada editor branding per instalasi, preview, reset ke MWX default, atau sumber tunggal untuk logo dan nama produk.
+- Referensi visual yang diminta: `X:\REPO\focus\moonwitness\apps\board` (MoonWitness Board). `src/index.css` mendefinisikan tema manga/ink dengan paper/ink berkontras tinggi, aksen lime dan hot pink, palet invers untuk dark mode, halftone/grain, border tegas, offset hard shadow, serta font display/body/mono yang berbeda. `src/components/manga/effects.tsx` menambahkan speed lines, scribble underline, doodle, rough frame, dan speech bubble; `src/components/layout/app-shell.tsx` memakai active nav seperti sticker dan shadow offset.
+- Arah visual MWX yang direncanakan menjadi **manga-ink enterprise**: ambil bahasa visual MoonWitness—kontras paper/ink, outline yang tegas, hard shadow pendek, aksen lime yang khas, micro-label mono, judul display, dan tekstur/halftone—lalu adaptasikan pada dashboard operator yang padat. Dark tetap default MWX; lime menjadi highlight brand, sementara pink hanya aksen dekoratif terbatas. Warna semantic status tetap hijau/amber/merah yang mudah dipahami. Terapkan efek komik besar (speed lines, marker, doodle/sticker) hanya pada hero, empty state, atau active selection yang tepat; hindari animasi/rough border di tabel, form, dialog konfirmasi, serta angka operasional.
+- Konsistensi saat ini juga mencakup bukan hanya warna: radius dan density berbeda antar komponen; kartu dan hero lokal mengulang gradient/shadow; hierarchy typography dan label uppercase belum punya aturan lintas halaman. Keseragaman harus memasukkan bentuk, border weight, offset shadow, typography, micro-label, hover/focus/pressed behavior, serta reduced-motion.
+
+### Hasil produk yang dituju
+
+1. **Visual konsisten:** halaman menggunakan token MUI dan komponen bersama untuk surface, section heading, metric, status, form, data table, dan page header. Karakter manga-ink tetap tampak, tetapi pola visual dan intensitas efek punya aturan jelas untuk menjaga fokus kerja profesional.
+2. **Branding editable per instalasi tunggal:** Admin dapat mengganti nama produk yang terlihat, nama ringkas/monogram, tagline, logo, dan warna aksen utama; UI memperbarui header, login, footer, browser title, favicon, dan tema tanpa rebuild frontend.
+3. **Default aman:** nilai awal tetap MWX-ISP, dark theme, hijau MWX, dan aset MWX. Admin dapat preview sebelum simpan dan reset identitas produk ke default. Brand aplikasi tidak mengubah nama legal/perusahaan pada invoice.
+4. **Batas arsitektur:** branding berlaku global untuk satu deployment; tidak membuat tenant, white-label per customer, marketplace tema, plugin branding, atau CSS bebas.
+
+### Tahapan rencana
+
+- **J.1 — Baseline visual:** audit semua route aktif dan bandingkan langsung dengan `moonwitness/apps/board`; petakan token paper/ink/lime/pink/dark, font display/body/mono, halftone, border 2px, offset shadow, active sticker, speedline, reduced motion. Buat matriks adaptasi (adopt / tone down / skip), lalu ambil screenshot dashboard/login/resource pada dark/light serta viewport lebar/sempit. Tetapkan kontras, fokus keyboard, dan aturan kepadatan data.
+- **J.2 — Sumber token tunggal:** perluas `theme.ts` dengan token semantik (ink/surface, brand lime, decorative pink, border, hard shadow, focus, data-series, state, type scale) dan theme factory. Tetapkan palet gelap sebagai default; light mode membalik paper/ink dengan aksen identitas yang konsisten. Branding accent yang dapat diedit tetap dibatasi agar tidak menimpa status success/warning/error atau teks kontras.
+- **J.3 — Komponen/pola bersama:** rapikan page header display + underline/highlighter terbatas, section rail, metric card border tegas + hard offset shadow ringan, micro-label mono, toolbar/filter, status chip, form section, data table, empty/loading/error state. Gunakan scale border/radius/elevation konsisten dan perilaku hover/pressed tactile yang halus. Migrasi bertahap—shell/login/dashboard; ISP/billing; RADIUS/network; system/operations—tanpa efek berulang yang mengganggu pemindaian.
+- **J.4 — Scope branding dan penyimpanan:** sebelum coding, revisi acceptance TR-F029 (CN dan EN) agar mencakup identitas configurable per deployment sambil mempertahankan batas satu instance; selaraskan roadmap/todo. Tambah struktur settings terpisah dari `isp.company_*` untuk product name, short name/mark, tagline, logo reference, dan accent color. Simpan di mekanisme config yang sudah tersedia bila batas nilai/penyimpanan sesuai; perubahan logo yang memerlukan unggah aset memakai endpoint Admin terpisah dengan validasi format, ukuran, nama, lokasi penyimpanan, dan akses. Jangan menerima SVG arbitrer atau CSS bebas tanpa strategi sanitasi.
+- **J.5 — Editor branding Admin:** letakkan di System Configuration atau halaman Branding di bawah area system existing. Tampilkan preview live header/login/sidebar, picker aksen dengan preview contrast di dark/light, field nama/tagline, upload/ganti/hapus logo, tombol Save/Reset to MWX defaults, dan konfirmasi singkat untuk reset. Jangan menampilkan nilai rahasia atau menggunakan upload sebagai endpoint publik.
+- **J.6 — Runtime propagation:** muat branding sebelum shell tampil agar tidak berkedip dari nama default ke custom; terapkan data yang sama pada AppBar, login, menu footer, document title, favicon, loading, dan theme provider. Tangani config belum tersedia, logo gagal dimuat, warna tidak valid, perubahan external/admin lain, serta reset; fallback selalu MWX green.
+- **J.7 — Audit/migrasi visual:** ganti literal dekoratif yang bertentangan dengan token, bukan warna status semantik. Terapkan halftone/grain rendah kontras pada background/hero saja; speedlines, doodles, scribble dan marker hanya sebagai aksen kontekstual non-data; jangan memutar badge/status operasional. Hard shadow pendek dan border ink harus menguatkan hierarchy, bukan mengelilingi setiap cell. Angka/status tetap lebih menonjol daripada hiasan; tabel responsif tidak kehilangan kolom kunci. Patuhi `prefers-reduced-motion` dan hindari gerakan dekoratif berulang.
+- **J.8 — Verifikasi:** cek dark/light × default/custom brand × desktop/tablet/mobile, halaman Login, Dashboard, semua resource, Operations, dan System Config; uji role Admin/operator, preview/cancel/save/reset, logo invalid/oversized/offline, config lama/kosong, reload, aksesibilitas keyboard/contrast, console, build dan browser journey. Branding tidak boleh mengubah data billing, secret RADIUS/SNMP, atau hasil otorisasi.
+
+### Batas dan keputusan yang perlu dipertahankan
+
+- Editor dan propagasi branding configurable tetap berupa rencana sampai checklist scope TR-F029 merged. Baseline visual manga-ink sudah diimplementasikan dan direview terpisah pada PR #2.
+- MoonWitness Board adalah referensi bahasa visual saja. Jangan menyalin identitas produk MoonWitness, logo, teks/asset, atau implementasi komponen dan dependensinya; adaptasikan motif dengan MUI dan struktur React Admin MWX yang telah ada.
+- Sebelum implementasi J.4, perubahan TR-F029 perlu dicatat pada `docs/feature-checklist.md` serta `docs/feature-checklist.en.md`. Existing acceptance saat ini menyebut merek terlihat tetap MWX-ISP; editor brand yang dapat mengganti nama/logo/warna memperluas scope yang disetujui. Rencana implementasi harus menunggu penyelarasan baseline tersebut.
+- Tidak mengubah company/billing identity, format invoice, warna status semantik, ACL, atau data bisnis hanya karena Admin mengubah product brand.
+- Upload logo sebaiknya menerima format raster yang disetujui (contoh PNG/WebP) dengan ukuran maksimum eksplisit dan hanya dapat diakses sebagai file statis pasif; bila SVG diminta kelak, perlu sanitasi/allowlist tersendiri.
+
+### Kemajuan implementasi visual (2026-10-04)
+
+- Baseline manga-ink sudah diterapkan pada theme MUI, shell/menu, loading/login, dashboard, onboarding, guide, Operations, System Config, Account Settings, dan kartu/panel di resource RADIUS, accounting, ISP, network, serta certificates. Radius besar diseragamkan menjadi bentuk kompak; status tetap memakai semantic success/warning/error.
+- Wiring tema Admin kini memakai `darkTheme` eksplisit dan `defaultTheme="dark"`; penggunaan prop `theme` lama sebelumnya membuat tombol light/dark mengganti pilihan tanpa mengganti palet. Light mode memakai aksen dan warna seri grafik dengan kontras lebih tinggi.
+- Pemeriksaan browser dengan Admin bootstrap pada database SQLite sementara (folder temp, RADIUS listener off) mencakup Dashboard, Guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice. Tidak ada data bisnis yang dibuat. Account Settings overflow 27 px pada viewport 529 px juga sudah diperbaiki.
+- Build/type-check lulus dan screenshot runtime mengonfirmasi dark/light serta layout sempit untuk halaman yang diuji. Audit desktop lebar, operator role, semua routes, dan data parsial/lengkap tetap terbuka.
+- Editor branding serta propagasi konfigurasi belum diimplementasikan; perubahan TR-F029 bilingual berada di PR scope #1 dan harus merged sebelum implementasi itu dimulai. Visual baseline berada di PR #2.
+
+### Kriteria penerimaan rencana implementasi
+
+- Semua lokasi yang menampilkan brand memakai satu konfigurasi dan kembali ke MWX-ISP saat konfigurasi hilang atau di-reset.
+- Warna aksen custom tetap terbaca di dark dan light; state sukses/peringatan/error dan warna seri data tidak tertukar dengan brand.
+- Preview tidak menyimpan perubahan; Save bertahan sesudah reload; Reset memulihkan seluruh default UI brand.
+- Logo invalid/terlalu besar ditolak dan logo yang gagal dimuat menggunakan fallback tanpa merusak layout.
+- Audit tiap grup halaman menunjukkan konsistensi komponen, kepadatan data, akses keyboard, dan kontras tanpa merombak proses kerja RADIUS/ISP.
+- Checklist, README/blueprint, label dan bantuan selaras; identitas invoice tetap terpisah dari identitas produk.

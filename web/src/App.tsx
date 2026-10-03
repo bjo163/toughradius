@@ -8,9 +8,10 @@ import Dashboard from './pages/Dashboard';
 import AccountSettings from './pages/AccountSettings';
 import { SystemConfigPage } from './pages/SystemConfigPage';
 import OperationsPage from './pages/OperationsPage';
+import UserGuidePage from './pages/UserGuidePage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
-import { theme, lightTheme } from './theme';
+import { darkTheme, lightTheme } from './theme';
 import {
   CustomerList, CustomerCreate, CustomerEdit, CustomerShow,
   PackageList, PackageCreate, PackageEdit,
@@ -27,12 +28,12 @@ const CustomLoading = () => {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        bgcolor: '#07130d',
-        color: '#cbd5e1',
+        bgcolor: 'background.default',
+        color: 'text.primary',
         gap: 2,
       }}
     >
-      <CircularProgress size={36} sx={{ color: '#4ade80' }} />
+      <CircularProgress size={36} color="primary" />
       <Typography variant="body2" color="text.secondary">Loading MWX-ISP...</Typography>
     </Box>
   );
@@ -87,8 +88,8 @@ const App = () => (
     dashboard={Dashboard}
     loginPage={LoginPage}
     title="MWX-ISP"
-    theme={theme}
     lightTheme={lightTheme}
+    darkTheme={darkTheme}
     defaultTheme="dark"
     layout={CustomLayout}
     loading={CustomLoading}
@@ -174,6 +175,7 @@ const App = () => (
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
       <Route path="/operations" element={<OperationsPage />} />
+      <Route path="/guide" element={<UserGuidePage />} />
     </CustomRoutes>
     </Admin>
 );

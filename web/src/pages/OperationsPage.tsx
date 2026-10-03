@@ -109,7 +109,7 @@ const OperationsPage: React.FC = () => {
       </Stack>
       {targetsQuery.isLoading && <LinearProgress />}
       {!targetsQuery.isLoading && targets.length === 0 && <Alert severity="info">No network targets are registered. Add an explicitly approved device below to begin monitoring.</Alert>}
-      <Stack spacing={1}>{targets.map(target => <Box key={target.id} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25 }}>
+      <Stack spacing={1}>{targets.map(target => <Box key={target.id} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 0.5, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25 }}>
         <Box sx={{ flex: '1 1 190px' }}><Typography fontWeight={700}>{target.name}</Typography><Typography variant="caption" color="text.secondary">{target.address} · {target.kind} · {target.probe_type.toUpperCase()}{target.probe_type !== 'icmp' ? `:${target.port}` : ''}</Typography></Box>
         <Chip size="small" color={statusColor(target.last_status)} label={target.last_status.toUpperCase()}/><Chip size="small" variant="outlined" label={`${target.last_latency_milliseconds} ms`}/><Chip size="small" variant="outlined" label={`${target.last_packet_loss_percent.toFixed(0)}% loss`}/>
         <Typography variant="caption" color="text.secondary">{target.last_checked_at ? new Date(target.last_checked_at).toLocaleString() : 'Not checked'}</Typography>
@@ -117,7 +117,7 @@ const OperationsPage: React.FC = () => {
         <Button size="small" onClick={() => setSelectedTarget(selectedTarget === target.id ? '' : target.id)}>{selectedTarget === target.id ? 'Hide history' : 'History'}</Button>
         <Button size="small" color="error" startIcon={<DeleteOutline/>} onClick={() => { if (window.confirm(`Remove ${target.name} and its history?`)) mutation.mutate({ path: `/network/monitor-targets/${target.id}`, method: 'DELETE' }); }}>Remove</Button>
       </Box>)}</Stack>
-      {selectedTarget && <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+      {selectedTarget && <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 0.5, bgcolor: 'action.hover' }}>
         <Typography variant="subtitle2">Latency and packet-loss history</Typography>
         <Typography variant="caption" color="text.secondary">Recent checks · bars are colored by reachability; hover for exact values.</Typography>
         {samplesQuery.isLoading ? <LinearProgress sx={{ mt: 1 }} /> : null}

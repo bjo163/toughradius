@@ -23,15 +23,14 @@ export const DetailSectionCard = ({
   <Card
     elevation={0}
     sx={{
-      borderRadius: 3,
-      border: theme => `1px solid ${theme.palette.divider}`,
+      borderRadius: 0.5,
+      border: theme => `1px solid ${theme.palette.text.primary}`,
+      boxShadow: theme => `2px 2px 0 ${theme.palette.text.primary}`,
       overflow: 'hidden',
       transition: 'all 0.2s ease',
       '&:hover': {
-        boxShadow: theme =>
-          theme.palette.mode === 'dark'
-            ? '0 4px 20px rgba(0, 0, 0, 0.3)'
-            : '0 4px 20px rgba(0, 0, 0, 0.08)',
+        transform: 'translate(-1px, -1px)',
+        boxShadow: theme => `3px 3px 0 ${theme.palette.text.primary}`,
       },
     }}
   >
@@ -45,7 +44,7 @@ export const DetailSectionCard = ({
             theme.palette.mode === 'dark' ? 0.15 : 0.06
           ),
         borderBottom: theme =>
-          `1px solid ${alpha(theme.palette[color].main, 0.2)}`,
+          `2px solid ${alpha(theme.palette[color].main, 0.45)}`,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -56,7 +55,8 @@ export const DetailSectionCard = ({
             justifyContent: 'center',
             width: 36,
             height: 36,
-            borderRadius: 2,
+            borderRadius: 0.5,
+            border: theme => `1px solid ${theme.palette.text.primary}`,
             backgroundColor: theme =>
               alpha(theme.palette[color].main, theme.palette.mode === 'dark' ? 0.3 : 0.15),
             color: `${color}.main`,

@@ -18,7 +18,7 @@ export const DetailItem = ({ label, value, highlight = false }: DetailItemProps)
       flexDirection: 'column',
       gap: 0.5,
       p: 1.5,
-      borderRadius: 1.5,
+      borderRadius: 0.5,
       backgroundColor: theme =>
         highlight
           ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.06)

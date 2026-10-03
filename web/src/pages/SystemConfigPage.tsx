@@ -142,43 +142,43 @@ export const SystemConfigPage: React.FC = () => {
       title: translate('pages.system_config.groups.radius.title'),
       description: translate('pages.system_config.groups.radius.description'),
       icon: <RouterIcon />,
-      color: '#1976d2',
+      color: 'info',
     },
     system: {
       title: translate('pages.system_config.groups.system.title'),
       description: translate('pages.system_config.groups.system.description'),
       icon: <SettingsIcon />,
-      color: '#2e7d32',
+      color: 'success',
     },
     security: {
       title: translate('pages.system_config.groups.security.title'),
       description: translate('pages.system_config.groups.security.description'),
       icon: <SecurityIcon />,
-      color: '#d32f2f',
+      color: 'error',
     },
     ldap: {
       title: translate('pages.system_config.groups.ldap.title'),
       description: translate('pages.system_config.groups.ldap.description'),
       icon: <AccountTreeIcon />,
-      color: '#7b1fa2',
+      color: 'secondary',
     },
     eap: {
       title: translate('pages.system_config.groups.eap.title'),
       description: translate('pages.system_config.groups.eap.description'),
       icon: <SecurityIcon />,
-      color: '#0288d1',
+      color: 'info',
     },
     isp_company: {
       title: translate('pages.system_config.groups.isp_company.title'),
       description: translate('pages.system_config.groups.isp_company.description'),
       icon: <SettingsIcon />,
-      color: '#00897b',
+      color: 'primary',
     },
     isp_billing: {
       title: translate('pages.system_config.groups.isp_billing.title'),
       description: translate('pages.system_config.groups.isp_billing.description'),
       icon: <BackupIcon />,
-      color: '#ef6c00',
+      color: 'warning',
     },
   }), [translate]);
 
@@ -600,7 +600,7 @@ export const SystemConfigPage: React.FC = () => {
             title: groupKey,
             description: `${groupKey} related settings`,
             icon: <SettingsIcon />,
-            color: '#666',
+            color: 'text.secondary',
           };
 
           const isExpanded = expandedGroups.includes(groupKey);
@@ -615,16 +615,17 @@ export const SystemConfigPage: React.FC = () => {
               <AccordionSummary 
                 expandIcon={<ExpandMoreIcon />}
                 sx={{ 
-                  backgroundColor: `${groupConfig.color}15`,
-                  '&:hover': { backgroundColor: `${groupConfig.color}25` }
+                  bgcolor: theme => theme.palette.action.hover,
+                  borderLeft: theme => `3px solid ${theme.palette[groupConfig.color as 'primary'].main}`,
+                  '&:hover': { bgcolor: theme => theme.palette.action.selected }
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ color: groupConfig.color }}>
+                  <Box sx={{ color: theme => theme.palette[groupConfig.color as 'primary'].main }}>
                     {groupConfig.icon}
                   </Box>
                   <Box>
-                    <Typography variant="h6" sx={{ color: groupConfig.color }}>
+                    <Typography variant="h6" sx={{ color: theme => theme.palette[groupConfig.color as 'primary'].main }}>
                       {groupConfig.title}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">

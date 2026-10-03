@@ -105,7 +105,7 @@ const NodeListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
       }}
     >
@@ -136,7 +136,7 @@ const NodeListSkeleton = ({ rows = 10 }: { rows?: number }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -287,7 +287,7 @@ const NodeSearchHeaderCard = () => {
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -334,7 +334,7 @@ const NodeSearchHeaderCard = () => {
               fullWidth
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -486,7 +486,7 @@ const NodeListContent = () => {
         <Card
           elevation={0}
           sx={{
-            borderRadius: 2,
+            borderRadius: 0.5,
             border: theme => `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -508,7 +508,7 @@ const NodeListContent = () => {
       <Card
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           border: theme => `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
         }}
@@ -562,7 +562,7 @@ const NodeListContent = () => {
                   bgcolor: theme =>
                     theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(25, 118, 210, 0.04)',
+                      : alpha(theme.palette.primary.main, 0.04),
                 },
                 '&:nth-of-type(odd)': {
                   bgcolor: theme =>
@@ -782,7 +782,7 @@ const NodeHeaderCard = () => {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 0.5,
         background: theme =>
           theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.4)} 0%, ${alpha(theme.palette.info.dark, 0.3)} 100%)`
@@ -903,7 +903,7 @@ const NodeHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -935,7 +935,7 @@ const NodeHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1029,7 +1029,7 @@ const NodeDetails = () => {
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 0.5,
                 bgcolor: theme =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255, 255, 255, 0.02)'

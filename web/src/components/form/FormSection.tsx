@@ -15,15 +15,17 @@ export const FormSection = ({ title, description, children }: FormSectionProps) 
   <Paper
     elevation={0}
     sx={{
-      p: 3,
-      mb: 3,
-      borderRadius: 2,
-      border: theme => `1px solid ${theme.palette.divider}`,
+      p: { xs: 1.5, sm: 2 },
+      mb: 2,
+      borderRadius: 0.5,
+      border: theme => `1px solid ${theme.palette.text.primary}`,
+      borderLeft: theme => `4px solid ${theme.palette.primary.main}`,
+      boxShadow: theme => `2px 2px 0 ${theme.palette.text.primary}`,
       backgroundColor: theme => theme.palette.background.paper,
       width: '100%'
     }}
   >
-    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+    <Typography variant="subtitle1" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.035em' }}>
       {title}
     </Typography>
     {description && (

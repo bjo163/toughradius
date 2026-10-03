@@ -152,7 +152,7 @@ const OperatorListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
       }}
     >
@@ -183,7 +183,7 @@ const OperatorListSkeleton = ({ rows = 10 }: { rows?: number }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -335,7 +335,7 @@ const OperatorSearchHeaderCard = () => {
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -382,7 +382,7 @@ const OperatorSearchHeaderCard = () => {
               fullWidth
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -565,7 +565,7 @@ const OperatorListContent = () => {
         <Card
           elevation={0}
           sx={{
-            borderRadius: 2,
+            borderRadius: 0.5,
             border: theme => `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -587,7 +587,7 @@ const OperatorListContent = () => {
       <Card
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           border: theme => `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
         }}
@@ -641,7 +641,7 @@ const OperatorListContent = () => {
                   bgcolor: theme =>
                     theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(25, 118, 210, 0.04)',
+                      : alpha(theme.palette.primary.main, 0.04),
                 },
                 '&:nth-of-type(odd)': {
                   bgcolor: theme =>
@@ -1043,7 +1043,7 @@ const OperatorHeaderCard = () => {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 0.5,
         background: theme =>
           theme.palette.mode === 'dark'
             ? isEnabled
@@ -1177,7 +1177,7 @@ const OperatorHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1196,7 +1196,7 @@ const OperatorHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1215,7 +1215,7 @@ const OperatorHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1232,7 +1232,7 @@ const OperatorHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1330,7 +1330,7 @@ const OperatorDetails = () => {
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 0.5,
                 bgcolor: theme =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255, 255, 255, 0.02)'

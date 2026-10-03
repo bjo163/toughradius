@@ -161,7 +161,7 @@ const DetailItem = ({ label, value, highlight = false }: DetailItemProps) => (
       flexDirection: 'column',
       gap: 0.5,
       p: 1.5,
-      borderRadius: 1.5,
+      borderRadius: 0.5,
       backgroundColor: theme =>
         highlight
           ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.06)
@@ -228,7 +228,7 @@ const DetailSectionCard = ({
   <Card
     elevation={0}
     sx={{
-      borderRadius: 3,
+      borderRadius: 0.5,
       border: theme => `1px solid ${theme.palette.divider}`,
       overflow: 'hidden',
       transition: 'all 0.2s ease',
@@ -261,7 +261,7 @@ const DetailSectionCard = ({
             justifyContent: 'center',
             width: 36,
             height: 36,
-            borderRadius: 2,
+            borderRadius: 0.5,
             backgroundColor: theme =>
               alpha(theme.palette[color].main, theme.palette.mode === 'dark' ? 0.3 : 0.15),
             color: `${color}.main`,
@@ -316,7 +316,7 @@ const TrafficStat = ({ label, value, icon, color = 'primary', subValue }: Traffi
       alignItems: 'center',
       justifyContent: 'center',
       p: 2.5,
-      borderRadius: 3,
+      borderRadius: 0.5,
       backgroundColor: theme =>
         alpha(theme.palette[color].main, theme.palette.mode === 'dark' ? 0.15 : 0.08),
       border: theme => `1px solid ${alpha(theme.palette[color].main, 0.2)}`,
@@ -445,7 +445,7 @@ const AccountingHeaderCard = () => {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 0.5,
         background: theme =>
           theme.palette.mode === 'dark'
             ? isOnline
@@ -605,7 +605,7 @@ const AccountingHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -624,7 +624,7 @@ const AccountingHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -643,7 +643,7 @@ const AccountingHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -662,7 +662,7 @@ const AccountingHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -682,7 +682,7 @@ const AccountingHeaderCard = () => {
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 0.5,
                 bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
                 backdropFilter: 'blur(8px)',
               }}
@@ -1059,7 +1059,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
       }}
     >
@@ -1091,7 +1091,7 @@ const AccountingListSkeleton = ({ rows = 10 }: { rows?: number }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -1254,7 +1254,7 @@ const SearchHeaderCard = () => {
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -1305,7 +1305,7 @@ const SearchHeaderCard = () => {
               fullWidth
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -1326,7 +1326,7 @@ const SearchHeaderCard = () => {
               }}
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -1523,7 +1523,7 @@ const AccountingListContent = () => {
         <Card
           elevation={0}
           sx={{
-            borderRadius: 2,
+            borderRadius: 0.5,
             border: theme => `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -1545,7 +1545,7 @@ const AccountingListContent = () => {
       <Card
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           border: theme => `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
         }}
@@ -1599,7 +1599,7 @@ const AccountingListContent = () => {
                   bgcolor: theme =>
                     theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(25, 118, 210, 0.04)',
+                      : alpha(theme.palette.primary.main, 0.04),
                   '& .row-actions': {
                     opacity: 1,
                   },

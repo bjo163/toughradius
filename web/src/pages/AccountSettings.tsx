@@ -66,13 +66,13 @@ export default function AccountSettings() {
       title: translate('pages.account_settings.basic_info'),
       description: translate('pages.account_settings.basic_info_desc'),
       icon: <PersonIcon />,
-      color: '#1976d2',
+      color: 'info',
     },
     password: {
       title: translate('pages.account_settings.security'),
       description: translate('pages.account_settings.security_desc'),
       icon: <LockIcon />,
-      color: '#d32f2f',
+      color: 'error',
     },
   };
 
@@ -185,6 +185,14 @@ export default function AccountSettings() {
 
   const passwordMutation = useApiMutation<{ message?: string }>({
     onSuccess: () => {
+      const onboardingKey = `mwx-isp:onboarding:v1:${encodeURIComponent(localStorage.getItem('username') || 'operator')}:checks`;
+      try {
+        const stored: unknown = JSON.parse(localStorage.getItem(onboardingKey) ?? '[]');
+        const checks = Array.isArray(stored) ? stored.filter((item): item is string => typeof item === 'string') : [];
+        localStorage.setItem(onboardingKey, JSON.stringify([...new Set([...checks, 'secure-account'])]));
+      } catch {
+        // Password changes remain successful if browser storage is disabled.
+      }
       notify('Password changeSuccess');
       setPasswordForm({ newPassword: '', confirmPassword: '' });
     },
@@ -279,8 +287,8 @@ export default function AccountSettings() {
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: `${ACCOUNT_GROUPS.profile.color}08`,
-                borderLeft: `4px solid ${ACCOUNT_GROUPS.profile.color}`,
+                bgcolor: 'action.hover',
+                borderLeft: theme => `3px solid ${theme.palette.info.main}`,
                 minHeight: 64,
                 '& .MuiAccordionSummary-content': {
                   alignItems: 'center',
@@ -289,11 +297,11 @@ export default function AccountSettings() {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ color: ACCOUNT_GROUPS.profile.color, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ color: 'info.main', display: 'flex', alignItems: 'center' }}>
                   {ACCOUNT_GROUPS.profile.icon}
                 </Box>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: ACCOUNT_GROUPS.profile.color }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'info.main' }}>
                     {ACCOUNT_GROUPS.profile.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -304,7 +312,7 @@ export default function AccountSettings() {
             </AccordionSummary>
             <AccordionDetails sx={{ px: 3, py: 3 }}>
               <form onSubmit={handleProfileSubmit}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 3 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: 3, minWidth: 0 }}>
                   <TextField
                     fullWidth
                     label={translate('pages.account_settings.fields.username')}
@@ -365,24 +373,25 @@ export default function AccountSettings() {
                     }}>
                       <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                         <strong>{translate('pages.account_settings.permission_level')}：</strong>
-                        <span
-                          style={{
+                        <Box
+                          component="span"
+                          sx={{
                             color:
                               userInfo.level === 'super'
-                                ? '#d32f2f'
+                                ? 'error.main'
                                 : userInfo.level === 'admin'
-                                ? '#ed6c02'
-                                : '#0288d1',
+                                  ? 'warning.main'
+                                  : 'info.main',
                           }}
                         >
                           {getLevelLabel(userInfo.level)}
-                        </span>
+                        </Box>
                       </Typography>
                       <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                         <strong>{translate('pages.account_settings.account_status')}：</strong>
-                        <span style={{ color: userInfo.status === 'enabled' ? '#2e7d32' : '#757575' }}>
+                        <Box component="span" sx={{ color: userInfo.status === 'enabled' ? 'success.main' : 'text.secondary' }}>
                           {getStatusLabel(userInfo.status)}
-                        </span>
+                        </Box>
                       </Typography>
                     </Box>
                   </Alert>
@@ -420,8 +429,8 @@ export default function AccountSettings() {
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: `${ACCOUNT_GROUPS.password.color}08`,
-                borderLeft: `4px solid ${ACCOUNT_GROUPS.password.color}`,
+                bgcolor: 'action.hover',
+                borderLeft: theme => `3px solid ${theme.palette.error.main}`,
                 minHeight: 64,
                 '& .MuiAccordionSummary-content': {
                   alignItems: 'center',
@@ -430,11 +439,11 @@ export default function AccountSettings() {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ color: ACCOUNT_GROUPS.password.color, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ color: 'error.main', display: 'flex', alignItems: 'center' }}>
                   {ACCOUNT_GROUPS.password.icon}
                 </Box>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: ACCOUNT_GROUPS.password.color }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
                     {ACCOUNT_GROUPS.password.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -454,7 +463,7 @@ export default function AccountSettings() {
                   </Alert>
 
                   {/* Password field */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 3 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: 3, minWidth: 0 }}>
                     <TextField
                       fullWidth
                       label={translate('pages.account_settings.new_password')}

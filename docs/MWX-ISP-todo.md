@@ -191,6 +191,45 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [ ] Lakukan inspeksi visual lintas browser, ukuran layar, dan semua resource memakai sesi/data operasional representatif.
 - [ ] Konfirmasi tata letak serta skala informasi dengan operator setelah pilot deployment.
 
-Urutan eksekusi yang disarankan: A → B → C → D → E → F → G → H. Simulator fake network dan mock WhatsApp dapat dipakai tanpa hardware/akun produksi; polling jaringan live memerlukan target yang diizinkan, sementara validasi vendor/cutover pada Gelombang F memerlukan NAS nyata.
+### I. Onboarding dan user guide (TR-F013 / TR-F015)
+
+- [x] Audit urutan kerja Admin/Operator, permission yang benar-benar berlaku, link route, kondisi awal, dan istilah yang terlihat dalam UI.
+- [x] Tulis konten panduan English: setup awal; Profile/NAS; Package; Customer/Subscription/RadiusUser; auth/accounting; billing/payment; operasi harian; monitoring/WhatsApp opsional; production readiness/troubleshooting.
+- [x] Buat Dashboard Getting Started card sesuai status setup, dapat di-collapse/dibuka lagi, dan link ke langkah relevan.
+- [x] Buat halaman Help/User Guide internal `/guide` dengan navigasi bab, deep link per modul, dan penanda Admin.
+- [x] Buat quick tour opsional lima langkah, keyboard accessible melalui dialog, bisa dilewati/diulang, tanpa menjalankan mutation atau menutupi form.
+- [x] Tampilkan hitungan record `Configured` terpisah dari verifikasi autentikasi/accounting NAS live; endpoint gagal menjadi `Unable to check`, bukan nol.
+- [x] Simpan hanya preferensi tour/collapse dan centang manual di localStorage per operator; tidak menyimpan data bisnis atau secret dan menjelaskan progress lokal.
+- [x] Review copy untuk dampak pengaturan billing, secret jaringan, WhatsApp opsional, serta batas simulasi dan verifikasi produksi.
+- [ ] Visual-check dashboard/guide pada tablet, role operator, serta data parsial/lengkap. Admin sempit (529 px), dark/light, dashboard, guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice sudah dibuka memakai instalasi SQLite sementara; empty states benar dan tidak ada error JS baru setelah backend siap.
+- [x] Pastikan panduan tidak membuat seed data dan tidak menyebut simulasi sebagai validasi produksi.
+
+### J. Audit visual konsisten dan branding yang dapat dikonfigurasi (rencana; TR-F029 perlu revisi scope)
+
+- [x] Audit sumber theme, shell, login, dashboard, config perusahaan, favicon/title, dan literal warna/radius/shadow.
+- [x] Audit referensi `X:\REPO\focus\moonwitness\apps\board`: manga-ink paper/dark, lime/pink, display/body/mono typography, halftone, bold outline, offset hard shadow, active sticker, doodle/speedlines, dan reduced motion.
+- [x] Tetapkan adaptasi manga-ink enterprise: dark MWX sebagai default, lime sebagai highlight, pink dekoratif terbatas, border dan hard shadow konsisten, data padat mudah dipindai, serta state operasional tetap semantik.
+- [x] Pisahkan branding produk dari identitas perusahaan/penagih invoice; ubah satu instalasi secara global tanpa menambah multi-tenancy.
+- [x] Rancang adaptasi referensi tanpa menyalin branding/aset MoonWitness, token theme, komponen konsisten, editor Admin, preview/save/reset, propagasi runtime, fallback, batas keamanan upload logo, dan matriks verifikasi pada blueprint bagian 13.
+- [x] Terapkan baseline manga-ink pada theme bersama, AppBar/Menu, Login, Dashboard, serta komponen section form/detail; dark tetap default dan warna status tetap semantik.
+- [x] Migrasikan radius card, panel, section, dan grup konten resource RADIUS, accounting, operator, NAS, node, certificate, online session, ISP, Operations ke bentuk square-kompak; samakan aksen heading System Config dengan semantic palette.
+- [x] Hilangkan warna aksen lama pada layar loading, status Account Settings, onboarding, dan hover baris data; seluruhnya kini memakai token theme/semantic MUI.
+- [x] Verifikasi dark mode desktop untuk Dashboard, Getting Started, dan seluruh User Guide dengan Admin simulasi; halaman tampil tanpa error JavaScript.
+- [x] Jalankan `npm run type-check`, `npm run build`, `go build ./...`, `go test ./...`, dan `git diff --check` setelah baseline visual.
+- [x] Ulangi type-check, production build, dan `git diff --check` setelah audit warna tambahan.
+- [x] Verifikasi langsung theme toggle setelah wiring `darkTheme`/`lightTheme` diperbaiki; sebelumnya `theme` lama memetakan kedua pilihan ke palet gelap.
+- [x] Perbaiki kontras aksen utama dan seri grafik pada light mode; screenshot menunjukkan tab/link lime sebelumnya terlalu terang di atas paper.
+- [x] Perbaiki overflow horizontal 27 px di Account Settings pada viewport 529 px dengan grid form yang responsif.
+- [x] Inspeksi browser runtime Dashboard, User Guide, Operations, System Config, Account Settings, RADIUS Users, Customer List, dan Invoice List pada empty database terisolasi; tidak menambah data bisnis.
+- [x] Verifikasi tema light/dark pada Operations, User Guide, Dashboard, dan System Config; Account Settings light mode tanpa overflow sesudah perbaikan.
+- [ ] Lengkapi inspeksi browser seluruh route resource, desktop lebar, mode Admin/Operator, dan data parsial/lengkap.
+- [ ] Uji high-contrast keyboard/focus dan empty/loading/error states pada seluruh kelompok resource.
+- [ ] Sebelum coding, ajukan revisi TR-F029 di checklist CN/EN untuk mengubah merek statis MWX-ISP menjadi konfigurasi brand per deployment; pertahankan batas single-instance.
+- [ ] Implementasikan J.1–J.8 secara bertahap setelah acceptance scope diselaraskan, sambil mempertahankan default MWX green dan dark theme.
+- [ ] Verifikasi dark/light, brand default/custom, responsive layouts, peran, aksesibilitas, error states, config legacy, reload, serta logo invalid/terlalu besar.
+
+Urutan eksekusi engineering: A → B → C → D → E → H → I → F → G; onboarding memakai route/fitur lokal dan dapat dikembangkan sebelum NAS nyata tersedia. Simulator fake network dan mock WhatsApp dapat dipakai tanpa hardware/akun produksi; polling jaringan live memerlukan target yang diizinkan, sementara validasi vendor/cutover pada Gelombang F memerlukan NAS nyata.
 
 Catatan hasil terbaru (2026-10-02): tes CoAService terpilih dan tes Admin API disconnect/authorization berhasil dijalankan lokal dengan fake NAS UDP. Acceptance scenario ISP ditambahkan ke `test/integration/isp_lifecycle_test.go` untuk memeriksa satu siklus customer sampai auth ulang plus accounting start/stop. `go test ./...`, `go vet ./...`, frontend production build, dan kompilasi paket integration bertag berhasil pada putaran sebelumnya; audit ini juga menjalankan `go test` terpilih untuk validasi E.164 dan endpoint Operator, serta frontend production build yang berhasil. Audit UI lokal memakai fixture simulasi untuk dashboard, login, Operations, detail invoice/payment, target jaringan, histori interface, insiden, chart, dan polling WhatsApp; tidak ada error JavaScript, nomor relasi terbaca, dan input allowlist tidak ter-reset. Header mobile dan detail payment diperiksa pada 390 px tanpa horizontal overflow. ESLint belum dapat dijalankan karena plugin `@typescript-eslint` gagal memuat `ts-api-utils` (`Cannot read properties of undefined (reading 'Intrinsic')`). Build masih memperingatkan bundle ECharts 1.14 MB. Eksekusi runtime suite PostgreSQL/OpenLDAP belum dilakukan karena Docker daemon lokal tidak aktif dan `TEST_DATABASE_*` tidak tersedia. Uji SNMP agent/NAS nyata serta pairing WhatsApp sungguhan tetap perlu validasi operasional.
+
+Catatan onboarding (2026-10-03): Dashboard checklist dan route User Guide/Quick Tour telah diimplementasikan. `go build ./...`, `go test ./...`, `web npm run type-check`, `web npm run build`, dan `git diff --check` berhasil. ESLint gagal dimulai karena dependency `ts-api-utils` membaca `Intrinsic` dari nilai undefined; `golangci-lint` tidak terpasang. Dev server merespons 200, tetapi sesi Playwright tidak bisa diimpor pada runtime ini, dan backend membutuhkan autentikasi untuk API identity. Karena itu inspeksi visual role/data dan console error masih terbuka; build tetap memperingatkan chunk ECharts 1.14 MB.

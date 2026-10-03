@@ -1,69 +1,70 @@
 import { alpha, createTheme, PaletteMode } from '@mui/material/styles';
 
-// Light theme palette
+// Shared manga-ink palette: warm paper/ink, lime highlight, and a restrained pink accent.
+// Operational statuses stay semantically distinct from brand accents.
 const lightPalette = {
   primary: {
-    main: '#16a34a',
-    light: '#4ade80',
-    dark: '#15803d',
+    main: '#5d7000',
+    light: '#e6ff00',
+    dark: '#485600',
     contrastText: '#ffffff',
   },
   secondary: {
-    main: '#0f766e',
-    light: '#2dd4bf',
-    dark: '#115e59',
+    main: '#b01355',
+    light: '#ff70ad',
+    dark: '#8c0e43',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#16a34a',
-    light: '#4ade80',
-    dark: '#15803d',
+    main: '#13783f',
+    light: '#24a862',
+    dark: '#0d6538',
   },
   warning: {
-    main: '#f59e0b',
+    main: '#925500',
     light: '#fbbf24',
-    dark: '#d97706',
+    dark: '#744300',
   },
   error: {
-    main: '#ef4444',
+    main: '#b42318',
     light: '#f87171',
     dark: '#dc2626',
   },
   info: {
-    main: '#0d9488',
-    light: '#2dd4bf',
-    dark: '#0f766e',
+    main: '#087e8b',
+    light: '#10a6b5',
+    dark: '#075d68',
   },
   background: {
-    default: '#f8fafc',
-    paper: '#ffffff',
+    default: '#f3efe4',
+    paper: '#fffdf6',
   },
   text: {
-    primary: '#0f172a',
-    secondary: '#64748b',
-    disabled: '#94a3b8',
+    primary: '#0d0d0d',
+    secondary: '#3a3a36',
+    disabled: '#8a877d',
   },
-  divider: 'rgba(100, 116, 139, 0.12)',
+  divider: 'rgba(13, 13, 13, 0.24)',
 };
 
-// 深色主题配色
+// Dark mode inverts ink and paper while keeping the accent identity unchanged.
 const darkPalette = {
   primary: {
-    main: '#4ade80',
-    light: '#86efac',
-    dark: '#22c55e',
-    contrastText: '#ffffff',
+    main: '#e6ff00',
+    light: '#efff5a',
+    dark: '#c4db00',
+    contrastText: '#0d0d0d',
   },
   secondary: {
-    main: '#2dd4bf',
-    light: '#5eead4',
-    dark: '#14b8a6',
+    main: '#ff2e88',
+    light: '#ff70ad',
+    dark: '#d51a69',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#4ade80',
-    light: '#86efac',
-    dark: '#22c55e',
+    main: '#62d990',
+    light: '#8ae8ad',
+    dark: '#32b76b',
   },
   warning: {
     main: '#fbbf24',
@@ -76,21 +77,26 @@ const darkPalette = {
     dark: '#ef4444',
   },
   info: {
-    main: '#2dd4bf',
-    light: '#5eead4',
-    dark: '#14b8a6',
+    main: '#55cbd5',
+    light: '#84e0e7',
+    dark: '#2daab5',
   },
   background: {
-    default: '#07130d',
-    paper: '#0e1f15',
+    default: '#0e0e10',
+    paper: '#17171a',
   },
   text: {
-    primary: '#f1f5f9',
-    secondary: '#cbd5e1',
-    disabled: '#64748b',
+    primary: '#f3efe4',
+    secondary: '#c9c5b8',
+    disabled: '#7d7a72',
   },
-  divider: 'rgba(134, 239, 172, 0.13)',
+  divider: 'rgba(243, 239, 228, 0.2)',
 };
+
+/** Stable chart colors remain distinct from brand and operational status colors. */
+export const dataSeriesColors = ['#e6ff00', '#ff2e88', '#55cbd5', '#fbbf24', '#60a5fa', '#a78bfa'];
+/** Higher-contrast series colors for paper surfaces in light mode. */
+export const lightDataSeriesColors = ['#5d7000', '#b01355', '#087e8b', '#925500', '#2563a8', '#6841a5'];
 
 /**
  * Create a theme configuration.
@@ -106,7 +112,7 @@ export const createAppTheme = (mode: PaletteMode) => {
       ...palette,
     },
     shape: {
-    borderRadius: 5,
+      borderRadius: 4,
     },
     typography: {
       fontFamily: [
@@ -119,15 +125,21 @@ export const createAppTheme = (mode: PaletteMode) => {
         '"Microsoft YaHei"',
         'sans-serif',
       ].join(','),
-      h1: { 
-        fontWeight: 700, 
+      h1: {
+        fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif',
+        fontWeight: 900,
         fontSize: '2.5rem',
         lineHeight: 1.2,
+        letterSpacing: '0.035em',
+        textTransform: 'uppercase',
       },
-      h2: { 
-        fontWeight: 700, 
+      h2: {
+        fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif',
+        fontWeight: 850,
         fontSize: '2rem',
         lineHeight: 1.3,
+        letterSpacing: '0.025em',
+        textTransform: 'uppercase',
       },
       h3: { 
         fontWeight: 600, 
@@ -160,65 +172,69 @@ export const createAppTheme = (mode: PaletteMode) => {
           body: {
             backgroundColor: palette.background.default,
             color: palette.text.primary,
-            transition: 'background-color 0.3s ease, color 0.3s ease',
-            backgroundImage: isDark
-              ? 'radial-gradient(ellipse at 8% 0%, rgba(34,197,94,0.075), transparent 32%), radial-gradient(ellipse at 92% 55%, rgba(20,184,166,0.045), transparent 30%)'
-              : 'radial-gradient(ellipse at 8% 0%, rgba(34,197,94,0.055), transparent 34%)',
+            transition: 'background-color 0.16s ease, color 0.16s ease',
+            backgroundImage: 'radial-gradient(' + alpha(palette.text.primary, isDark ? 0.055 : 0.07) + ' 0.65px, transparent 0.8px)',
+            backgroundSize: '8px 8px',
             backgroundAttachment: 'fixed',
           },
           '#root': {
             backgroundColor: palette.background.default,
           },
           '.RaLayout-content': {
-            backgroundImage: isDark
-              ? 'linear-gradient(rgba(134,239,172,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(134,239,172,0.022) 1px, transparent 1px)'
-              : 'linear-gradient(rgba(22,163,74,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(22,163,74,0.025) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-            backgroundPosition: '-1px -1px',
+            backgroundImage: 'radial-gradient(' + alpha(palette.text.primary, isDark ? 0.035 : 0.045) + ' 0.65px, transparent 0.8px)',
+            backgroundSize: '7px 7px',
           },
           '*::-webkit-scrollbar': {
             width: '8px',
             height: '8px',
           },
           '*::-webkit-scrollbar-track': {
-            background: isDark ? '#0e1f15' : '#f1f5f9',
+            background: palette.background.paper,
           },
           '*::-webkit-scrollbar-thumb': {
-            background: isDark ? '#285238' : '#cbd5e1',
-            borderRadius: '4px',
+            background: isDark ? '#56565b' : '#8a877d',
+            borderRadius: '2px',
             '&:hover': {
-              background: isDark ? '#3f7a53' : '#94a3b8',
+              background: palette.primary.main,
             },
           },
-          // 强制菜单图标始终使用浅色
+          '::selection': {
+            backgroundColor: palette.primary.main,
+            color: palette.primary.contrastText,
+          },
+          ':focus-visible': {
+            outline: '2px solid ' + palette.primary.main,
+            outlineOffset: 2,
+          },
+          '@media (prefers-reduced-motion: reduce)': {
+            '*, *::before, *::after': {
+              animationDuration: '0.01ms !important',
+              transitionDuration: '0.01ms !important',
+            },
+          },
+          // Menu icon colors follow the active theme.
           '.RaMenuItemLink-icon': {
-            color: 'rgba(255, 255, 255, 0.85) !important',
+            color: alpha(palette.text.primary, 0.82) + ' !important',
           },
           '.RaMenuItemLink-root:hover .RaMenuItemLink-icon': {
-            color: '#ffffff !important',
+            color: palette.text.primary + ' !important',
           },
           '.RaMenuItemLink-active .RaMenuItemLink-icon': {
-            color: '#ffffff !important',
+            color: palette.primary.contrastText + ' !important',
           },
         },
       },
       MuiPaper: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
-            border: `1px solid ${isDark ? 'rgba(134, 239, 172, 0.1)' : 'rgba(100, 116, 139, 0.12)'}`,
-            boxShadow: isDark 
-              ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)' 
-              : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-            backgroundImage: isDark
-              ? 'linear-gradient(135deg, rgba(255,255,255,0.018), transparent 62%)'
-              : 'linear-gradient(135deg, rgba(255,255,255,0.8), transparent 62%)',
-            transition: 'all 0.3s ease',
+            borderRadius: 4,
+            border: '1px solid ' + alpha(palette.text.primary, isDark ? 0.2 : 0.55),
+            boxShadow: 'none',
+            backgroundImage: 'none',
+            transition: 'border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease',
           },
           elevation1: {
-            boxShadow: isDark
-              ? '0 2px 4px 0 rgba(0, 0, 0, 0.4)'
-              : '0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+            boxShadow: '2px 2px 0 ' + alpha(palette.text.primary, isDark ? 0.34 : 0.75),
           },
         },
       },
@@ -228,16 +244,13 @@ export const createAppTheme = (mode: PaletteMode) => {
         },
         styleOverrides: {
           root: {
-            borderRadius: 9,
-            border: `1px solid ${isDark ? 'rgba(134, 239, 172, 0.14)' : 'rgba(100, 116, 139, 0.12)'}`,
-            boxShadow: isDark
-              ? '0 1px 3px 0 rgba(0, 0, 0, 0.3)'
-              : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.3s ease',
+            borderRadius: 4,
+            border: '1px solid ' + alpha(palette.text.primary, isDark ? 0.2 : 0.55),
+            boxShadow: '2px 2px 0 ' + alpha(palette.text.primary, isDark ? 0.34 : 0.75),
+            transition: 'transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease',
             '&:hover': {
-              boxShadow: isDark
-                ? '0 8px 26px rgba(0,0,0,0.28), 0 0 0 1px rgba(74,222,128,0.07)'
-                : '0 8px 26px rgba(15,23,42,0.08)',
+              transform: 'translate(-1px, -1px)',
+              boxShadow: '3px 3px 0 ' + alpha(palette.text.primary, isDark ? 0.48 : 0.9),
             },
           },
         },
@@ -248,19 +261,23 @@ export const createAppTheme = (mode: PaletteMode) => {
         },
         styleOverrides: {
           root: {
-            borderRadius: 6,
+            borderRadius: 3,
             textTransform: 'none',
             fontWeight: 600,
             paddingInline: 14,
             paddingBlock: 7,
-            transition: 'all 0.2s ease',
+            transition: 'transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease',
           },
           contained: {
-            boxShadow: 'none',
+            border: '1px solid ' + palette.text.primary,
+            boxShadow: '2px 2px 0 ' + palette.text.primary,
             '&:hover': {
-              boxShadow: isDark
-                ? '0 4px 8px 0 rgba(0, 0, 0, 0.3)'
-                : '0 4px 8px 0 rgba(0, 0, 0, 0.1)',
+              transform: 'translate(-1px, -1px)',
+              boxShadow: '3px 3px 0 ' + palette.text.primary,
+            },
+            '&:active': {
+              transform: 'translate(2px, 2px)',
+              boxShadow: 'none',
             },
           },
         },
@@ -268,7 +285,7 @@ export const createAppTheme = (mode: PaletteMode) => {
       MuiIconButton: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 3,
             transition: 'all 0.2s ease',
             '&:hover': {
               backgroundColor: alpha(palette.primary.main, 0.08),
@@ -280,7 +297,7 @@ export const createAppTheme = (mode: PaletteMode) => {
         styleOverrides: {
           root: {
             '& .MuiOutlinedInput-root': {
-              borderRadius: 6,
+              borderRadius: 3,
               transition: 'all 0.2s ease',
               '&:hover .MuiOutlinedInput-notchedOutline': {
                 borderColor: palette.primary.main,
@@ -292,24 +309,21 @@ export const createAppTheme = (mode: PaletteMode) => {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? '#0e1f15' : '#ffffff',
-            color: isDark ? '#f1f5f9' : '#1f2937',
-            borderBottom: isDark 
-              ? '1px solid rgba(74, 222, 128, 0.18)'
-              : '1px solid rgba(22, 163, 74, 0.18)',
-            boxShadow: isDark 
-              ? 'none' 
-              : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.3s ease',
+            backgroundColor: palette.background.paper,
+            color: palette.text.primary,
+            borderBottom: '2px solid ' + palette.text.primary,
+            boxShadow: '0 2px 0 ' + alpha(palette.text.primary, 0.7),
+            transition: 'background-color 0.16s ease, color 0.16s ease',
           },
         },
       },
       MuiDrawer: {
         styleOverrides: {
           paper: {
-            backgroundColor: isDark ? '#0e2417' : '#14532d',
-            borderRight: 'none',
-            transition: 'all 0.3s ease',
+            backgroundColor: palette.background.paper,
+            color: palette.text.primary,
+            borderRight: '2px solid ' + palette.text.primary,
+            transition: 'background-color 0.16s ease, color 0.16s ease',
           },
         },
       },
@@ -323,7 +337,7 @@ export const createAppTheme = (mode: PaletteMode) => {
           },
           head: {
             fontWeight: 600,
-            backgroundColor: isDark ? '#10251a' : '#f8fafc',
+            backgroundColor: isDark ? '#202024' : '#e7e2d4',
             color: palette.text.primary,
             padding: '8px 12px',
             fontSize: '0.75rem',
@@ -336,7 +350,7 @@ export const createAppTheme = (mode: PaletteMode) => {
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 6,
+            borderRadius: 3,
             fontWeight: 500,
           },
         },
@@ -344,51 +358,50 @@ export const createAppTheme = (mode: PaletteMode) => {
       RaMenuItemLink: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 2,
             marginInline: 7,
             marginBlock: 2,
             paddingBlock: 6,
             paddingInline: 10,
-            // 菜单项始终使用浅色文字
-            color: 'rgba(255, 255, 255, 0.9) !important',
-            transition: 'all 0.2s ease',
+            color: alpha(palette.text.primary, 0.82) + ' !important',
+            transition: 'transform 0.14s ease, background-color 0.14s ease, color 0.14s ease',
             '& .RaMenuItemLink-label': {
               fontWeight: 500,
               fontSize: '0.80rem',
-              color: 'rgba(255, 255, 255, 0.9) !important',
+              color: alpha(palette.text.primary, 0.82) + ' !important',
             },
             '& .RaMenuItemLink-icon': {
-              color: 'rgba(255, 255, 255, 0.85) !important',
+              color: alpha(palette.text.primary, 0.82) + ' !important',
               fontSize: '1.25rem',
             },
             '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              color: '#ffffff !important',
+              backgroundColor: alpha(palette.primary.main, 0.18),
+              color: palette.text.primary + ' !important',
+              transform: 'translate(-1px, -1px)',
               '& .RaMenuItemLink-label': {
-                color: '#ffffff !important',
+                color: palette.text.primary + ' !important',
               },
               '& .RaMenuItemLink-icon': {
-                color: '#ffffff !important',
-                transform: 'scale(1.05)',
+                color: palette.primary.main + ' !important',
               },
             },
             '&.RaMenuItemLink-active': {
-              backgroundColor: 'rgba(34, 197, 94, 0.19)',
-              boxShadow: 'inset 2px 0 #4ade80, 0 0 18px rgba(34,197,94,0.08)',
-              color: '#ffffff !important',
+              backgroundColor: palette.primary.main,
+              boxShadow: '2px 2px 0 ' + palette.text.primary,
+              color: palette.primary.contrastText + ' !important',
+              transform: 'rotate(-0.6deg)',
               fontWeight: 600,
               '& .RaMenuItemLink-label': {
-                color: '#ffffff !important',
+                color: palette.primary.contrastText + ' !important',
               },
               '& .RaMenuItemLink-icon': {
-                color: '#ffffff !important',
+                color: palette.primary.contrastText + ' !important',
               },
             },
           },
           icon: {
-            // 菜单图标始终使用浅色，添加 !important 确保优先级
-            color: 'rgba(255, 255, 255, 0.85) !important',
-            transition: 'all 0.2s ease',
+            color: alpha(palette.text.primary, 0.82) + ' !important',
+            transition: 'color 0.14s ease, transform 0.14s ease',
           },
         },
       },
@@ -414,11 +427,11 @@ export const createAppTheme = (mode: PaletteMode) => {
             },
             '& .RaDatagrid-headerCell': {
               fontWeight: 600,
-              backgroundColor: isDark ? '#10251a' : '#f8fafc',
+              backgroundColor: isDark ? '#202024' : '#e7e2d4',
               padding: '7px 12px',
               fontSize: '0.75rem',
               color: palette.text.primary,
-              borderBottom: `1px solid ${isDark ? 'rgba(74, 222, 128, 0.3)' : 'rgba(100, 116, 139, 0.15)'}`,
+              borderBottom: '2px solid ' + alpha(palette.text.primary, isDark ? 0.44 : 0.8),
               whiteSpace: 'nowrap',
               '&:first-of-type': {
                 paddingLeft: 24,
@@ -466,7 +479,6 @@ export const createAppTheme = (mode: PaletteMode) => {
   });
 };
 
-// Default theme and optional light mode.
-export const theme = createAppTheme('dark');
+// Dark mode is the product default; light mode remains available via the app bar.
 export const darkTheme = createAppTheme('dark');
 export const lightTheme = createAppTheme('light');
