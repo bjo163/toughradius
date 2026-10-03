@@ -21,7 +21,7 @@ import { useTranslate } from 'react-admin';
 import { Link as RouterLink } from 'react-router-dom';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { GettingStartedCard } from '../components/onboarding/GettingStartedCard';
-import { dataSeriesColors } from '../theme';
+import { dataSeriesColors, lightDataSeriesColors } from '../theme';
 
 interface DashboardStats {
   total_users: number;
@@ -104,6 +104,7 @@ const emptyStats: DashboardStats = {
 const Dashboard = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const chartColors = isDark ? dataSeriesColors : lightDataSeriesColors;
   const translate = useTranslate();
   const { data: statsPayload, isFetching, isError: statsError } = useApiQuery<DashboardStats>({
     path: '/dashboard/stats',
@@ -191,19 +192,19 @@ const Dashboard = () => {
       value: `↑ ${stats.today_input_gb.toFixed(2)} GB`,
       secondaryValue: `↓ ${stats.today_output_gb.toFixed(2)} GB`,
       icon: <SwapVertOutlinedIcon fontSize="large" />,
-      accent: dataSeriesColors[3],
+      accent: chartColors[3],
       highlights: [],
     },
   ];
 
   const ipv6 = stats.ipv6_stats ?? emptyStats.ipv6_stats;
   const ipv6Cards = [
-    { label: translate('dashboard.ipv6_online'), value: ipv6.online_with_ipv6, accent: dataSeriesColors[0] },
-    { label: translate('dashboard.ipv6_address'), value: ipv6.online_with_ipv6_address, accent: dataSeriesColors[1] },
-    { label: translate('dashboard.ipv6_framed_prefix'), value: ipv6.online_with_framed_prefix, accent: dataSeriesColors[2] },
-    { label: translate('dashboard.ipv6_delegated_prefix'), value: ipv6.online_with_delegated_prefix, accent: dataSeriesColors[3] },
-    { label: translate('dashboard.ipv6_users_static_address'), value: ipv6.users_with_static_address, accent: dataSeriesColors[4] },
-    { label: translate('dashboard.ipv6_users_delegated_prefix'), value: ipv6.users_with_delegated_prefix, accent: dataSeriesColors[5] },
+    { label: translate('dashboard.ipv6_online'), value: ipv6.online_with_ipv6, accent: chartColors[0] },
+    { label: translate('dashboard.ipv6_address'), value: ipv6.online_with_ipv6_address, accent: chartColors[1] },
+    { label: translate('dashboard.ipv6_framed_prefix'), value: ipv6.online_with_framed_prefix, accent: chartColors[2] },
+    { label: translate('dashboard.ipv6_delegated_prefix'), value: ipv6.online_with_delegated_prefix, accent: chartColors[3] },
+    { label: translate('dashboard.ipv6_users_static_address'), value: ipv6.users_with_static_address, accent: chartColors[4] },
+    { label: translate('dashboard.ipv6_users_delegated_prefix'), value: ipv6.users_with_delegated_prefix, accent: chartColors[5] },
   ];
 
   const authTrendOption = useMemo(
@@ -282,11 +283,11 @@ const Dashboard = () => {
             length: 20,
           },
           data: profileSlices,
-          color: dataSeriesColors,
+          color: chartColors,
         },
       ],
     }),
-    [theme, profileSlices, translate],
+    [theme, profileSlices, translate, chartColors],
   );
 
   const trafficOption = useMemo(

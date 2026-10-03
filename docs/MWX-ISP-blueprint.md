@@ -282,11 +282,19 @@ Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigu
 
 ### Batas dan keputusan yang perlu dipertahankan
 
-- Ini adalah rencana; belum ada perubahan visual atau fungsi branding pada kode dari bagian ini.
+- Editor dan propagasi branding configurable tetap berupa rencana sampai checklist scope TR-F029 merged. Baseline visual manga-ink sudah diimplementasikan dan direview terpisah pada PR #2.
 - MoonWitness Board adalah referensi bahasa visual saja. Jangan menyalin identitas produk MoonWitness, logo, teks/asset, atau implementasi komponen dan dependensinya; adaptasikan motif dengan MUI dan struktur React Admin MWX yang telah ada.
 - Sebelum implementasi J.4, perubahan TR-F029 perlu dicatat pada `docs/feature-checklist.md` serta `docs/feature-checklist.en.md`. Existing acceptance saat ini menyebut merek terlihat tetap MWX-ISP; editor brand yang dapat mengganti nama/logo/warna memperluas scope yang disetujui. Rencana implementasi harus menunggu penyelarasan baseline tersebut.
 - Tidak mengubah company/billing identity, format invoice, warna status semantik, ACL, atau data bisnis hanya karena Admin mengubah product brand.
 - Upload logo sebaiknya menerima format raster yang disetujui (contoh PNG/WebP) dengan ukuran maksimum eksplisit dan hanya dapat diakses sebagai file statis pasif; bila SVG diminta kelak, perlu sanitasi/allowlist tersendiri.
+
+### Kemajuan implementasi visual (2026-10-04)
+
+- Baseline manga-ink sudah diterapkan pada theme MUI, shell/menu, loading/login, dashboard, onboarding, guide, Operations, System Config, Account Settings, dan kartu/panel di resource RADIUS, accounting, ISP, network, serta certificates. Radius besar diseragamkan menjadi bentuk kompak; status tetap memakai semantic success/warning/error.
+- Wiring tema Admin kini memakai `darkTheme` eksplisit dan `defaultTheme="dark"`; penggunaan prop `theme` lama sebelumnya membuat tombol light/dark mengganti pilihan tanpa mengganti palet. Light mode memakai aksen dan warna seri grafik dengan kontras lebih tinggi.
+- Pemeriksaan browser dengan Admin bootstrap pada database SQLite sementara (folder temp, RADIUS listener off) mencakup Dashboard, Guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice. Tidak ada data bisnis yang dibuat. Account Settings overflow 27 px pada viewport 529 px juga sudah diperbaiki.
+- Build/type-check lulus dan screenshot runtime mengonfirmasi dark/light serta layout sempit untuk halaman yang diuji. Audit desktop lebar, operator role, semua routes, dan data parsial/lengkap tetap terbuka.
+- Editor branding serta propagasi konfigurasi belum diimplementasikan; perubahan TR-F029 bilingual berada di PR scope #1 dan harus merged sebelum implementasi itu dimulai. Visual baseline berada di PR #2.
 
 ### Kriteria penerimaan rencana implementasi
 

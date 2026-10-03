@@ -4,29 +4,29 @@ import { alpha, createTheme, PaletteMode } from '@mui/material/styles';
 // Operational statuses stay semantically distinct from brand accents.
 const lightPalette = {
   primary: {
-    main: '#d7ef00',
+    main: '#5d7000',
     light: '#e6ff00',
-    dark: '#a8bd00',
-    contrastText: '#0d0d0d',
+    dark: '#485600',
+    contrastText: '#ffffff',
   },
   secondary: {
-    main: '#ff2e88',
+    main: '#b01355',
     light: '#ff70ad',
-    dark: '#c2185b',
+    dark: '#8c0e43',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#16834b',
+    main: '#13783f',
     light: '#24a862',
     dark: '#0d6538',
   },
   warning: {
-    main: '#f59e0b',
+    main: '#925500',
     light: '#fbbf24',
-    dark: '#d97706',
+    dark: '#744300',
   },
   error: {
-    main: '#ef4444',
+    main: '#b42318',
     light: '#f87171',
     dark: '#dc2626',
   },
@@ -95,6 +95,8 @@ const darkPalette = {
 
 /** Stable chart colors remain distinct from brand and operational status colors. */
 export const dataSeriesColors = ['#e6ff00', '#ff2e88', '#55cbd5', '#fbbf24', '#60a5fa', '#a78bfa'];
+/** Higher-contrast series colors for paper surfaces in light mode. */
+export const lightDataSeriesColors = ['#5d7000', '#b01355', '#087e8b', '#925500', '#2563a8', '#6841a5'];
 
 /**
  * Create a theme configuration.
@@ -477,7 +479,6 @@ export const createAppTheme = (mode: PaletteMode) => {
   });
 };
 
-// Default theme and optional light mode.
-export const theme = createAppTheme('dark');
+// Dark mode is the product default; light mode remains available via the app bar.
 export const darkTheme = createAppTheme('dark');
 export const lightTheme = createAppTheme('light');

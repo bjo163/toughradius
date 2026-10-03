@@ -201,7 +201,7 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Tampilkan hitungan record `Configured` terpisah dari verifikasi autentikasi/accounting NAS live; endpoint gagal menjadi `Unable to check`, bukan nol.
 - [x] Simpan hanya preferensi tour/collapse dan centang manual di localStorage per operator; tidak menyimpan data bisnis atau secret dan menjelaskan progress lokal.
 - [x] Review copy untuk dampak pengaturan billing, secret jaringan, WhatsApp opsional, serta batas simulasi dan verifikasi produksi.
-- [ ] Visual-check dashboard serta guide pada light mode, tablet, role operator, serta data kosong/parsial/lengkap. Browser dark mode desktop untuk Admin sudah diverifikasi dengan fixture lokal; tidak ada error JavaScript. Pemeriksaan warna, error console backend/API, responsif tablet, dan sesi Operator masih terbuka.
+- [ ] Visual-check dashboard/guide pada tablet, role operator, serta data parsial/lengkap. Admin sempit (529 px), dark/light, dashboard, guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice sudah dibuka memakai instalasi SQLite sementara; empty states benar dan tidak ada error JS baru setelah backend siap.
 - [x] Pastikan panduan tidak membuat seed data dan tidak menyebut simulasi sebagai validasi produksi.
 
 ### J. Audit visual konsisten dan branding yang dapat dikonfigurasi (rencana; TR-F029 perlu revisi scope)
@@ -217,9 +217,13 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Verifikasi dark mode desktop untuk Dashboard, Getting Started, dan seluruh User Guide dengan Admin simulasi; halaman tampil tanpa error JavaScript.
 - [x] Jalankan `npm run type-check`, `npm run build`, `go build ./...`, `go test ./...`, dan `git diff --check` setelah baseline visual.
 - [x] Ulangi type-check, production build, dan `git diff --check` setelah audit warna tambahan.
-- [ ] Inspeksi browser runtime resource dan halaman Operations/System Config belum dapat dilakukan karena browser embedded menolak akses localhost (`ERR_BLOCKED_BY_CLIENT`); retry memakai `localhost` juga diblokir.
-- [ ] Verifikasi visual langsung pada seluruh resource setelah migrasi radius; cek Operations dan System Config di browser.
-- [ ] Periksa light mode, tablet/mobile, role Operator, dan data lengkap/parsial.
+- [x] Verifikasi langsung theme toggle setelah wiring `darkTheme`/`lightTheme` diperbaiki; sebelumnya `theme` lama memetakan kedua pilihan ke palet gelap.
+- [x] Perbaiki kontras aksen utama dan seri grafik pada light mode; screenshot menunjukkan tab/link lime sebelumnya terlalu terang di atas paper.
+- [x] Perbaiki overflow horizontal 27 px di Account Settings pada viewport 529 px dengan grid form yang responsif.
+- [x] Inspeksi browser runtime Dashboard, User Guide, Operations, System Config, Account Settings, RADIUS Users, Customer List, dan Invoice List pada empty database terisolasi; tidak menambah data bisnis.
+- [x] Verifikasi tema light/dark pada Operations, User Guide, Dashboard, dan System Config; Account Settings light mode tanpa overflow sesudah perbaikan.
+- [ ] Lengkapi inspeksi browser seluruh route resource, desktop lebar, mode Admin/Operator, dan data parsial/lengkap.
+- [ ] Uji high-contrast keyboard/focus dan empty/loading/error states pada seluruh kelompok resource.
 - [ ] Sebelum coding, ajukan revisi TR-F029 di checklist CN/EN untuk mengubah merek statis MWX-ISP menjadi konfigurasi brand per deployment; pertahankan batas single-instance.
 - [ ] Implementasikan J.1–J.8 secara bertahap setelah acceptance scope diselaraskan, sambil mempertahankan default MWX green dan dark theme.
 - [ ] Verifikasi dark/light, brand default/custom, responsive layouts, peran, aksesibilitas, error states, config legacy, reload, serta logo invalid/terlalu besar.

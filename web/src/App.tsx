@@ -11,7 +11,7 @@ import OperationsPage from './pages/OperationsPage';
 import UserGuidePage from './pages/UserGuidePage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
-import { theme, lightTheme } from './theme';
+import { darkTheme, lightTheme } from './theme';
 import {
   CustomerList, CustomerCreate, CustomerEdit, CustomerShow,
   PackageList, PackageCreate, PackageEdit,
@@ -88,8 +88,8 @@ const App = () => (
     dashboard={Dashboard}
     loginPage={LoginPage}
     title="MWX-ISP"
-    theme={theme}
     lightTheme={lightTheme}
+    darkTheme={darkTheme}
     defaultTheme="dark"
     layout={CustomLayout}
     loading={CustomLoading}

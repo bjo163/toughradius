@@ -312,7 +312,7 @@ export default function AccountSettings() {
             </AccordionSummary>
             <AccordionDetails sx={{ px: 3, py: 3 }}>
               <form onSubmit={handleProfileSubmit}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 3 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: 3, minWidth: 0 }}>
                   <TextField
                     fullWidth
                     label={translate('pages.account_settings.fields.username')}
@@ -463,7 +463,7 @@ export default function AccountSettings() {
                   </Alert>
 
                   {/* Password field */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 3 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: 3, minWidth: 0 }}>
                     <TextField
                       fullWidth
                       label={translate('pages.account_settings.new_password')}
