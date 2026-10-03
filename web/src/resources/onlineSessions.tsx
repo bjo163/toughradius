@@ -1770,7 +1770,7 @@ const OnlineSessionListContent = () => {
                   bgcolor: theme =>
                     theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(25, 118, 210, 0.04)',
+                      : alpha(theme.palette.primary.main, 0.04),
                   '& .row-actions': {
                     opacity: 1,
                   },

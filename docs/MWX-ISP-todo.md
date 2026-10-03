@@ -213,8 +213,11 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Rancang adaptasi referensi tanpa menyalin branding/aset MoonWitness, token theme, komponen konsisten, editor Admin, preview/save/reset, propagasi runtime, fallback, batas keamanan upload logo, dan matriks verifikasi pada blueprint bagian 13.
 - [x] Terapkan baseline manga-ink pada theme bersama, AppBar/Menu, Login, Dashboard, serta komponen section form/detail; dark tetap default dan warna status tetap semantik.
 - [x] Migrasikan radius card, panel, section, dan grup konten resource RADIUS, accounting, operator, NAS, node, certificate, online session, ISP, Operations ke bentuk square-kompak; samakan aksen heading System Config dengan semantic palette.
+- [x] Hilangkan warna aksen lama pada layar loading, status Account Settings, onboarding, dan hover baris data; seluruhnya kini memakai token theme/semantic MUI.
 - [x] Verifikasi dark mode desktop untuk Dashboard, Getting Started, dan seluruh User Guide dengan Admin simulasi; halaman tampil tanpa error JavaScript.
 - [x] Jalankan `npm run type-check`, `npm run build`, `go build ./...`, `go test ./...`, dan `git diff --check` setelah baseline visual.
+- [x] Ulangi type-check, production build, dan `git diff --check` setelah audit warna tambahan.
+- [ ] Inspeksi browser runtime resource dan halaman Operations/System Config belum dapat dilakukan karena browser embedded menolak akses localhost (`ERR_BLOCKED_BY_CLIENT`); retry memakai `localhost` juga diblokir.
 - [ ] Verifikasi visual langsung pada seluruh resource setelah migrasi radius; cek Operations dan System Config di browser.
 - [ ] Periksa light mode, tablet/mobile, role Operator, dan data lengkap/parsial.
 - [ ] Sebelum coding, ajukan revisi TR-F029 di checklist CN/EN untuk mengubah merek statis MWX-ISP menjadi konfigurasi brand per deployment; pertahankan batas single-instance.

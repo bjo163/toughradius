@@ -39,7 +39,7 @@ interface SetupStepProps {
 const SetupStep = ({ step, checked, isAdmin, onManualChange, countState, total, retry }: SetupStepProps) => {
   return (
     <Grid item xs={12} md={6}>
-      <Box sx={{ height: '100%', p: 1.25, border: '1px solid', borderColor: checked ? 'success.dark' : 'divider', borderRadius: 1.5, bgcolor: checked ? 'rgba(34,197,94,0.06)' : 'background.paper' }}>
+      <Box sx={{ height: '100%', p: 1.25, border: '1px solid', borderColor: checked ? 'success.dark' : 'divider', borderRadius: 0.5, bgcolor: checked ? (theme => theme.palette.action.selected) : 'background.paper' }}>
         <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
           <Box sx={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
             {step.manual && <Checkbox checked={checked} onChange={(event) => onManualChange(step.id, event.target.checked)} inputProps={{ 'aria-label': `Mark ${step.title} complete` }} sx={{ pt: 0.15, pl: 0, pr: 1 }} />}

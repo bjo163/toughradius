@@ -28,8 +28,8 @@ const CustomLoading = () => {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        bgcolor: '#07130d',
-        color: '#cbd5e1',
+        bgcolor: 'background.default',
+        color: 'text.primary',
         gap: 2,
       }}
     >
