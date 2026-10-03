@@ -153,7 +153,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
       }}
     >
@@ -184,7 +184,7 @@ const NASListSkeleton = ({ rows = 10 }: { rows?: number }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -336,7 +336,7 @@ const NASSearchHeaderCard = () => {
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -383,7 +383,7 @@ const NASSearchHeaderCard = () => {
               fullWidth
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -602,7 +602,7 @@ const NASListContent = () => {
         <Card
           elevation={0}
           sx={{
-            borderRadius: 2,
+            borderRadius: 0.5,
             border: theme => `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -624,7 +624,7 @@ const NASListContent = () => {
       <Card
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           border: theme => `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
         }}
@@ -1108,7 +1108,7 @@ const NASHeaderCard = () => {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 0.5,
         background: theme =>
           theme.palette.mode === 'dark'
             ? isEnabled
@@ -1238,7 +1238,7 @@ const NASHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1257,7 +1257,7 @@ const NASHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1276,7 +1276,7 @@ const NASHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1295,7 +1295,7 @@ const NASHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1452,7 +1452,7 @@ const NASDetails = () => {
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 0.5,
                 bgcolor: theme =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255, 255, 255, 0.02)'

@@ -129,7 +129,7 @@ const ProfileListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
       }}
     >
@@ -160,7 +160,7 @@ const ProfileListSkeleton = ({ rows = 10 }: { rows?: number }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -312,7 +312,7 @@ const ProfileSearchHeaderCard = () => {
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -359,7 +359,7 @@ const ProfileSearchHeaderCard = () => {
               fullWidth
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -543,7 +543,7 @@ const ProfileListContent = () => {
         <Card
           elevation={0}
           sx={{
-            borderRadius: 2,
+            borderRadius: 0.5,
             border: theme => `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -565,7 +565,7 @@ const ProfileListContent = () => {
       <Card
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           border: theme => `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
         }}
@@ -1067,7 +1067,7 @@ const ProfileHeaderCard = () => {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 0.5,
         background: theme =>
           theme.palette.mode === 'dark'
             ? isEnabled
@@ -1193,7 +1193,7 @@ const ProfileHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1212,7 +1212,7 @@ const ProfileHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1231,7 +1231,7 @@ const ProfileHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1250,7 +1250,7 @@ const ProfileHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1409,7 +1409,7 @@ const ProfileDetails = () => {
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 0.5,
                 bgcolor: theme =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255, 255, 255, 0.02)'

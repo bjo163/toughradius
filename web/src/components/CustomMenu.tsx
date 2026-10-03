@@ -35,7 +35,6 @@ const menuItems = [
 export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
   const currentYear = new Date().getFullYear();
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const { data: identity } = useGetIdentity();
   const translate = useTranslate();
 
@@ -52,11 +51,10 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        // Keep the navigation anchored to the MWX green brand.
-        background: isDark
-          ? 'linear-gradient(180deg, #0e2417 0%, #0a1910 100%)'
-          : 'linear-gradient(180deg, #14532d 0%, #166534 100%)',
-        color: '#ffffff',
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        borderRight: '2px solid',
+        borderColor: theme.palette.text.primary,
         pt: 0,
         transition: 'background-color 0.3s ease',
       }}
@@ -64,7 +62,7 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
       <Box sx={{ flexGrow: 1, overflowY: 'auto', pt: 1, marginTop: 2 }}>
         {filteredMenuItems.map((item) => (
           <Box key={item.to}>
-            {item.sectionKey && <Typography variant="overline" sx={{ display: 'block', px: 2.5, pt: 1.5, color: 'rgba(255,255,255,0.62)' }}>
+            {item.sectionKey && <Typography variant="overline" sx={{ display: 'block', px: 2.5, pt: 1.5, color: 'text.secondary', fontFamily: 'monospace', letterSpacing: '0.16em', fontSize: '0.65rem' }}>
               {translate(item.sectionKey)}
             </Typography>}
             <MenuItemLink
@@ -80,12 +78,13 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
 
       <Box
         sx={{
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          borderTop: '2px solid',
+          borderColor: theme.palette.divider,
           textAlign: 'center',
           px: 2,
           py: 3,
           fontSize: 12,
-          color: 'rgba(255, 255, 255, 0.6)',
+          color: theme.palette.text.secondary,
           transition: 'all 0.3s ease',
         }}
       >

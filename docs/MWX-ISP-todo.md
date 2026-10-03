@@ -201,8 +201,25 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Tampilkan hitungan record `Configured` terpisah dari verifikasi autentikasi/accounting NAS live; endpoint gagal menjadi `Unable to check`, bukan nol.
 - [x] Simpan hanya preferensi tour/collapse dan centang manual di localStorage per operator; tidak menyimpan data bisnis atau secret dan menjelaskan progress lokal.
 - [x] Review copy untuk dampak pengaturan billing, secret jaringan, WhatsApp opsional, serta batas simulasi dan verifikasi produksi.
-- [ ] Visual-check dashboard serta guide pada dark/light, desktop/tablet, role admin/operator, data kosong/parsial/lengkap, dan tidak ada error console. Build dan dev server berhasil; browser runtime belum tervalidasi karena Playwright gagal diimpor (`./index.js` tidak menyediakan default export) dan backend endpoint auth/me merespons 401 tanpa sesi.
+- [ ] Visual-check dashboard serta guide pada light mode, tablet, role operator, serta data kosong/parsial/lengkap. Browser dark mode desktop untuk Admin sudah diverifikasi dengan fixture lokal; tidak ada error JavaScript. Pemeriksaan warna, error console backend/API, responsif tablet, dan sesi Operator masih terbuka.
 - [x] Pastikan panduan tidak membuat seed data dan tidak menyebut simulasi sebagai validasi produksi.
+
+### J. Audit visual konsisten dan branding yang dapat dikonfigurasi (rencana; TR-F029 perlu revisi scope)
+
+- [x] Audit sumber theme, shell, login, dashboard, config perusahaan, favicon/title, dan literal warna/radius/shadow.
+- [x] Audit referensi `X:\REPO\focus\moonwitness\apps\board`: manga-ink paper/dark, lime/pink, display/body/mono typography, halftone, bold outline, offset hard shadow, active sticker, doodle/speedlines, dan reduced motion.
+- [x] Tetapkan adaptasi manga-ink enterprise: dark MWX sebagai default, lime sebagai highlight, pink dekoratif terbatas, border dan hard shadow konsisten, data padat mudah dipindai, serta state operasional tetap semantik.
+- [x] Pisahkan branding produk dari identitas perusahaan/penagih invoice; ubah satu instalasi secara global tanpa menambah multi-tenancy.
+- [x] Rancang adaptasi referensi tanpa menyalin branding/aset MoonWitness, token theme, komponen konsisten, editor Admin, preview/save/reset, propagasi runtime, fallback, batas keamanan upload logo, dan matriks verifikasi pada blueprint bagian 13.
+- [x] Terapkan baseline manga-ink pada theme bersama, AppBar/Menu, Login, Dashboard, serta komponen section form/detail; dark tetap default dan warna status tetap semantik.
+- [x] Migrasikan radius card, panel, section, dan grup konten resource RADIUS, accounting, operator, NAS, node, certificate, online session, ISP, Operations ke bentuk square-kompak; samakan aksen heading System Config dengan semantic palette.
+- [x] Verifikasi dark mode desktop untuk Dashboard, Getting Started, dan seluruh User Guide dengan Admin simulasi; halaman tampil tanpa error JavaScript.
+- [x] Jalankan `npm run type-check`, `npm run build`, `go build ./...`, `go test ./...`, dan `git diff --check` setelah baseline visual.
+- [ ] Verifikasi visual langsung pada seluruh resource setelah migrasi radius; cek Operations dan System Config di browser.
+- [ ] Periksa light mode, tablet/mobile, role Operator, dan data lengkap/parsial.
+- [ ] Sebelum coding, ajukan revisi TR-F029 di checklist CN/EN untuk mengubah merek statis MWX-ISP menjadi konfigurasi brand per deployment; pertahankan batas single-instance.
+- [ ] Implementasikan J.1–J.8 secara bertahap setelah acceptance scope diselaraskan, sambil mempertahankan default MWX green dan dark theme.
+- [ ] Verifikasi dark/light, brand default/custom, responsive layouts, peran, aksesibilitas, error states, config legacy, reload, serta logo invalid/terlalu besar.
 
 Urutan eksekusi engineering: A → B → C → D → E → H → I → F → G; onboarding memakai route/fitur lokal dan dapat dikembangkan sebelum NAS nyata tersedia. Simulator fake network dan mock WhatsApp dapat dipakai tanpa hardware/akun produksi; polling jaringan live memerlukan target yang diizinkan, sementara validasi vendor/cutover pada Gelombang F memerlukan NAS nyata.
 

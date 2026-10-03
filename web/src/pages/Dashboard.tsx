@@ -21,6 +21,7 @@ import { useTranslate } from 'react-admin';
 import { Link as RouterLink } from 'react-router-dom';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { GettingStartedCard } from '../components/onboarding/GettingStartedCard';
+import { dataSeriesColors } from '../theme';
 
 interface DashboardStats {
   total_users: number;
@@ -190,19 +191,19 @@ const Dashboard = () => {
       value: `↑ ${stats.today_input_gb.toFixed(2)} GB`,
       secondaryValue: `↓ ${stats.today_output_gb.toFixed(2)} GB`,
       icon: <SwapVertOutlinedIcon fontSize="large" />,
-      accent: '#f97316',
+      accent: dataSeriesColors[3],
       highlights: [],
     },
   ];
 
   const ipv6 = stats.ipv6_stats ?? emptyStats.ipv6_stats;
   const ipv6Cards = [
-    { label: translate('dashboard.ipv6_online'), value: ipv6.online_with_ipv6, accent: '#4ade80' },
-    { label: translate('dashboard.ipv6_address'), value: ipv6.online_with_ipv6_address, accent: '#2dd4bf' },
-    { label: translate('dashboard.ipv6_framed_prefix'), value: ipv6.online_with_framed_prefix, accent: '#86efac' },
-    { label: translate('dashboard.ipv6_delegated_prefix'), value: ipv6.online_with_delegated_prefix, accent: '#a3e635' },
-    { label: translate('dashboard.ipv6_users_static_address'), value: ipv6.users_with_static_address, accent: '#34d399' },
-    { label: translate('dashboard.ipv6_users_delegated_prefix'), value: ipv6.users_with_delegated_prefix, accent: '#14b8a6' },
+    { label: translate('dashboard.ipv6_online'), value: ipv6.online_with_ipv6, accent: dataSeriesColors[0] },
+    { label: translate('dashboard.ipv6_address'), value: ipv6.online_with_ipv6_address, accent: dataSeriesColors[1] },
+    { label: translate('dashboard.ipv6_framed_prefix'), value: ipv6.online_with_framed_prefix, accent: dataSeriesColors[2] },
+    { label: translate('dashboard.ipv6_delegated_prefix'), value: ipv6.online_with_delegated_prefix, accent: dataSeriesColors[3] },
+    { label: translate('dashboard.ipv6_users_static_address'), value: ipv6.users_with_static_address, accent: dataSeriesColors[4] },
+    { label: translate('dashboard.ipv6_users_delegated_prefix'), value: ipv6.users_with_delegated_prefix, accent: dataSeriesColors[5] },
   ];
 
   const authTrendOption = useMemo(
@@ -269,7 +270,7 @@ const Dashboard = () => {
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 8,
-            borderColor: '#fff',
+            borderColor: theme.palette.background.paper,
             borderWidth: 2,
           },
           label: {
@@ -281,12 +282,7 @@ const Dashboard = () => {
             length: 20,
           },
           data: profileSlices,
-          color: [
-            theme.palette.primary.main,
-            theme.palette.secondary.main,
-            '#34d399',
-            '#facc15',
-          ],
+          color: dataSeriesColors,
         },
       ],
     }),
@@ -362,18 +358,18 @@ const Dashboard = () => {
       <GettingStartedCard />
       <Card
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           overflow: 'hidden',
           position: 'relative',
           background: isDark
-            ? 'radial-gradient(ellipse at 85% 5%, rgba(34,197,94,0.16), transparent 32%), linear-gradient(112deg, #0e1f15 0%, #10271a 58%, #123321 100%)'
-            : 'radial-gradient(ellipse at 85% 5%, rgba(34,197,94,0.12), transparent 32%), linear-gradient(112deg, #ffffff, #effaf2)',
-          border: `1px solid ${isDark ? 'rgba(74,222,128,0.25)' : 'rgba(22,163,74,0.2)'}`,
-          boxShadow: isDark ? '0 16px 42px rgba(0,0,0,0.2), inset 0 1px rgba(255,255,255,0.035)' : '0 12px 30px rgba(22,101,52,0.08)',
+            ? 'linear-gradient(120deg, #17171a 0%, #101012 72%)'
+            : 'linear-gradient(120deg, #fffdf6 0%, #e7e2d4 100%)',
+          border: '2px solid ' + alpha(theme.palette.text.primary, isDark ? 0.72 : 0.9),
+          boxShadow: '4px 4px 0 ' + alpha(theme.palette.text.primary, isDark ? 0.82 : 0.9),
           '&::after': {
-            content: '""', position: 'absolute', inset: 0, pointerEvents: 'none', opacity: isDark ? 0.28 : 0.18,
-            backgroundImage: 'linear-gradient(rgba(134,239,172,0.11) 1px, transparent 1px), linear-gradient(90deg, rgba(134,239,172,0.11) 1px, transparent 1px)',
-            backgroundSize: '24px 24px', maskImage: 'linear-gradient(90deg, transparent 42%, black 100%)',
+            content: '""', position: 'absolute', inset: 0, pointerEvents: 'none', opacity: isDark ? 0.2 : 0.13,
+            backgroundImage: 'radial-gradient(' + alpha(theme.palette.primary.main, 0.9) + ' 0.8px, transparent 1px)',
+            backgroundSize: '8px 8px', maskImage: 'linear-gradient(90deg, transparent 38%, black 100%)',
           },
         }}
       >
@@ -386,10 +382,10 @@ const Dashboard = () => {
           >
             <Box>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.6 }}>
-                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#4ade80', boxShadow: '0 0 12px #4ade80' }} />
-                <Typography variant="overline" sx={{ color: 'primary.light', fontWeight: 800, letterSpacing: '0.15em', lineHeight: 1.3 }}>MWX / NETWORK CONTROL</Typography>
+                <Box sx={{ width: 9, height: 9, border: '1px solid', borderColor: 'text.primary', bgcolor: 'primary.main', transform: 'rotate(45deg)' }} />
+                <Typography variant="overline" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.15em', lineHeight: 1.3 }}>MWX / NETWORK CONTROL</Typography>
               </Stack>
-              <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.025em', mb: 0.4 }}>
+              <Typography variant="h5" sx={{ fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif', textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.035em', mb: 0.4 }}>
                 {translate('dashboard.title')}
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 520 }}>
@@ -398,11 +394,11 @@ const Dashboard = () => {
 
             </Box>
 
-            <Box sx={{ minWidth: { xs: '100%', md: 260 }, alignSelf: 'center', p: 1.5, borderLeft: { md: '1px solid rgba(134,239,172,0.22)' }, borderTop: { xs: '1px solid rgba(134,239,172,0.22)', md: 'none' } }}>
+            <Box sx={{ minWidth: { xs: '100%', md: 260 }, alignSelf: 'center', p: 1.5, borderLeft: { md: '1px solid' }, borderTop: { xs: '1px solid', md: 'none' }, borderColor: 'divider' }}>
               <Typography variant="caption" color="text.secondary">
                 {translate('dashboard.online_ratio')}
               </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 800, my: 0.3, color: 'primary.light', fontVariantNumeric: 'tabular-nums', textShadow: '0 0 28px rgba(74,222,128,0.24)' }}>
+                <Typography variant="h3" sx={{ fontWeight: 900, my: 0.3, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
                 {onlineRatio.toFixed(1)}%
               </Typography>
               <LinearProgress
@@ -418,8 +414,8 @@ const Dashboard = () => {
                 }}
               />
               <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.8 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {translate('dashboard.online_count')} <Box component="span" sx={{ color: '#86efac', fontWeight: 800 }}>{stats.online_users}</Box>
+                  <Typography variant="caption" color="text.secondary">
+                  {translate('dashboard.online_count')} <Box component="span" sx={{ color: 'primary.main', fontWeight: 800 }}>{stats.online_users}</Box>
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {translate('dashboard.total_count')} {stats.total_users}
@@ -441,7 +437,7 @@ const Dashboard = () => {
           { label: 'dashboard.overdue', value: ispStats?.overdue ?? 0, to: '/isp/invoices' },
         ].map(({ label, value, to }) => (
           <Grid item xs={6} sm={3} key={label}>
-            <Card sx={{ height: '100%', borderRadius: 1.5, position: 'relative', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', inset: '0 auto 0 0', width: 2, bgcolor: label === 'dashboard.overdue' ? 'error.main' : 'primary.main', opacity: 0.8 } }}>
+            <Card sx={{ height: '100%', borderRadius: 0.5, position: 'relative', overflow: 'hidden', '&::before': { content: '""', position: 'absolute', inset: '0 auto 0 0', width: 2, bgcolor: label === 'dashboard.overdue' ? 'error.main' : 'primary.main', opacity: 0.8 } }}>
               <CardActionArea component={RouterLink} to={to} sx={{ height: '100%', textAlign: 'left' }}>
               <CardContent sx={{ p: 1.25, '&:last-child': { pb: 1.25 } }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.5}>
@@ -466,7 +462,7 @@ const Dashboard = () => {
             <Card
               sx={{
                 height: '100%',
-                borderRadius: 1.5,
+                borderRadius: 0.5,
                 overflow: 'hidden',
                 position: 'relative',
                 '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${card.accent}, transparent 82%)` },
@@ -491,7 +487,7 @@ const Dashboard = () => {
                     sx={{
                       width: 40,
                       height: 40,
-                      borderRadius: 1.5,
+                      borderRadius: 0.5,
                       display: 'grid',
                       placeItems: 'center',
                       backgroundColor: alpha(card.accent, 0.15),

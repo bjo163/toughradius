@@ -33,7 +33,7 @@ const CustomLoading = () => {
         gap: 2,
       }}
     >
-      <CircularProgress size={36} sx={{ color: '#4ade80' }} />
+      <CircularProgress size={36} color="primary" />
       <Typography variant="body2" color="text.secondary">Loading MWX-ISP...</Typography>
     </Box>
   );

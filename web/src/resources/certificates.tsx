@@ -300,7 +300,7 @@ const CertificateSearchHeaderCard = () => {
   }, [handleSearch]);
 
   return (
-    <Card elevation={0} sx={{ mb: 2, borderRadius: 2, border: theme => `1px solid ${theme.palette.divider}`, overflow: 'hidden' }}>
+    <Card elevation={0} sx={{ mb: 2, borderRadius: 0.5, border: theme => `1px solid ${theme.palette.divider}`, overflow: 'hidden' }}>
       <Box
         sx={{
           px: 2.5,
@@ -385,7 +385,7 @@ const CertificateListContent = () => {
     return (
       <Box>
         <CertificateSearchHeaderCard />
-        <Card elevation={0} sx={{ borderRadius: 2, border: theme => `1px solid ${theme.palette.divider}` }}>
+        <Card elevation={0} sx={{ borderRadius: 0.5, border: theme => `1px solid ${theme.palette.divider}` }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, color: 'text.secondary' }}>
             <VerifiedUserIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
             <Typography variant="h6" sx={{ opacity: 0.6, mb: 1 }}>
@@ -404,7 +404,7 @@ const CertificateListContent = () => {
     <Box>
       <CertificateSearchHeaderCard />
       <ActiveFilters fieldLabels={fieldLabels} valueLabels={valueLabels} />
-      <Card elevation={0} sx={{ borderRadius: 2, border: theme => `1px solid ${theme.palette.divider}`, overflow: 'hidden' }}>
+      <Card elevation={0} sx={{ borderRadius: 0.5, border: theme => `1px solid ${theme.palette.divider}`, overflow: 'hidden' }}>
         <Box sx={{ px: 2, py: 1, bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'), borderBottom: theme => `1px solid ${theme.palette.divider}` }}>
           <Typography variant="body2" color="text.secondary">
             {translate('resources.system/certificate.list.total', { total: total?.toLocaleString() || 0, _: 'Total %{total} certificates' })}
@@ -643,7 +643,7 @@ const CertificateDetails = () => {
   return (
     <Box sx={{ width: '100%', p: { xs: 2, sm: 3, md: 4 } }}>
       <Stack spacing={3}>
-        <Card elevation={0} sx={{ borderRadius: 4, border: theme => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, overflow: 'hidden' }}>
+        <Card elevation={0} sx={{ borderRadius: 0.5, border: theme => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, overflow: 'hidden' }}>
           <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main' }}>
@@ -711,7 +711,7 @@ const CertificateDetails = () => {
             sx={{
               m: 0,
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.04)'),
               border: theme => `1px solid ${theme.palette.divider}`,
               overflowX: 'auto',

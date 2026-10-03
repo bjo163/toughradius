@@ -12,6 +12,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 
 export const LoginPage = () => {
@@ -23,6 +24,7 @@ export const LoginPage = () => {
   const notify = useNotify();
   const translate = useTranslate();
   const queryClient = useQueryClient();
+  const theme = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,19 +55,21 @@ export const LoginPage = () => {
         minHeight: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(ellipse at 18% 12%, rgba(74,222,128,0.20), transparent 36%), radial-gradient(ellipse at 85% 88%, rgba(20,184,166,0.15), transparent 36%), linear-gradient(145deg, #07130d 0%, #0e2417 52%, #10251a 100%)',
+        bgcolor: 'background.default',
+        backgroundImage: 'radial-gradient(' + (theme.palette.mode === 'dark' ? 'rgba(230,255,0,0.09)' : 'rgba(13,13,13,0.07)') + ' 0.8px, transparent 1px)',
+        backgroundSize: '8px 8px',
       }}
     >
-      <Card sx={{ minWidth: 400, maxWidth: 500, borderRadius: 3, boxShadow: '0 24px 80px rgba(0,0,0,0.38)', border: '1px solid rgba(134,239,172,0.16)', background: 'linear-gradient(145deg, rgba(18,36,25,0.98), rgba(10,25,16,0.98))', color: '#f0fdf4' }}>
+      <Card sx={{ width: 'min(100% - 32px, 460px)', borderRadius: 1, boxShadow: '4px 4px 0 ' + theme.palette.text.primary, border: '2px solid', borderColor: 'text.primary', bgcolor: 'background.paper', color: 'text.primary' }}>
         <CardContent sx={{ p: 4 }}>
           <Box sx={{ mb: 4, textAlign: 'center' }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <Box sx={{ width: 54, height: 54, display: 'grid', placeItems: 'center', borderRadius: 2.5, color: '#07130d', background: 'linear-gradient(135deg, #86efac, #16a34a)', fontSize: 25, fontWeight: 900, letterSpacing: '-0.08em', boxShadow: '0 8px 30px rgba(34,197,94,0.28)' }}>M</Box>
+              <Box sx={{ width: 54, height: 54, display: 'grid', placeItems: 'center', border: '2px solid', borderColor: 'text.primary', borderRadius: 0.5, color: 'primary.contrastText', bgcolor: 'primary.main', fontSize: 25, fontWeight: 900, letterSpacing: '-0.08em', boxShadow: '3px 3px 0 ' + theme.palette.text.primary, transform: 'rotate(-2deg)' }}>M</Box>
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#f0fdf4', mb: 1, letterSpacing: '0.04em' }}>
+            <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif', textTransform: 'uppercase', color: 'text.primary', mb: 1, letterSpacing: '0.06em' }}>
               {translate('app.title')}
             </Typography>
-            <Typography variant="body2" sx={{ color: '#a7c4ae' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {translate('app.subtitle')}
             </Typography>
           </Box>
@@ -127,12 +131,8 @@ export const LoginPage = () => {
               sx={{
                 mt: 2,
                 py: 1.5,
-                background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)',
-                color: '#07130d',
-                boxShadow: '0 8px 24px rgba(34,197,94,0.24)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #86efac 0%, #22c55e 100%)',
-                },
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
               }}
             >
               {loading ? (

@@ -149,7 +149,7 @@ const DetailItem = ({ label, value, highlight = false }: DetailItemProps) => (
       flexDirection: 'column',
       gap: 0.5,
       p: 1.5,
-      borderRadius: 1.5,
+      borderRadius: 0.5,
       backgroundColor: theme =>
         highlight
           ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.06)
@@ -216,7 +216,7 @@ const DetailSectionCard = ({
   <Card
     elevation={0}
     sx={{
-      borderRadius: 3,
+      borderRadius: 0.5,
       border: theme => `1px solid ${theme.palette.divider}`,
       overflow: 'hidden',
       transition: 'all 0.2s ease',
@@ -249,7 +249,7 @@ const DetailSectionCard = ({
             justifyContent: 'center',
             width: 36,
             height: 36,
-            borderRadius: 2,
+            borderRadius: 0.5,
             backgroundColor: theme =>
               alpha(theme.palette[color].main, theme.palette.mode === 'dark' ? 0.3 : 0.15),
             color: `${color}.main`,
@@ -323,7 +323,7 @@ const FormSection = ({ title, description, children }: FormSectionProps) => (
     sx={{
       p: 3,
       mb: 3,
-      borderRadius: 2,
+      borderRadius: 0.5,
       border: theme => `1px solid ${theme.palette.divider}`,
       backgroundColor: theme => theme.palette.background.paper,
       width: '100%'
@@ -432,7 +432,7 @@ const FieldGridItem = ({
 
 const controlWrapperSx = {
   border: (theme: Theme) => `1px solid ${theme.palette.divider}`,
-  borderRadius: 2,
+  borderRadius: 0.5,
   px: 2,
   py: 1.5,
   height: '100%',
@@ -493,7 +493,7 @@ const RadiusUserListSkeleton = ({ rows = 10 }: { rows?: number }) => (
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
       }}
     >
@@ -525,7 +525,7 @@ const RadiusUserListSkeleton = ({ rows = 10 }: { rows?: number }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -680,7 +680,7 @@ const UserSearchHeaderCard = () => {
       elevation={0}
       sx={{
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 0.5,
         border: theme => `1px solid ${theme.palette.divider}`,
         overflow: 'hidden',
       }}
@@ -729,7 +729,7 @@ const UserSearchHeaderCard = () => {
               fullWidth
               sx={{
                 '& .MuiInputBase-root': {
-                  borderRadius: 1.5,
+                  borderRadius: 0.5,
                 },
               }}
             />
@@ -978,7 +978,7 @@ const RadiusUserListContent = () => {
         <Card
           elevation={0}
           sx={{
-            borderRadius: 2,
+            borderRadius: 0.5,
             border: theme => `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -1000,7 +1000,7 @@ const RadiusUserListContent = () => {
       <Card
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 0.5,
           border: theme => `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
         }}
@@ -1572,7 +1572,7 @@ const UserHeaderCard = () => {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 0.5,
         background: theme =>
           theme.palette.mode === 'dark'
             ? isEnabled
@@ -1722,7 +1722,7 @@ const UserHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1741,7 +1741,7 @@ const UserHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1760,7 +1760,7 @@ const UserHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -1779,7 +1779,7 @@ const UserHeaderCard = () => {
           <Box
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 0.5,
               bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(8px)',
             }}
@@ -2122,7 +2122,7 @@ const UserDetails = () => {
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 0.5,
                 bgcolor: theme =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255, 255, 255, 0.02)'

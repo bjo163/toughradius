@@ -9,7 +9,6 @@ import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGe
 export const CustomAppBar = (props: AppBarProps) => {
   const redirect = useRedirect();
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const { data: identity } = useGetIdentity();
   const translate = useTranslate();
   const [sidebarOpen, setSidebarOpen] = useSidebarState();
@@ -25,15 +24,11 @@ export const CustomAppBar = (props: AppBarProps) => {
       elevation={0}
       alwaysOn={true}
       sx={{
-        backgroundColor: isDark ? '#0e1f15' : '#ffffff',
-        color: isDark ? '#f1f5f9' : '#1f2937',
-        borderBottom: isDark
-          ? '1px solid rgba(74, 222, 128, 0.2)'
-          : '1px solid rgba(22, 163, 74, 0.18)',
-        boxShadow: isDark 
-          ? 'none' 
-          : '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-        transition: 'all 0.3s ease',
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        borderBottom: '2px solid ' + theme.palette.text.primary,
+        boxShadow: '0 2px 0 ' + theme.palette.text.primary,
+        transition: 'background-color 0.16s ease, color 0.16s ease',
         // 隐藏默认的汉堡菜单button，我们自己添加
         '& .RaAppBar-menuButton': {
           display: 'none',
@@ -63,12 +58,10 @@ export const CustomAppBar = (props: AppBarProps) => {
               size="medium"
               onClick={handleToggleSidebar}
               sx={{
-                color: isDark ? '#f1f5f9' : '#6b7280',
+                color: theme.palette.text.primary,
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: isDark 
-                    ? 'rgba(255, 255, 255, 0.1)'
-                    : 'rgba(0, 0, 0, 0.05)',
+                  backgroundColor: theme.palette.action.hover,
                 },
               }}
             >
@@ -81,25 +74,25 @@ export const CustomAppBar = (props: AppBarProps) => {
             height: 30,
             display: 'grid',
             placeItems: 'center',
-            borderRadius: 1.5,
-            color: isDark ? '#07130d' : '#ffffff',
-            background: isDark ? 'linear-gradient(135deg, #86efac, #22c55e)' : 'linear-gradient(135deg, #22c55e, #15803d)',
+            borderRadius: 0.5,
+            border: '1px solid ' + theme.palette.text.primary,
+            color: theme.palette.primary.contrastText,
+            backgroundColor: theme.palette.primary.main,
             fontSize: 15,
             fontWeight: 900,
             letterSpacing: '-0.08em',
-            boxShadow: '0 4px 16px rgba(34, 197, 94, 0.28)',
+            boxShadow: '2px 2px 0 ' + theme.palette.text.primary,
           }}>M</Box>
           <Typography
             variant="h6" 
             sx={{ 
               fontSize: { xs: 15, sm: 18 },
-              fontWeight: 700, 
+              fontWeight: 900,
+              fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif',
               whiteSpace: 'nowrap',
-              color: isDark ? '#f1f5f9' : '#1f2937',
-              letterSpacing: '0.04em',
-              background: isDark ? 'linear-gradient(90deg, #f0fdf4, #86efac)' : 'linear-gradient(90deg, #14532d, #16a34a)',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: theme.palette.text.primary,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
             }}
           >
               MWX-ISP
@@ -108,12 +101,12 @@ export const CustomAppBar = (props: AppBarProps) => {
         </Stack>
 
         <Stack direction="row" spacing={{ xs: 0.25, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
-          <Typography aria-label="Interface language" variant="caption" sx={{ color: isDark ? '#86efac' : '#166534', fontWeight: 800, letterSpacing: '0.08em', px: 1 }}>
+          <Typography aria-label="Interface language" variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 800, letterSpacing: '0.12em', px: 1 }}>
             EN
           </Typography>
 
           <Tooltip title="User guide">
-            <IconButton size="large" aria-label="Open user guide" onClick={() => redirect('/guide')} sx={{ color: isDark ? '#f1f5f9' : '#6b7280' }}>
+            <IconButton size="large" aria-label="Open user guide" onClick={() => redirect('/guide')} sx={{ color: theme.palette.text.secondary }}>
               <HelpOutlineIcon />
             </IconButton>
           </Tooltip>
@@ -123,16 +116,14 @@ export const CustomAppBar = (props: AppBarProps) => {
               sx={{ 
                 '& svg': { 
                   fontSize: 22, 
-                  color: isDark ? '#f1f5f9' : '#6b7280',
+                  color: theme.palette.text.secondary,
                 },
                 '& button': {
-                  color: isDark ? '#f1f5f9' : '#6b7280',
+                  color: theme.palette.text.secondary,
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     transform: 'rotate(180deg)',
-                    backgroundColor: isDark 
-                      ? 'rgba(255, 255, 255, 0.1)'
-                      : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: theme.palette.action.hover,
                   },
                 },
               }}
@@ -148,13 +139,11 @@ export const CustomAppBar = (props: AppBarProps) => {
                 size="large" 
                 onClick={() => redirect('/system/config')}
                 sx={{
-                  color: isDark ? '#f1f5f9' : '#6b7280',
+                  color: theme.palette.text.secondary,
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     transform: 'scale(1.05)',
-                    backgroundColor: isDark 
-                      ? 'rgba(255, 255, 255, 0.1)'
-                      : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: theme.palette.action.hover,
                   },
                 }}
               >
@@ -169,13 +158,11 @@ export const CustomAppBar = (props: AppBarProps) => {
               size="large" 
               onClick={() => redirect('/account/settings')}
               sx={{
-                color: isDark ? '#f1f5f9' : '#6b7280',
+                color: theme.palette.text.secondary,
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   transform: 'scale(1.05)',
-                  backgroundColor: isDark 
-                    ? 'rgba(255, 255, 255, 0.1)'
-                    : 'rgba(0, 0, 0, 0.05)',
+                  backgroundColor: theme.palette.action.hover,
                 },
               }}
             >

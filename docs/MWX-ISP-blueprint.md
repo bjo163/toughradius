@@ -248,3 +248,51 @@ Tour singkat memperkenalkan Dashboard → Customers/Subscriptions → Online Ses
 ### Batas ruang lingkup
 
 Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigurasi otomatis, integrasi telemetry/help analytics, backend progress API, knowledge base eksternal, atau sistem ticketing. Bila kelak dibutuhkan progres lintas perangkat atau data demo, ajukan scope terpisah melalui feature checklist.
+
+## 13. Audit konsistensi visual dan rencana branding per instalasi
+
+### Temuan audit kode saat ini (2026-10-04)
+
+- `web/src/theme.ts` sudah menyediakan tema gelap default, palet hijau, token status, dan gaya global MUI; ini fondasi yang baik untuk mempertahankan karakter MWX yang teknis dan padat data.
+- Sejumlah halaman/resource masih mendefinisikan warna, gradient, radius, shadow, dan aksen secara lokal. Beberapa contoh mencampur nilai biru Material (`#1976d2`, `#0288d1`), merah/hijau status literal, aksen oranye/teal/lime, dan radius dari 1 sampai 4. Akibatnya halaman tidak seluruhnya mengikuti token tema dan branding warna tidak bisa diterapkan seragam.
+- Permukaan merek menggandakan nilai tetap: nama/monogram pada AppBar, nama footer sidebar, halaman Login, `Admin title`, `index.html` title, favicon dan label loading. Mengubah satu tempat saat ini tidak mengubah semuanya.
+- Nama perusahaan dan informasi invoice memang dapat dikonfigurasi melalui `isp.company_*`, tetapi itu adalah identitas penagih. Nilai tersebut belum mengubah nama produk, logo, aksen UI, atau favicon dan tidak boleh diam-diam digunakan sebagai pengganti merek aplikasi.
+- Tema MUI dibangun dari preset dark/light statis. Belum ada editor branding per instalasi, preview, reset ke MWX default, atau sumber tunggal untuk logo dan nama produk.
+- Referensi visual yang diminta: `X:\REPO\focus\moonwitness\apps\board` (MoonWitness Board). `src/index.css` mendefinisikan tema manga/ink dengan paper/ink berkontras tinggi, aksen lime dan hot pink, palet invers untuk dark mode, halftone/grain, border tegas, offset hard shadow, serta font display/body/mono yang berbeda. `src/components/manga/effects.tsx` menambahkan speed lines, scribble underline, doodle, rough frame, dan speech bubble; `src/components/layout/app-shell.tsx` memakai active nav seperti sticker dan shadow offset.
+- Arah visual MWX yang direncanakan menjadi **manga-ink enterprise**: ambil bahasa visual MoonWitness—kontras paper/ink, outline yang tegas, hard shadow pendek, aksen lime yang khas, micro-label mono, judul display, dan tekstur/halftone—lalu adaptasikan pada dashboard operator yang padat. Dark tetap default MWX; lime menjadi highlight brand, sementara pink hanya aksen dekoratif terbatas. Warna semantic status tetap hijau/amber/merah yang mudah dipahami. Terapkan efek komik besar (speed lines, marker, doodle/sticker) hanya pada hero, empty state, atau active selection yang tepat; hindari animasi/rough border di tabel, form, dialog konfirmasi, serta angka operasional.
+- Konsistensi saat ini juga mencakup bukan hanya warna: radius dan density berbeda antar komponen; kartu dan hero lokal mengulang gradient/shadow; hierarchy typography dan label uppercase belum punya aturan lintas halaman. Keseragaman harus memasukkan bentuk, border weight, offset shadow, typography, micro-label, hover/focus/pressed behavior, serta reduced-motion.
+
+### Hasil produk yang dituju
+
+1. **Visual konsisten:** halaman menggunakan token MUI dan komponen bersama untuk surface, section heading, metric, status, form, data table, dan page header. Karakter manga-ink tetap tampak, tetapi pola visual dan intensitas efek punya aturan jelas untuk menjaga fokus kerja profesional.
+2. **Branding editable per instalasi tunggal:** Admin dapat mengganti nama produk yang terlihat, nama ringkas/monogram, tagline, logo, dan warna aksen utama; UI memperbarui header, login, footer, browser title, favicon, dan tema tanpa rebuild frontend.
+3. **Default aman:** nilai awal tetap MWX-ISP, dark theme, hijau MWX, dan aset MWX. Admin dapat preview sebelum simpan dan reset identitas produk ke default. Brand aplikasi tidak mengubah nama legal/perusahaan pada invoice.
+4. **Batas arsitektur:** branding berlaku global untuk satu deployment; tidak membuat tenant, white-label per customer, marketplace tema, plugin branding, atau CSS bebas.
+
+### Tahapan rencana
+
+- **J.1 — Baseline visual:** audit semua route aktif dan bandingkan langsung dengan `moonwitness/apps/board`; petakan token paper/ink/lime/pink/dark, font display/body/mono, halftone, border 2px, offset shadow, active sticker, speedline, reduced motion. Buat matriks adaptasi (adopt / tone down / skip), lalu ambil screenshot dashboard/login/resource pada dark/light serta viewport lebar/sempit. Tetapkan kontras, fokus keyboard, dan aturan kepadatan data.
+- **J.2 — Sumber token tunggal:** perluas `theme.ts` dengan token semantik (ink/surface, brand lime, decorative pink, border, hard shadow, focus, data-series, state, type scale) dan theme factory. Tetapkan palet gelap sebagai default; light mode membalik paper/ink dengan aksen identitas yang konsisten. Branding accent yang dapat diedit tetap dibatasi agar tidak menimpa status success/warning/error atau teks kontras.
+- **J.3 — Komponen/pola bersama:** rapikan page header display + underline/highlighter terbatas, section rail, metric card border tegas + hard offset shadow ringan, micro-label mono, toolbar/filter, status chip, form section, data table, empty/loading/error state. Gunakan scale border/radius/elevation konsisten dan perilaku hover/pressed tactile yang halus. Migrasi bertahap—shell/login/dashboard; ISP/billing; RADIUS/network; system/operations—tanpa efek berulang yang mengganggu pemindaian.
+- **J.4 — Scope branding dan penyimpanan:** sebelum coding, revisi acceptance TR-F029 (CN dan EN) agar mencakup identitas configurable per deployment sambil mempertahankan batas satu instance; selaraskan roadmap/todo. Tambah struktur settings terpisah dari `isp.company_*` untuk product name, short name/mark, tagline, logo reference, dan accent color. Simpan di mekanisme config yang sudah tersedia bila batas nilai/penyimpanan sesuai; perubahan logo yang memerlukan unggah aset memakai endpoint Admin terpisah dengan validasi format, ukuran, nama, lokasi penyimpanan, dan akses. Jangan menerima SVG arbitrer atau CSS bebas tanpa strategi sanitasi.
+- **J.5 — Editor branding Admin:** letakkan di System Configuration atau halaman Branding di bawah area system existing. Tampilkan preview live header/login/sidebar, picker aksen dengan preview contrast di dark/light, field nama/tagline, upload/ganti/hapus logo, tombol Save/Reset to MWX defaults, dan konfirmasi singkat untuk reset. Jangan menampilkan nilai rahasia atau menggunakan upload sebagai endpoint publik.
+- **J.6 — Runtime propagation:** muat branding sebelum shell tampil agar tidak berkedip dari nama default ke custom; terapkan data yang sama pada AppBar, login, menu footer, document title, favicon, loading, dan theme provider. Tangani config belum tersedia, logo gagal dimuat, warna tidak valid, perubahan external/admin lain, serta reset; fallback selalu MWX green.
+- **J.7 — Audit/migrasi visual:** ganti literal dekoratif yang bertentangan dengan token, bukan warna status semantik. Terapkan halftone/grain rendah kontras pada background/hero saja; speedlines, doodles, scribble dan marker hanya sebagai aksen kontekstual non-data; jangan memutar badge/status operasional. Hard shadow pendek dan border ink harus menguatkan hierarchy, bukan mengelilingi setiap cell. Angka/status tetap lebih menonjol daripada hiasan; tabel responsif tidak kehilangan kolom kunci. Patuhi `prefers-reduced-motion` dan hindari gerakan dekoratif berulang.
+- **J.8 — Verifikasi:** cek dark/light × default/custom brand × desktop/tablet/mobile, halaman Login, Dashboard, semua resource, Operations, dan System Config; uji role Admin/operator, preview/cancel/save/reset, logo invalid/oversized/offline, config lama/kosong, reload, aksesibilitas keyboard/contrast, console, build dan browser journey. Branding tidak boleh mengubah data billing, secret RADIUS/SNMP, atau hasil otorisasi.
+
+### Batas dan keputusan yang perlu dipertahankan
+
+- Ini adalah rencana; belum ada perubahan visual atau fungsi branding pada kode dari bagian ini.
+- MoonWitness Board adalah referensi bahasa visual saja. Jangan menyalin identitas produk MoonWitness, logo, teks/asset, atau implementasi komponen dan dependensinya; adaptasikan motif dengan MUI dan struktur React Admin MWX yang telah ada.
+- Sebelum implementasi J.4, perubahan TR-F029 perlu dicatat pada `docs/feature-checklist.md` serta `docs/feature-checklist.en.md`. Existing acceptance saat ini menyebut merek terlihat tetap MWX-ISP; editor brand yang dapat mengganti nama/logo/warna memperluas scope yang disetujui. Rencana implementasi harus menunggu penyelarasan baseline tersebut.
+- Tidak mengubah company/billing identity, format invoice, warna status semantik, ACL, atau data bisnis hanya karena Admin mengubah product brand.
+- Upload logo sebaiknya menerima format raster yang disetujui (contoh PNG/WebP) dengan ukuran maksimum eksplisit dan hanya dapat diakses sebagai file statis pasif; bila SVG diminta kelak, perlu sanitasi/allowlist tersendiri.
+
+### Kriteria penerimaan rencana implementasi
+
+- Semua lokasi yang menampilkan brand memakai satu konfigurasi dan kembali ke MWX-ISP saat konfigurasi hilang atau di-reset.
+- Warna aksen custom tetap terbaca di dark dan light; state sukses/peringatan/error dan warna seri data tidak tertukar dengan brand.
+- Preview tidak menyimpan perubahan; Save bertahan sesudah reload; Reset memulihkan seluruh default UI brand.
+- Logo invalid/terlalu besar ditolak dan logo yang gagal dimuat menggunakan fallback tanpa merusak layout.
+- Audit tiap grup halaman menunjukkan konsistensi komponen, kepadatan data, akses keyboard, dan kontras tanpa merombak proses kerja RADIUS/ISP.
+- Checklist, README/blueprint, label dan bantuan selaras; identitas invoice tetap terpisah dari identitas produk.
