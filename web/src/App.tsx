@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import AccountSettings from './pages/AccountSettings';
 import { SystemConfigPage } from './pages/SystemConfigPage';
 import OperationsPage from './pages/OperationsPage';
+import UserGuidePage from './pages/UserGuidePage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
 import { theme, lightTheme } from './theme';
@@ -174,6 +175,7 @@ const App = () => (
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
       <Route path="/operations" element={<OperationsPage />} />
+      <Route path="/guide" element={<UserGuidePage />} />
     </CustomRoutes>
     </Admin>
 );

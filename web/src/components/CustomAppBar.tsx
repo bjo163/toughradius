@@ -2,6 +2,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Box, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
 import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, useTranslate, useSidebarState } from 'react-admin';
 
@@ -110,6 +111,12 @@ export const CustomAppBar = (props: AppBarProps) => {
           <Typography aria-label="Interface language" variant="caption" sx={{ color: isDark ? '#86efac' : '#166534', fontWeight: 800, letterSpacing: '0.08em', px: 1 }}>
             EN
           </Typography>
+
+          <Tooltip title="User guide">
+            <IconButton size="large" aria-label="Open user guide" onClick={() => redirect('/guide')} sx={{ color: isDark ? '#f1f5f9' : '#6b7280' }}>
+              <HelpOutlineIcon />
+            </IconButton>
+          </Tooltip>
 
           <Tooltip title={translate('appbar.toggle_theme')}>
             <Box 

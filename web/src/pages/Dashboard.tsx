@@ -20,6 +20,7 @@ import { useMemo } from 'react';
 import { useTranslate } from 'react-admin';
 import { Link as RouterLink } from 'react-router-dom';
 import { useApiQuery } from '../hooks/useApiQuery';
+import { GettingStartedCard } from '../components/onboarding/GettingStartedCard';
 
 interface DashboardStats {
   total_users: number;
@@ -358,6 +359,7 @@ const Dashboard = () => {
         />
       )}
       {(statsError || ispStatsError) && <Alert severity="warning">Some dashboard data could not be loaded. Values may be incomplete; retry after checking the server connection.</Alert>}
+      <GettingStartedCard />
       <Card
         sx={{
           borderRadius: 2,

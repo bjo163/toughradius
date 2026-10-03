@@ -185,6 +185,14 @@ export default function AccountSettings() {
 
   const passwordMutation = useApiMutation<{ message?: string }>({
     onSuccess: () => {
+      const onboardingKey = `mwx-isp:onboarding:v1:${encodeURIComponent(localStorage.getItem('username') || 'operator')}:checks`;
+      try {
+        const stored: unknown = JSON.parse(localStorage.getItem(onboardingKey) ?? '[]');
+        const checks = Array.isArray(stored) ? stored.filter((item): item is string => typeof item === 'string') : [];
+        localStorage.setItem(onboardingKey, JSON.stringify([...new Set([...checks, 'secure-account'])]));
+      } catch {
+        // Password changes remain successful if browser storage is disabled.
+      }
       notify('Password changeSuccess');
       setPasswordForm({ newPassword: '', confirmPassword: '' });
     },
