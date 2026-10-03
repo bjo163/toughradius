@@ -362,9 +362,7 @@ const Dashboard = () => {
           borderRadius: 0.5,
           overflow: 'hidden',
           position: 'relative',
-          background: isDark
-            ? 'linear-gradient(120deg, #17171a 0%, #101012 72%)'
-            : 'linear-gradient(120deg, #fffdf6 0%, #e7e2d4 100%)',
+          background: `linear-gradient(120deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, isDark ? 0.1 : 0.08)} 100%)`,
           border: '2px solid ' + alpha(theme.palette.text.primary, isDark ? 0.72 : 0.9),
           boxShadow: '4px 4px 0 ' + alpha(theme.palette.text.primary, isDark ? 0.82 : 0.9),
           '&::after': {
@@ -507,7 +505,7 @@ const Dashboard = () => {
         ))}
       </Grid>
 
-      <Card sx={{ borderRadius: 1.5 }}>
+      <Card sx={{ borderRadius: 0.5 }}>
         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
@@ -533,7 +531,7 @@ const Dashboard = () => {
           <Grid container spacing={0.75}>
             {ipv6Cards.map((item) => (
               <Grid item xs={6} md={3} key={item.label}>
-                <Box sx={{ p: 1, borderRadius: 1, backgroundColor: alpha(item.accent, 0.075), border: `1px solid ${alpha(item.accent, 0.12)}` }}>
+                <Box sx={{ p: 1, borderRadius: 0.5, backgroundColor: alpha(item.accent, 0.075), border: `1px solid ${alpha(item.accent, 0.12)}` }}>
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {item.label}
                   </Typography>
@@ -549,7 +547,7 @@ const Dashboard = () => {
 
       <Grid container spacing={1.25}>
         <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 1.5, height: '100%' }}>
+          <Card sx={{ borderRadius: 0.5, height: '100%' }}>
             <CardContent sx={{ height: '100%', p: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
                 {translate('dashboard.auth_trend')}
@@ -562,7 +560,7 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 1.5, height: '100%' }}>
+          <Card sx={{ borderRadius: 0.5, height: '100%' }}>
             <CardContent sx={{ height: '100%', p: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
                 {translate('dashboard.online_distribution')}
@@ -575,7 +573,7 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12}>
-          <Card sx={{ borderRadius: 1.5 }}>
+          <Card sx={{ borderRadius: 0.5 }}>
             <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
                 {translate('dashboard.traffic_stats')}

@@ -6,7 +6,7 @@ import { Theme } from '@mui/material/styles';
  */
 export const controlWrapperSx = {
   border: (theme: Theme) => `1px solid ${theme.palette.divider}`,
-  borderRadius: 2,
+  borderRadius: 0.5,
   px: 2,
   py: 1.5,
   height: '100%',
