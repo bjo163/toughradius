@@ -393,7 +393,7 @@ func (a *Application) ensureDefaultTenant() error {
 	}
 	// PostgreSQL sequences are not advanced by explicit-ID inserts. Keep the
 	// next generated tenant ID above the default row and any pre-existing rows.
-	if a.gormDB.Dialector.Name() == "postgres" {
+	if a.gormDB.Name() == "postgres" {
 		var sequenceValue int64
 		if err := a.gormDB.Raw(`SELECT setval(pg_get_serial_sequence('tenant', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM tenant), 1), 1), true)`).Scan(&sequenceValue).Error; err != nil {
 			return fmt.Errorf("advance tenant ID sequence: %w", err)
