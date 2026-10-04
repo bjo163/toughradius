@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/app"
-	"github.com/bjo163/mwx-isp/internal/domain"
-	"github.com/bjo163/mwx-isp/pkg/common"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +30,7 @@ func setupAuthTest(t *testing.T) (*gorm.DB, *echo.Echo, app.AppContext, *domain.
 
 	testOpr := &domain.SysOpr{
 		ID:        common.UUIDint64(),
+		TenantID:  domain.DefaultTenantID,
 		Username:  "testuser",
 		Password:  hashedPassword,
 		Realname:  "Test User",
@@ -239,12 +240,107 @@ func TestIssueToken(t *testing.T) {
 	// Verify claims
 	if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok {
 		assert.Equal(t, fmt.Sprintf("%d", testOpr.ID), claims["sub"])
+		assert.Equal(t, fmt.Sprintf("%d", testOpr.TenantID), claims["tenant_id"])
 		assert.Equal(t, testOpr.Username, claims["username"])
 		assert.Equal(t, testOpr.Level, claims["role"])
 		assert.Equal(t, "toughradius", claims["iss"])
 	} else {
 		t.Errorf("unable to parse claims")
 	}
+}
+
+func TestLoginHandlerScopesCredentialsAndTokenToTenant(t *testing.T) {
+	db, e, appCtx, defaultOperator, cleanup := setupAuthTest(t)
+	defer cleanup()
+
+	otherTenant := domain.Tenant{ID: 2, Name: "RT RW Net Example", Slug: "rt-rw-example", Kind: "rtrw", Status: "active"}
+	require.NoError(t, db.Create(&otherTenant).Error)
+	hashedPassword, err := common.HashPassword("OtherPassword123")
+	require.NoError(t, err)
+	otherOperator := domain.SysOpr{
+		ID: common.UUIDint64(), TenantID: otherTenant.ID, Username: defaultOperator.Username,
+		Password: hashedPassword, Level: "admin", Status: common.ENABLED,
+	}
+	require.NoError(t, db.Create(&otherOperator).Error)
+
+	login := func(tenantSlug, password string) (*httptest.ResponseRecorder, map[string]interface{}) {
+		t.Helper()
+		body, marshalErr := json.Marshal(map[string]string{
+			"tenant_slug": tenantSlug, "username": defaultOperator.Username, "password": password,
+		})
+		require.NoError(t, marshalErr)
+		req := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(string(body)))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		ctx := CreateTestContext(e, db, req, rec, appCtx)
+		require.NoError(t, loginHandler(ctx))
+		var envelope map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+		return rec, envelope
+	}
+
+	wrongTenantResponse, _ := login(otherTenant.Slug, "password123")
+	assert.Equal(t, http.StatusUnauthorized, wrongTenantResponse.Code,
+		"a valid password from another organization must not authenticate")
+
+	response, envelope := login(otherTenant.Slug, "OtherPassword123")
+	require.Equal(t, http.StatusOK, response.Code)
+	data, ok := envelope["data"].(map[string]interface{})
+	require.True(t, ok)
+	tokenString, ok := data["token"].(string)
+	require.True(t, ok)
+	claims := jwt.MapClaims{}
+	parsed, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(appCtx.Config().Web.Secret), nil
+	})
+	require.NoError(t, err)
+	require.True(t, parsed.Valid)
+	assert.Equal(t, fmt.Sprintf("%d", otherTenant.ID), claims["tenant_id"])
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+	ctx := CreateTestContext(e, db, req, httptest.NewRecorder(), appCtx)
+	ctx.Set("current_operator", nil)
+	ctx.Set("user", parsed)
+	resolved, err := resolveOperatorFromContext(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, otherTenant.ID, resolved.TenantID)
+	assert.Equal(t, otherTenant.ID, ctx.Get("tenant_id"))
+
+	// A signed but mismatched tenant claim cannot move an operator into a tenant
+	// where that operator record does not belong.
+	operatorWithForgedScope := *defaultOperator
+	operatorWithForgedScope.TenantID = otherTenant.ID
+	forgedScope, err := issueToken(ctx, operatorWithForgedScope)
+	require.NoError(t, err)
+	forgedParsed, err := jwt.Parse(forgedScope, func(token *jwt.Token) (interface{}, error) {
+		return []byte(appCtx.Config().Web.Secret), nil
+	})
+	require.NoError(t, err)
+	ctx.Set("user", forgedParsed)
+	_, err = resolveOperatorFromContext(ctx)
+	require.Error(t, err)
+}
+
+func TestListLoginTenantsReturnsOnlyActivePublicFields(t *testing.T) {
+	db, e, appCtx := CreateTestAppContext(t)
+	require.NoError(t, db.Create(&domain.Tenant{ID: 2, Name: "Active Net", Slug: "active-net", Kind: "rtrw", Status: "active"}).Error)
+	require.NoError(t, db.Create(&domain.Tenant{ID: 3, Name: "Disabled Net", Slug: "disabled-net", Kind: "isp", Status: "disabled"}).Error)
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/tenants", nil)
+	rec := httptest.NewRecorder()
+	ctx := CreateTestContext(e, db, req, rec, appCtx)
+	require.NoError(t, listLoginTenantsHandler(ctx))
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var envelope map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+	data, ok := envelope["data"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, data, 2)
+	serialized, err := json.Marshal(data)
+	require.NoError(t, err)
+	assert.NotContains(t, string(serialized), "disabled-net")
+	assert.NotContains(t, string(serialized), "status")
 }
 
 // TestTokenExpirationTime tests token expiration time
@@ -364,6 +460,35 @@ func TestResolveOperatorFromContext_DisabledAccount(t *testing.T) {
 	err = currentUserHandler(c2)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusUnauthorized, rec2.Code)
+}
+
+func TestTenantContextMiddlewareRejectsInactiveTenant(t *testing.T) {
+	db, e, appCtx, operator, cleanup := setupAuthTest(t)
+	defer cleanup()
+
+	savedResolver := testOperatorResolver
+	testOperatorResolver = nil
+	t.Cleanup(func() { testOperatorResolver = savedResolver })
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/users", nil)
+	response := httptest.NewRecorder()
+	ctx := CreateTestContext(e, db, request, response, appCtx)
+	ctx.Set("current_operator", nil)
+	setJWTUser(t, ctx, operator)
+	next := func(c echo.Context) error {
+		assert.Equal(t, operator.TenantID, c.Get("tenant_id"))
+		return c.NoContent(http.StatusNoContent)
+	}
+	require.NoError(t, tenantContextMiddleware()(next)(ctx))
+	assert.Equal(t, http.StatusNoContent, response.Code)
+
+	require.NoError(t, db.Model(&domain.Tenant{}).Where("id = ?", operator.TenantID).Update("status", "disabled").Error)
+	response = httptest.NewRecorder()
+	ctx = CreateTestContext(e, db, request, response, appCtx)
+	ctx.Set("current_operator", nil)
+	setJWTUser(t, ctx, operator)
+	require.NoError(t, tenantContextMiddleware()(next)(ctx))
+	assert.Equal(t, http.StatusUnauthorized, response.Code)
 }
 
 // TestResolveOperatorFromContext_IgnoresInjectedOperatorInProduction proves the

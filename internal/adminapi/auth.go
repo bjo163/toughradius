@@ -24,6 +24,13 @@ const tokenTTL = 12 * time.Hour
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Tenant   string `json:"tenant_slug"`
+}
+
+type loginTenant struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+	Kind string `json:"kind"`
 }
 
 // loginRateLimiter throttles authentication attempts per client IP to slow down
@@ -52,7 +59,37 @@ func loginRateLimiter() echo.MiddlewareFunc {
 
 func registerAuthRoutes() {
 	webserver.ApiPOST("/auth/login", loginHandler, loginRateLimiter())
+	webserver.ApiGET("/auth/tenants", listLoginTenantsHandler)
 	webserver.ApiGET("/auth/me", currentUserHandler)
+}
+
+func listLoginTenantsHandler(c echo.Context) error {
+	var tenants []loginTenant
+	err := GetDB(c).Model(&domain.Tenant{}).
+		Select("name", "slug", "kind").
+		Where("status = ?", "active").Order("name ASC, id ASC").Find(&tenants).Error
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to list organizations", err.Error())
+	}
+	return ok(c, tenants)
+}
+
+func tenantContextMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if c.Get("user") == nil {
+				// Public auth routes are skipped by JWT middleware. Protected routes
+				// without a token have already been rejected before reaching here.
+				return next(c)
+			}
+			operator, err := resolveOperatorFromContext(c)
+			if err != nil {
+				return fail(c, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required", nil)
+			}
+			c.Set("authenticated_operator", operator)
+			return next(c)
+		}
+	}
 }
 
 func loginHandler(c echo.Context) error {
@@ -62,21 +99,42 @@ func loginHandler(c echo.Context) error {
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	req.Password = strings.TrimSpace(req.Password)
+	req.Tenant = strings.ToLower(strings.TrimSpace(req.Tenant))
+	if req.Tenant == "" {
+		req.Tenant = "default"
+	}
 	if req.Username == "" || req.Password == "" {
 		return fail(c, http.StatusBadRequest, "INVALID_CREDENTIALS", "Username and password cannot be empty", nil)
 	}
-
-	var operator domain.SysOpr
-	err := GetDB(c).Where("username = ?", req.Username).First(&operator).Error
+	var tenant domain.Tenant
+	err := GetDB(c).Where("slug = ? AND status = ?", req.Tenant, "active").First(&tenant).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return fail(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Incorrect username or password", nil)
+		return fail(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Incorrect organization, username, or password", nil)
+	}
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to query organization", err.Error())
+	}
+
+	var operators []domain.SysOpr
+	err = GetDB(c).Where("tenant_id = ? AND username = ?", tenant.ID, req.Username).Limit(2).Find(&operators).Error
+	if err == nil && len(operators) > 1 {
+		return fail(c, http.StatusInternalServerError, "AMBIGUOUS_OPERATOR", "Multiple operator accounts match this organization", nil)
+	}
+	var operator domain.SysOpr
+	if len(operators) == 1 {
+		operator = operators[0]
+	} else if err == nil {
+		err = gorm.ErrRecordNotFound
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return fail(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Incorrect organization, username, or password", nil)
 	}
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to query user", err.Error())
 	}
 
 	if !common.VerifyPassword(req.Password, operator.Password) {
-		return fail(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Incorrect username or password", nil)
+		return fail(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Incorrect organization, username, or password", nil)
 	}
 	if strings.EqualFold(operator.Status, common.DISABLED) {
 		return fail(c, http.StatusForbidden, "ACCOUNT_DISABLED", "Account has been disabled", nil)
@@ -87,14 +145,16 @@ func loginHandler(c echo.Context) error {
 		return fail(c, http.StatusInternalServerError, "TOKEN_ERROR", "Failed to generate login token", nil)
 	}
 
-	go func(id int64) {
-		GetDB(c).Model(&domain.SysOpr{}).Where("id = ?", id).Update("last_login", time.Now())
-	}(operator.ID)
+	db := GetDB(c)
+	go func(id, tenantID int64) {
+		db.Model(&domain.SysOpr{}).Where("id = ? AND tenant_id = ?", id, tenantID).Update("last_login", time.Now())
+	}(operator.ID, tenant.ID)
 
 	operator.Password = ""
 	return ok(c, map[string]interface{}{
 		"token":        token,
 		"user":         operator,
+		"tenant":       tenant,
 		"permissions":  []string{},
 		"tokenExpires": time.Now().Add(tokenTTL).Unix(),
 	})
@@ -103,13 +163,14 @@ func loginHandler(c echo.Context) error {
 func issueToken(c echo.Context, op domain.SysOpr) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub":      fmt.Sprintf("%d", op.ID),
-		"username": op.Username,
-		"role":     op.Level,
-		"exp":      now.Add(tokenTTL).Unix(),
-		"iat":      now.Unix(),
-		"nbf":      now.Add(-1 * time.Minute).Unix(),
-		"iss":      "toughradius",
+		"sub":       fmt.Sprintf("%d", op.ID),
+		"tenant_id": fmt.Sprintf("%d", op.TenantID),
+		"username":  op.Username,
+		"role":      op.Level,
+		"exp":       now.Add(tokenTTL).Unix(),
+		"iat":       now.Unix(),
+		"nbf":       now.Add(-1 * time.Minute).Unix(),
+		"iss":       "toughradius",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(GetAppContext(c).Config().Web.Secret))
@@ -122,6 +183,7 @@ func currentUserHandler(c echo.Context) error {
 	}
 	return ok(c, map[string]interface{}{
 		"user":        operator,
+		"tenant":      c.Get("tenant"),
 		"permissions": []string{},
 	})
 }
@@ -162,8 +224,18 @@ func resolveOperatorFromContext(c echo.Context) (*domain.SysOpr, error) {
 	if err != nil {
 		return nil, errors.New("invalid token id")
 	}
+	tenantClaim, _ := claims["tenant_id"].(string)
+	tenantID, err := strconv.ParseInt(tenantClaim, 10, 64)
+	if err != nil || tenantID <= 0 {
+		return nil, errors.New("invalid token tenant")
+	}
+	var tenant domain.Tenant
+	err = GetDB(c).Where("id = ? AND status = ?", tenantID, "active").First(&tenant).Error
+	if err != nil {
+		return nil, errors.New("tenant unavailable")
+	}
 	var operator domain.SysOpr
-	err = GetDB(c).Where("id = ?", id).First(&operator).Error
+	err = GetDB(c).Where("id = ? AND tenant_id = ?", id, tenantID).First(&operator).Error
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +244,8 @@ func resolveOperatorFromContext(c echo.Context) (*domain.SysOpr, error) {
 	if strings.EqualFold(operator.Status, common.DISABLED) {
 		return nil, errors.New("account disabled")
 	}
+	c.Set("tenant_id", tenantID)
+	c.Set("tenant", tenant)
 	operator.Password = ""
 	return &operator, nil
 }

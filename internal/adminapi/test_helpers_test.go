@@ -1,17 +1,19 @@
 package adminapi
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/glebarez/sqlite"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	customValidator "github.com/bjo163/mwx-isp/pkg/validator"
+	"github.com/glebarez/sqlite"
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -38,11 +40,13 @@ func setupTestEcho() *echo.Echo {
 
 // setupTestDB creates an in-memory test database
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	dbName := fmt.Sprintf("file:%s-%d?mode=memory&cache=shared", t.Name(), common.UUIDint64())
+	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	require.NoError(t, err)
 
 	// Automatically migrate common tables
 	err = db.AutoMigrate(
+		&domain.Tenant{},
 		&domain.RadiusProfile{},
 		&domain.RadiusUser{},
 		&domain.NetNode{},
@@ -55,6 +59,9 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		&domain.SysCert{},
 	)
 	require.NoError(t, err)
+	require.NoError(t, db.Create(&domain.Tenant{
+		ID: domain.DefaultTenantID, Name: "Default ISP", Slug: "default", Kind: "isp", Status: "active",
+	}).Error)
 
 	return db
 }

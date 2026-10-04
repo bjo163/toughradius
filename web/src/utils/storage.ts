@@ -17,7 +17,7 @@ if (typeof window !== 'undefined' && window.localStorage.getItem('theme') === nu
  * 保留用户偏好设置（如语言、主题等）
  */
 export const clearAuthStorage = () => {
-  const keysToRemove = ['token', 'username', 'permissions', 'user'];
+  const keysToRemove = ['token', 'username', 'permissions', 'user', 'activeTenant'];
   keysToRemove.forEach(key => localStorage.removeItem(key));
 };
 

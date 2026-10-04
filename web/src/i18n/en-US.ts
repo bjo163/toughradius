@@ -9,6 +9,8 @@ const customEnglishMessages: TranslationMessages = {
     loading: 'Loading...',
   },
   auth: {
+    organization: 'Organization',
+    organizations_unavailable: 'Could not load organizations. The default organization will be tried.',
     username: 'Username',
     password: 'Password',
     sign_in: 'Sign In',
