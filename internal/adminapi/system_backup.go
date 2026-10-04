@@ -130,7 +130,9 @@ func (b SystemBackupMonitorTarget) toMonitorTarget() domain.NetMonitorTarget {
 
 func tenantOwnedBackupRows(b *SystemBackup) map[string]any {
 	return map[string]any{
-		"sys_opr": b.Operators, "sys_opr_log": b.OprLogs,
+		// sys_opr_log predates tenant isolation and has no TenantID field; it is
+		// retained as installation-wide audit history, like other system logs.
+		"sys_opr":  b.Operators,
 		"net_node": b.Nodes, "net_nas": b.Nas, "radius_profile": b.Profiles,
 		"radius_user": b.Users, "radius_accounting": b.Accounting,
 		"radius_session_action_audit": b.SessionActions,

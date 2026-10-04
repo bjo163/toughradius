@@ -79,34 +79,23 @@ func TestRunBillingForTenantScopesInvoiceGenerationAndDisconnect(t *testing.T) {
 func TestSchedClearExpireData(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&domain.RadiusOnline{}, &domain.RadiusAccounting{}))
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.Tenant{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{}))
 
 	now := time.Now()
-
-	// radius_online with the default 300s interim -> 900s stale window:
-	//   dangling (20m, missed several interims) is deleted; live sessions kept.
-	require.NoError(t, db.Create(&domain.RadiusOnline{
-		Username: "dangling", AcctSessionId: "sess-dangling", LastUpdate: now.Add(-20 * time.Minute),
-	}).Error)
-	require.NoError(t, db.Create(&domain.RadiusOnline{
-		Username: "live-recent", AcctSessionId: "sess-recent", LastUpdate: now.Add(-60 * time.Second),
-	}).Error)
-	require.NoError(t, db.Create(&domain.RadiusOnline{
-		Username: "live-quiet", AcctSessionId: "sess-quiet", LastUpdate: now.Add(-10 * time.Minute),
-	}).Error)
-
-	// radius_accounting with a 30-day retention.
-	require.NoError(t, db.Create(&domain.RadiusAccounting{
-		Username: "old-stopped", AcctStopTime: now.AddDate(0, 0, -40),
-	}).Error)
-	require.NoError(t, db.Create(&domain.RadiusAccounting{
-		Username: "recent-stopped", AcctStopTime: now.AddDate(0, 0, -5),
-	}).Error)
-	// Active session: row created at Accounting-Start with a zero AcctStopTime;
-	// must NOT be purged or its billing history is lost permanently.
-	require.NoError(t, db.Create(&domain.RadiusAccounting{
-		Username: "active", AcctStartTime: now.AddDate(0, 0, -40),
-	}).Error)
+	for _, tenantID := range []int64{10, 20} {
+		tenant := domain.Tenant{ID: tenantID, Name: fmt.Sprintf("Tenant %d", tenantID), Slug: fmt.Sprintf("tenant-%d", tenantID), Kind: "isp", Status: "active"}
+		require.NoError(t, db.Create(&tenant).Error)
+		tenantDB := db.WithContext(tenancy.WithTenantID(context.Background(), tenantID))
+		// Each tenant may reuse session identifiers. Retention must delete stale
+		// data in both organizations while preserving recent/active records.
+		require.NoError(t, tenantDB.Create(&domain.RadiusOnline{Username: "dangling", AcctSessionId: "same-session", LastUpdate: now.Add(-20 * time.Minute)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusOnline{Username: "live-recent", AcctSessionId: "live-recent", LastUpdate: now.Add(-60 * time.Second)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusOnline{Username: "live-quiet", AcctSessionId: "live-quiet", LastUpdate: now.Add(-10 * time.Minute)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "old-stopped", AcctStopTime: now.AddDate(0, 0, -40)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "recent-stopped", AcctStopTime: now.AddDate(0, 0, -5)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "active", AcctStartTime: now.AddDate(0, 0, -40)}).Error)
+	}
 
 	cm := &ConfigManager{
 		configs: map[string]string{"radius.AccountingHistoryDays": "30"},
@@ -116,10 +105,10 @@ func TestSchedClearExpireData(t *testing.T) {
 
 	a.SchedClearExpireData()
 
-	require.ElementsMatch(t, []string{"live-recent", "live-quiet"}, onlineUsernames(t, db),
-		"only dangling online sessions should be removed; live sessions must remain")
-	require.ElementsMatch(t, []string{"recent-stopped", "active"}, accountingUsernames(t, db),
-		"only terminated records past retention should be removed; active session must remain")
+	require.ElementsMatch(t, []string{"live-recent", "live-quiet", "live-recent", "live-quiet"}, onlineUsernames(t, db),
+		"stale sessions should be removed in every tenant; live sessions must remain")
+	require.ElementsMatch(t, []string{"recent-stopped", "active", "recent-stopped", "active"}, accountingUsernames(t, db),
+		"old accounting rows should be pruned in every tenant; recent and active rows must remain")
 }
 
 // TestSchedClearExpireData_DisabledRetention verifies that AccountingHistoryDays=0
@@ -129,7 +118,8 @@ func TestSchedClearExpireData(t *testing.T) {
 func TestSchedClearExpireData_DisabledRetention(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&domain.RadiusOnline{}, &domain.RadiusAccounting{}))
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.Tenant{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{}))
 
 	now := time.Now()
 	require.NoError(t, db.Create(&domain.RadiusAccounting{

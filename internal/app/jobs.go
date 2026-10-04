@@ -249,7 +249,7 @@ func (a *Application) SchedProcessMonitorTask() {
 // SchedClearExpireData purges stale operational data and is registered as a
 // @daily cron job by initJob.
 //
-// It performs two independent cleanups:
+// It performs tenant-scoped cleanup for every organization:
 //   - radius_online: deletes rows that have not refreshed for at least three
 //     radius.AcctInterimInterval periods, reclaiming sessions left dangling by a
 //     missed Accounting-Stop. A live session updates every interim interval, so
@@ -261,8 +261,9 @@ func (a *Application) SchedProcessMonitorTask() {
 //     Active sessions carry a zero AcctStopTime (stamped only at Accounting-Stop)
 //     and are always excluded, so an online session never loses its billing row.
 //
-// Any panic is recovered and logged so a cleanup failure never crashes the
-// scheduler goroutine.
+// Legacy sys_opr_log retention remains installation-wide because that older
+// table does not carry tenant ownership. Any panic is recovered and logged so
+// a cleanup failure never crashes the scheduler goroutine.
 func (a *Application) SchedClearExpireData() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -270,29 +271,36 @@ func (a *Application) SchedClearExpireData() {
 		}
 	}()
 
-	// Reclaim dangling online sessions. A healthy session refreshes every
-	// AcctInterimInterval, so only delete rows that have missed several updates
-	// to avoid dropping live sessions.
+	var tenants []domain.Tenant
+	if err := a.gormDB.Find(&tenants).Error; err != nil {
+		zap.L().Error("load tenants for session retention", zap.Error(err))
+		return
+	}
+	if len(tenants) == 0 {
+		// Keep cleanup working on legacy/test installations before tenant rows
+		// have been initialized; the migration assigns their data to tenant 1.
+		tenants = []domain.Tenant{{ID: domain.DefaultTenantID}}
+	}
+
+	// Reclaim dangling sessions and accounting history within each tenant.
 	interim := a.ConfigMgr().GetInt("radius", "AcctInterimInterval")
 	if interim <= 0 {
 		interim = 300
 	}
 	onlineStaleWindow := time.Duration(interim*3) * time.Second
-	a.gormDB.Where("last_update <= ?",
-		time.Now().Add(-onlineStaleWindow)).
-		Delete(&domain.RadiusOnline{})
-
-	// Clean up accounting history. radius.AccountingHistoryDays is the retention
-	// window in days; 0 disables accounting cleanup (matching the config schema's
-	// "0=disabled" semantics), so a missing or zero value never silently purges
-	// data. The acct_stop_time > epoch guard excludes active sessions, whose
-	// AcctStopTime is the zero value (0001-01-01) until Accounting-Stop and would
-	// otherwise sort before every cutoff and be deleted immediately.
 	idays := a.ConfigMgr().GetInt("radius", "AccountingHistoryDays")
-	if idays > 0 {
-		cutoff := time.Now().Add(-time.Hour * 24 * time.Duration(idays))
-		a.gormDB.
-			Where("acct_stop_time > ? AND acct_stop_time < ?", time.Unix(0, 0), cutoff).
-			Delete(domain.RadiusAccounting{})
+	for _, tenant := range tenants {
+		db := a.gormDB.WithContext(tenancy.WithTenantID(context.Background(), tenant.ID))
+		if err := db.Where("last_update <= ?", time.Now().Add(-onlineStaleWindow)).Delete(&domain.RadiusOnline{}).Error; err != nil {
+			zap.L().Error("prune stale tenant sessions", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
+		// A zero retention setting disables accounting cleanup. The epoch guard
+		// excludes active sessions with a zero AcctStopTime.
+		if idays > 0 {
+			cutoff := time.Now().Add(-time.Hour * 24 * time.Duration(idays))
+			if err := db.Where("acct_stop_time > ? AND acct_stop_time < ?", time.Unix(0, 0), cutoff).Delete(&domain.RadiusAccounting{}).Error; err != nil {
+				zap.L().Error("prune tenant accounting history", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			}
+		}
 	}
 }

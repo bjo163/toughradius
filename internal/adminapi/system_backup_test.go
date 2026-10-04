@@ -73,6 +73,7 @@ func TestBackupSystem(t *testing.T) {
 
 	profile := createTestProfile(db, "backup-profile")
 	createTestUser(db, "backup_user", profile.ID)
+	require.NoError(t, db.Create(&domain.SysOprLog{OprName: "admin", OptAction: "test", OptDesc: "legacy global audit row"}).Error)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/backup", nil)
 	rec := httptest.NewRecorder()
@@ -89,6 +90,8 @@ func TestBackupSystem(t *testing.T) {
 	assert.Len(t, backup.Profiles, 1)
 	assert.Len(t, backup.Users, 1)
 	assert.Equal(t, "backup_user", backup.Users[0].Username)
+	assert.Len(t, backup.OprLogs, 1, "legacy installation-wide operator logs remain in system backups")
+	assert.NotContains(t, backup.TenantIDs, "sys_opr_log", "legacy operator logs have no tenant ownership")
 }
 
 func TestRestoreSystem(t *testing.T) {
