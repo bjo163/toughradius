@@ -1,6 +1,6 @@
 import unittest
 
-from release_automation import bump_version, classify, pending_release, validate_new_tag
+from release_automation import bump_version, classify, parse_commit_records, pending_release, validate_new_tag
 
 
 class ReleaseAutomationTest(unittest.TestCase):
@@ -11,6 +11,14 @@ class ReleaseAutomationTest(unittest.TestCase):
         ])
         self.assertEqual("minor", bump)
         self.assertEqual(["add organization selector"], groups["Features"])
+
+    def test_commit_log_keeps_empty_bodies(self):
+        records = parse_commit_records(
+            "feature-sha\x1ffeat(tenancy): add organization isolation\x1f\x1e"
+            "fix-sha\x1ffix(api): reject foreign IDs\x1f\x1e"
+        )
+        self.assertEqual(2, len(records))
+        self.assertEqual(("minor", {"Features": ["add organization isolation"], "Fixes and Improvements": ["reject foreign IDs"]}), classify(records))
 
     def test_breaking_change_wins(self):
         bump, groups = classify([("a", "feat(api)!: require tenant identity", "")])
