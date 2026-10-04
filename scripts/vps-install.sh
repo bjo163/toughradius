@@ -403,18 +403,27 @@ else
     for volume in mwx-isp_postgres_data mwx-isp_mwx_isp_data; do
       if docker volume inspect "${volume}" >/dev/null 2>&1; then existing_data=1; fi
     done
+  ensure_existing_services_ready_for_backup() {
+    if [[ -z "${any_app_container}" || -z "${any_db_container}" ]]; then
+      fail "Existing MWX-ISP data was found, but both existing app and db containers are not available. No new containers were created and no data was changed; restore the matching .env and recover the original services before retrying."
+    fi
+    if [[ -z "${app_container}" || -z "${db_container}" ]]; then
+      echo "Starting the existing stopped MWX-ISP app and db containers without pulling or recreating them, so a safety backup can be made."
+      docker compose start db app || fail "Could not start the existing app and db containers. No update was performed; inspect 'docker compose logs' and retry."
+      app_container="$(docker compose ps -q app | head -n 1 || true)"
+      db_container="$(docker compose ps -q db | head -n 1 || true)"
+    fi
+    wait_for_healthy_service db
+    wait_for_healthy_service app
+  }
   if [[ -n "${any_app_container}" || -n "${any_db_container}" || -n "${existing_data}" ]]; then
       if [[ "${INSTALL_IN_PROGRESS}" == true ]]; then
-        if [[ -z "${app_container}" || -z "${db_container}" ]]; then
-          fail "An interrupted install marker exists alongside MWX-ISP containers/data, but the app and database are not both running. Refusing to reuse unknown data; restore the matching .env and start both services before retrying."
-        fi
+        ensure_existing_services_ready_for_backup
         step "4/6" "Creating a safety backup before resuming the interrupted installation"
         git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
         echo "Resuming an interrupted install with its existing configuration and volumes."
       else
-        if [[ -z "${app_container}" || -z "${db_container}" ]]; then
-          fail "Existing MWX-ISP data or stopped containers were found. Start both app and db services, verify they are healthy, and rerun so a backup can be made before upgrade. No data was changed."
-        fi
+        ensure_existing_services_ready_for_backup
         step "4/6" "Creating a safety backup before updating an existing installation"
         git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
       fi
