@@ -185,6 +185,18 @@ func (s *RadiusService) getValidUser(tenantID int64, usernameOrMac string, macau
 	cacheKey := radiusUserCacheKey(tenantID, macauth, usernameOrMac)
 	if s.userCache != nil {
 		if cached, ok := s.userCache.Get(cacheKey); ok {
+			if cached.Status == common.DISABLED {
+				return nil, radiuserrors.NewUserDisabledError()
+			}
+			if cached.ExpireTime.Before(time.Now()) {
+				s.userCache.Delete(cacheKey)
+				if !macauth && s.appCtx != nil && s.appCtx.DB() != nil {
+					if err := markExpiredHotspotVoucher(s.appCtx.DB(), tenantID, usernameOrMac, time.Now()); err != nil {
+						return nil, err
+					}
+				}
+				return nil, radiuserrors.NewUserExpiredError()
+			}
 			return cached, nil
 		}
 	}
@@ -203,18 +215,106 @@ func (s *RadiusService) getValidUser(tenantID int64, usernameOrMac string, macau
 		return nil, err
 	}
 
-	// Keep original validation logic for backward compatibility
+	// Keep original validation logic for backward compatibility. Voucher
+	// activation happens after credential validation in the auth pipeline.
 	if user.Status == common.DISABLED {
 		return nil, radiuserrors.NewUserDisabledError()
 	}
 
 	if user.ExpireTime.Before(time.Now()) {
+		if !macauth && s.appCtx != nil && s.appCtx.DB() != nil {
+			if err := markExpiredHotspotVoucher(s.appCtx.DB(), tenantID, usernameOrMac, time.Now()); err != nil {
+				return nil, err
+			}
+		}
 		return nil, radiuserrors.NewUserExpiredError()
 	}
 	if s.userCache != nil {
 		s.userCache.Set(cacheKey, user)
 	}
 	return user, nil
+}
+
+func markExpiredHotspotVoucher(db *gorm.DB, tenantID int64, username string, now time.Time) error {
+	if db == nil || tenantID <= 0 || username == "" {
+		return nil
+	}
+	return db.WithContext(tenancy.WithTenantID(context.Background(), tenantID)).
+		Model(&domain.HotspotVoucher{}).
+		Where("code = ? AND status = ? AND expires_at IS NOT NULL AND expires_at <= ?", username, "used", now).
+		Update("status", "expired").Error
+}
+
+func (s *AuthService) activateVoucherAfterAuthentication(user *domain.RadiusUser, nas *domain.NetNas) error {
+	if s.RadiusService == nil || s.appCtx == nil || s.appCtx.DB() == nil || user == nil || nas == nil {
+		return nil
+	}
+	expiresAt, found, err := activateHotspotVoucher(s.appCtx.DB(), nas.TenantID, user, time.Now())
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
+	if !expiresAt.After(time.Now()) {
+		return radiuserrors.NewUserExpiredError()
+	}
+	user.ExpireTime = expiresAt
+	return nil
+}
+
+// activateHotspotVoucher starts a voucher's validity window after its first
+// successful credential validation. The conditional update makes concurrent first
+// authentication requests share one activation timestamp across app instances.
+func activateHotspotVoucher(db *gorm.DB, tenantID int64, user *domain.RadiusUser, now time.Time) (time.Time, bool, error) {
+	if db == nil || tenantID <= 0 || user == nil || user.Username == "" {
+		return time.Time{}, false, nil
+	}
+	var expiry time.Time
+	var found bool
+	err := db.WithContext(tenancy.WithTenantID(context.Background(), tenantID)).Transaction(func(tx *gorm.DB) error {
+		var voucher domain.HotspotVoucher
+		if err := tx.Where("code = ?", user.Username).First(&voucher).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		found = true
+		if voucher.Status == "active" && voucher.FirstLoginAt == nil {
+			firstLogin := now
+			newExpiry := now.Add(time.Duration(voucher.ValiditySeconds) * time.Second)
+			result := tx.Model(&domain.HotspotVoucher{}).
+				Where("id = ? AND status = ? AND first_login_at IS NULL", voucher.ID, "active").
+				Updates(map[string]any{"first_login_at": firstLogin, "expires_at": newExpiry, "status": "used"})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 1 {
+				if err := tx.Model(&domain.RadiusUser{}).Where("id = ? AND username = ?", user.ID, user.Username).Update("expire_time", newExpiry).Error; err != nil {
+					return err
+				}
+				expiry = newExpiry
+				return nil
+			}
+			if err := tx.First(&voucher, voucher.ID).Error; err != nil {
+				return err
+			}
+		}
+		if voucher.ExpiresAt != nil {
+			expiry = *voucher.ExpiresAt
+		}
+		if voucher.Status == "expired" || voucher.Status == "revoked" || voucher.ExpiresAt == nil {
+			expiry = now.Add(-time.Second)
+		}
+		if !expiry.After(now) && voucher.Status != "revoked" {
+			if err := tx.Model(&domain.HotspotVoucher{}).Where("id = ?", voucher.ID).Update("status", "expired").Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return expiry, found, err
 }
 
 func radiusUserCacheKey(tenantID int64, macauth bool, identity string) string {

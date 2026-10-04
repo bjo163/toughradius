@@ -12,6 +12,7 @@ import (
 	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
 	repogorm "github.com/bjo163/mwx-isp/internal/radiusd/repository/gorm"
 	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -70,6 +71,102 @@ func TestRadiusAuthenticationCachesAreTenantScoped(t *testing.T) {
 	require.NoError(t, service.CheckAuthRateLimitForTenant(2, "shared"))
 	require.Error(t, service.CheckAuthRateLimitForTenant(1, "shared"))
 }
+
+func TestCachedRadiusUsersStillEnforceStatusAndExpiration(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:radius-expiry-cache?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.RadiusUser{}))
+	validUntil := time.Now().Add(time.Hour)
+	for _, username := range []string{"cached-expire", "cached-disabled"} {
+		require.NoError(t, db.Create(&domain.RadiusUser{ID: common.UUIDint64(), TenantID: 1, Username: username, Password: "secret", Status: "enabled", ExpireTime: validUntil}).Error)
+	}
+	service := &RadiusService{
+		UserRepo:  repogorm.NewGormUserRepository(db),
+		userCache: cachepkg.NewTTLCache[*domain.RadiusUser](time.Minute, 16),
+	}
+	user, err := service.GetValidUserForTenant(1, "cached-expire", false)
+	require.NoError(t, err)
+	user.ExpireTime = time.Now().Add(-time.Second)
+	_, err = service.GetValidUserForTenant(1, "cached-expire", false)
+	require.Error(t, err, "cached users must be rechecked after expiration")
+	if authErr, ok := radiuserrors.GetAuthError(err); ok {
+		require.Equal(t, "radus_reject_expire", authErr.MetricsType)
+	} else {
+		t.Fatalf("expected typed expiration error, got %T: %v", err, err)
+	}
+
+	user, err = service.GetValidUserForTenant(1, "cached-disabled", false)
+	require.NoError(t, err)
+	user.Status = common.DISABLED
+	_, err = service.GetValidUserForTenant(1, "cached-disabled", false)
+	require.Error(t, err, "cached users must be rechecked after disablement")
+	if authErr, ok := radiuserrors.GetAuthError(err); ok {
+		require.Equal(t, "radus_reject_disabled", authErr.MetricsType)
+	} else {
+		t.Fatalf("expected typed disabled error, got %T: %v", err, err)
+	}
+}
+
+func TestHotspotVoucherValidityStartsOnceAndIsTenantScoped(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:radius-voucher-activation?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.HotspotVoucher{}, &domain.RadiusUser{}))
+	now := time.Date(2026, time.October, 5, 12, 0, 0, 0, time.UTC)
+	user := domain.RadiusUser{ID: 501, TenantID: 1, Username: "HOT-ONE", Status: "enabled", ExpireTime: now.AddDate(1, 0, 0)}
+	require.NoError(t, db.Create(&user).Error)
+	voucher := domain.HotspotVoucher{ID: 601, TenantID: 1, Code: user.Username, Status: "active", ValiditySeconds: 3600, CreatedAt: now.Add(-48 * time.Hour)}
+	require.NoError(t, db.Create(&voucher).Error)
+	otherTenantVoucher := domain.HotspotVoucher{ID: 602, TenantID: 2, Code: user.Username, Status: "active", ValiditySeconds: 60}
+	require.NoError(t, db.Create(&otherTenantVoucher).Error)
+
+	expiresAt, found, err := activateHotspotVoucher(db, 1, &user, now)
+	require.NoError(t, err)
+	require.True(t, found)
+	require.True(t, expiresAt.Equal(now.Add(time.Hour)))
+	var activated domain.HotspotVoucher
+	require.NoError(t, db.Where("tenant_id = ? AND id = ?", 1, voucher.ID).First(&activated).Error)
+	require.Equal(t, "used", activated.Status)
+	require.NotNil(t, activated.FirstLoginAt)
+	require.True(t, activated.FirstLoginAt.Equal(now))
+	var updatedUser domain.RadiusUser
+	require.NoError(t, db.Where("tenant_id = ? AND id = ?", 1, user.ID).First(&updatedUser).Error)
+	require.True(t, updatedUser.ExpireTime.Equal(expiresAt))
+
+	secondExpiry, found, err := activateHotspotVoucher(db, 1, &updatedUser, now.Add(30*time.Minute))
+	require.NoError(t, err)
+	require.True(t, found)
+	require.True(t, secondExpiry.Equal(expiresAt), "re-authentication must not extend voucher validity")
+
+	_, found, err = activateHotspotVoucher(db, 1, &updatedUser, expiresAt.Add(time.Second))
+	require.NoError(t, err)
+	require.True(t, found)
+	require.NoError(t, db.Where("tenant_id = ? AND id = ?", 1, voucher.ID).First(&activated).Error)
+	require.Equal(t, "expired", activated.Status)
+	require.NoError(t, db.Where("tenant_id = ? AND id = ?", 2, otherTenantVoucher.ID).First(&otherTenantVoucher).Error)
+	require.Equal(t, "active", otherTenantVoucher.Status)
+}
+
+func TestMarkExpiredHotspotVoucherIsTenantScoped(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:radius-voucher-expiration?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.HotspotVoucher{}))
+	now := time.Now()
+	for _, tenantID := range []int64{1, 2} {
+		voucher := domain.HotspotVoucher{TenantID: tenantID, Code: "same-code", Status: "used", ExpiresAt: timePtr(now.Add(-time.Minute))}
+		require.NoError(t, db.Create(&voucher).Error)
+	}
+	require.NoError(t, markExpiredHotspotVoucher(db, 1, "same-code", now))
+	var tenantOne, tenantTwo domain.HotspotVoucher
+	require.NoError(t, db.Where("tenant_id = ?", 1).First(&tenantOne).Error)
+	require.NoError(t, db.Where("tenant_id = ?", 2).First(&tenantTwo).Error)
+	require.Equal(t, "expired", tenantOne.Status)
+	require.Equal(t, "used", tenantTwo.Status)
+}
+
+func timePtr(value time.Time) *time.Time { return &value }
 
 func TestRadiusNASLookupAndCacheAreTenantScoped(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:radius-tenant-nas?mode=memory&cache=shared"), &gorm.Config{})

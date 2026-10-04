@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -11,9 +12,12 @@ import (
 	"time"
 
 	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/billing"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 func registerISPOperationsRoutes() {
@@ -69,17 +73,22 @@ type generateVoucherInput struct {
 
 const voucherChars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ" // No 0/O, 1/I ambiguity
 
-func generateRandomCode(length int) string {
+var errInvalidVoucherPackage = errors.New("selected package is not usable for RADIUS")
+
+func generateRandomCode(length int) (string, error) {
 	if length <= 0 {
 		length = 6
 	}
 	result := make([]byte, length)
 	charLen := big.NewInt(int64(len(voucherChars)))
 	for i := 0; i < length; i++ {
-		idx, _ := rand.Int(rand.Reader, charLen)
+		idx, err := rand.Int(rand.Reader, charLen)
+		if err != nil {
+			return "", err
+		}
 		result[i] = voucherChars[idx.Int64()]
 	}
-	return string(result)
+	return string(result), nil
 }
 
 func generateVouchers(c echo.Context) error {
@@ -90,85 +99,106 @@ func generateVouchers(c echo.Context) error {
 	if in.Quantity <= 0 || in.Quantity > 500 {
 		return fail(c, 400, "INVALID_QUANTITY", "Quantity must be between 1 and 500", nil)
 	}
+	if in.Price < 0 {
+		return fail(c, 400, "INVALID_PRICE", "Price cannot be negative", nil)
+	}
 	if in.CodeLength < 4 || in.CodeLength > 12 {
 		in.CodeLength = 6
 	}
 	if in.ValiditySeconds <= 0 {
 		in.ValiditySeconds = 86400 // default 1 day
 	}
+	if in.ValiditySeconds > 365*24*60*60 {
+		return fail(c, 400, "INVALID_VALIDITY", "Voucher validity cannot exceed 365 days", nil)
+	}
+	if in.QuotaMB > 0 {
+		return fail(c, 400, "QUOTA_NOT_SUPPORTED", "Voucher data quotas are not enforced by the RADIUS accounting path yet; use 0 for unlimited data", nil)
+	}
+	if in.QuotaMB < 0 || in.QuotaMB > (int64(^uint64(0)>>1)/1024/1024) {
+		return fail(c, 400, "INVALID_QUOTA", "Quota must be zero (unlimited) or a positive number of MB", nil)
+	}
+	if in.PackageID <= 0 {
+		return fail(c, 400, "PACKAGE_REQUIRED", "Select an active package linked to a RADIUS profile", nil)
+	}
 
 	db := GetDB(c)
 	now := time.Now()
-	batchNo := fmt.Sprintf("BATCH-%s-%04d", now.Format("060102"), in.Quantity)
-
-	// Create Batch record
-	batch := domain.HotspotBatch{
-		BatchNo:         batchNo,
-		Name:            in.Name,
-		PackageID:       in.PackageID,
-		Quantity:        in.Quantity,
-		Price:           in.Price,
-		ValiditySeconds: in.ValiditySeconds,
-		QuotaBytes:      in.QuotaMB * 1024 * 1024,
-		Prefix:          strings.ToUpper(strings.TrimSpace(in.Prefix)),
-		CodeLength:      in.CodeLength,
-		CreatedBy:       "operator",
-		CreatedAt:       now,
-	}
-	if err := db.Create(&batch).Error; err != nil {
-		return fail(c, 500, "DATABASE_ERROR", "Failed to create voucher batch", nil)
-	}
-
-	// Find default or package profile if linked
-	var profileID int64
-	if in.PackageID > 0 {
-		var pkg domain.InternetPackage
-		if err := db.First(&pkg, in.PackageID).Error; err == nil {
-			profileID = pkg.RadiusProfileID
-		}
-	}
-
+	var batch domain.HotspotBatch
 	vouchers := make([]domain.HotspotVoucher, in.Quantity)
-	radiusUsers := make([]domain.RadiusUser, in.Quantity)
-
-	for i := 0; i < in.Quantity; i++ {
-		rawCode := generateRandomCode(in.CodeLength)
-		code := batch.Prefix + rawCode
-		pwd := code
-		if !in.SameUserPass {
-			pwd = generateRandomCode(4)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var pkg domain.InternetPackage
+		if err := tx.Where("status = ?", "active").First(&pkg, in.PackageID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: package is missing or inactive", errInvalidVoucherPackage)
+			}
+			return err
 		}
-
-		vouchers[i] = domain.HotspotVoucher{
-			BatchID:         batch.ID,
-			PackageID:       in.PackageID,
-			Code:            code,
-			Password:        pwd,
-			Price:           in.Price,
-			ValiditySeconds: in.ValiditySeconds,
-			QuotaBytes:      batch.QuotaBytes,
-			Status:          "active",
-			CreatedAt:       now,
+		if pkg.RadiusProfileID <= 0 {
+			return fmt.Errorf("%w: package has no linked RADIUS profile", errInvalidVoucherPackage)
 		}
-
-		// Also create RADIUS user so voucher authenticates immediately
-		radiusUsers[i] = domain.RadiusUser{
-			Username:  code,
-			Password:  pwd,
-			ProfileId: profileID,
-			Status:    "enabled",
-			CreatedAt: now,
-			UpdatedAt: now,
+		var profile domain.RadiusProfile
+		if err := tx.First(&profile, pkg.RadiusProfileID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: linked RADIUS profile is unavailable", errInvalidVoucherPackage)
+			}
+			return err
 		}
-	}
-
-	if err := db.Create(&vouchers).Error; err != nil {
-		return fail(c, 500, "DATABASE_ERROR", "Failed to save generated vouchers", nil)
-	}
-
-	// Insert radius users (ignore duplicates if any)
-	for _, u := range radiusUsers {
-		_ = db.Create(&u)
+		if profile.Status != "enabled" && profile.Status != "1" {
+			return fmt.Errorf("%w: linked RADIUS profile is disabled", errInvalidVoucherPackage)
+		}
+		serial, err := billing.NextDocumentSerial(tx, "voucher", now.Format("060102"))
+		if err != nil {
+			return err
+		}
+		batch = domain.HotspotBatch{
+			BatchNo: fmt.Sprintf("BATCH-%s-%06d", now.Format("060102"), serial),
+			Name:    in.Name, PackageID: pkg.ID, Quantity: in.Quantity, Price: in.Price,
+			ValiditySeconds: in.ValiditySeconds, QuotaBytes: in.QuotaMB * 1024 * 1024,
+			Prefix: strings.ToUpper(strings.TrimSpace(in.Prefix)), CodeLength: in.CodeLength,
+			CreatedBy: "operator", CreatedAt: now,
+		}
+		if err := tx.Create(&batch).Error; err != nil {
+			return err
+		}
+		radiusUsers := make([]domain.RadiusUser, in.Quantity)
+		for i := 0; i < in.Quantity; i++ {
+			rawCode, err := generateRandomCode(in.CodeLength)
+			if err != nil {
+				return err
+			}
+			code := batch.Prefix + rawCode
+			password := code
+			if !in.SameUserPass {
+				password, err = generateRandomCode(4)
+				if err != nil {
+					return err
+				}
+			}
+			radiusUserID := common.UUIDint64()
+			vouchers[i] = domain.HotspotVoucher{
+				BatchID: batch.ID, PackageID: pkg.ID, Code: code, Password: password,
+				RadiusUserID: radiusUserID, Price: in.Price, ValiditySeconds: in.ValiditySeconds,
+				QuotaBytes: batch.QuotaBytes, Status: "active", CreatedAt: now,
+			}
+			radiusUsers[i] = domain.RadiusUser{
+				ID: radiusUserID, NodeId: profile.NodeId, ProfileId: profile.ID,
+				Username: code, Password: password, AddrPool: profile.AddrPool, ActiveNum: profile.ActiveNum,
+				UpRate: profile.UpRate, DownRate: profile.DownRate, Domain: profile.Domain,
+				IPv6PrefixPool: profile.IPv6PrefixPool, DelegatedIpv6PrefixPool: profile.DelegatedIpv6PrefixPool,
+				RadiusClass: profile.RadiusClass, BindMac: profile.BindMac, BindVlan: profile.BindVlan,
+				ProfileLinkMode: domain.ProfileLinkModeStatic, ExpireTime: now.AddDate(100, 0, 0), Status: "enabled", CreatedAt: now, UpdatedAt: now,
+			}
+		}
+		if err := tx.Create(&vouchers).Error; err != nil {
+			return err
+		}
+		return tx.Create(&radiusUsers).Error
+	})
+	if err != nil {
+		if errors.Is(err, errInvalidVoucherPackage) {
+			return fail(c, 400, "INVALID_PACKAGE", err.Error(), nil)
+		}
+		return fail(c, 500, "DATABASE_ERROR", "Failed to generate voucher batch", nil)
 	}
 
 	return ok(c, map[string]any{
@@ -226,11 +256,6 @@ func checkPublicVoucher(c echo.Context) error {
 		}
 	}
 
-	remainingBytes := v.QuotaBytes - v.UsedBytes
-	if remainingBytes < 0 {
-		remainingBytes = 0
-	}
-
 	return ok(c, map[string]any{
 		"code":             v.Code,
 		"package_name":     pkgName,
@@ -239,7 +264,8 @@ func checkPublicVoucher(c echo.Context) error {
 		"validity_seconds": v.ValiditySeconds,
 		"quota_bytes":      v.QuotaBytes,
 		"used_bytes":       v.UsedBytes,
-		"remaining_bytes":  remainingBytes,
+		"quota_enforced":   false,
+		"usage_available":  false,
 		"first_login_at":   v.FirstLoginAt,
 		"expires_at":       v.ExpiresAt,
 	})
@@ -264,18 +290,46 @@ func deleteVoucherBatch(c echo.Context) error {
 		return fail(c, 400, "INVALID_ID", "Invalid batch ID", nil)
 	}
 	db := GetDB(c)
-	// Delete associated vouchers and radius users
-	var vouchers []domain.HotspotVoucher
-	db.Where("batch_id = ?", id).Find(&vouchers)
-	codes := make([]string, len(vouchers))
-	for i, v := range vouchers {
-		codes[i] = v.Code
+	err = db.Transaction(func(tx *gorm.DB) error {
+		var batch domain.HotspotBatch
+		if err := tx.First(&batch, id).Error; err != nil {
+			return err
+		}
+		var vouchers []domain.HotspotVoucher
+		if err := tx.Where("batch_id = ?", id).Find(&vouchers).Error; err != nil {
+			return err
+		}
+		userIDs := make([]int64, 0, len(vouchers))
+		for _, voucher := range vouchers {
+			if voucher.RadiusUserID > 0 {
+				userIDs = append(userIDs, voucher.RadiusUserID)
+			}
+		}
+		if len(userIDs) > 0 {
+			if err := tx.Where("id IN ?", userIDs).Delete(&domain.RadiusUser{}).Error; err != nil {
+				return err
+			}
+		}
+		// Remove credentials generated before RadiusUserID was persisted, but
+		// only when both the voucher username and password still match.
+		for _, voucher := range vouchers {
+			if voucher.RadiusUserID == 0 {
+				if err := tx.Where("username = ? AND password = ?", voucher.Code, voucher.Password).Delete(&domain.RadiusUser{}).Error; err != nil {
+					return err
+				}
+			}
+		}
+		if err := tx.Where("batch_id = ?", id).Delete(&domain.HotspotVoucher{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&batch).Error
+	})
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return fail(c, 404, "NOT_FOUND", "Voucher batch not found", nil)
 	}
-	if len(codes) > 0 {
-		db.Where("username IN ?", codes).Delete(&domain.RadiusUser{})
-		db.Where("batch_id = ?", id).Delete(&domain.HotspotVoucher{})
+	if err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to delete voucher batch", nil)
 	}
-	db.Delete(&domain.HotspotBatch{}, id)
 	return ok(c, map[string]any{"id": strconv.FormatInt(id, 10)})
 }
 

@@ -62,6 +62,14 @@ interface Batch {
   created_at: string;
 }
 
+interface InternetPackage {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  radius_profile_id: string;
+}
+
 export const HotspotVouchersPage: React.FC = () => {
   const { branding } = useBranding();
   const notify = useNotify();
@@ -77,10 +85,10 @@ export const HotspotVouchersPage: React.FC = () => {
   // Form state for generating vouchers
   const [genForm, setGenForm] = useState({
     name: 'Standard Hotspot',
+    package_id: '',
     quantity: 20,
     price: 5000,
     validity_hours: 24,
-    quota_mb: 1024,
     prefix: 'HOT',
     code_length: 6,
     same_user_pass: true,
@@ -91,6 +99,14 @@ export const HotspotVouchersPage: React.FC = () => {
     queryFn: async () => {
       const res = await apiRequest<unknown>('/isp/vouchers/batches?perPage=50');
       return extractData<Batch[]>(res) ?? [];
+    },
+  });
+
+  const packagesQuery = useQuery({
+    queryKey: ['isp', 'vouchers', 'packages'],
+    queryFn: async () => {
+      const res = await apiRequest<unknown>('/isp/packages?status=active&perPage=100');
+      return (extractData<InternetPackage[]>(res) ?? []).filter((pkg) => Number(pkg.radius_profile_id) > 0);
     },
   });
 
@@ -113,10 +129,11 @@ export const HotspotVouchersPage: React.FC = () => {
         method: 'POST',
         body: JSON.stringify({
           name: genForm.name,
+          package_id: genForm.package_id,
           quantity: Number(genForm.quantity),
           price: Number(genForm.price),
           validity_seconds: Number(genForm.validity_hours) * 3600,
-          quota_mb: Number(genForm.quota_mb),
+          quota_mb: 0,
           prefix: genForm.prefix.trim(),
           code_length: Number(genForm.code_length),
           same_user_pass: genForm.same_user_pass,
@@ -150,10 +167,10 @@ export const HotspotVouchersPage: React.FC = () => {
   };
 
   const formatQuota = (bytes: number) => {
-    if (!bytes || bytes <= 0) return 'Unlimited';
+    if (!bytes || bytes <= 0) return 'Unlimited (no data cap)';
     const mb = bytes / (1024 * 1024);
-    if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-    return `${mb.toFixed(0)} MB`;
+    const configured = mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(0)} MB`;
+    return `Not enforced (${configured} stored)`;
   };
 
   const totalValue = vouchers.reduce((acc, v) => acc + (v.price || 0), 0);
@@ -189,7 +206,7 @@ export const HotspotVouchersPage: React.FC = () => {
         <KpiTile label="Total Vouchers" value={vouchers.length} icon={<ConfirmationNumber fontSize="small" />} />
         <KpiTile label="Active / Unused" value={countStatus('active')} tone="success" hint="Ready for customers" />
         <KpiTile label="Used / Online" value={countStatus('used')} tone="info" hint="Logged in" />
-        <KpiTile label="Expired" value={countStatus('expired')} tone="error" hint="Quota / time reached" />
+        <KpiTile label="Expired" value={countStatus('expired')} tone="error" hint="Validity window ended" />
         <KpiTile label="Total Batches" value={batches.length} tone="warning" hint="Created batches" />
         <KpiTile
           label="Total Face Value"
@@ -325,6 +342,24 @@ export const HotspotVouchersPage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 800 }}>Generate Hotspot Vouchers</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            <FormControl size="small" fullWidth required>
+              <InputLabel id="voucher-package-label">RADIUS Package</InputLabel>
+              <Select
+                labelId="voucher-package-label"
+                label="RADIUS Package"
+                value={genForm.package_id}
+                onChange={(e) => setGenForm({ ...genForm, package_id: e.target.value })}
+                disabled={packagesQuery.isLoading}
+              >
+                {packagesQuery.data?.map((pkg) => (
+                  <MenuItem key={pkg.id} value={pkg.id}>{pkg.code} — {pkg.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {packagesQuery.isError && <Alert severity="error">Could not load active packages linked to a RADIUS profile.</Alert>}
+            {!packagesQuery.isLoading && !packagesQuery.isError && packagesQuery.data?.length === 0 && (
+              <Alert severity="warning">Create an active ISP package linked to a RADIUS profile before generating vouchers.</Alert>
+            )}
             <TextField
               size="small"
               label="Batch / Package Name"
@@ -368,15 +403,10 @@ export const HotspotVouchersPage: React.FC = () => {
                 sx={{ flex: 1 }}
               />
             </Stack>
+            <Alert severity="info">
+              Validity starts at the first successful RADIUS login. Data quota enforcement is not available yet; generated vouchers use unlimited data.
+            </Alert>
             <Stack direction="row" spacing={1.5}>
-              <TextField
-                size="small"
-                type="number"
-                label="Quota (MB, 0 = unltd)"
-                value={genForm.quota_mb}
-                onChange={(e) => setGenForm({ ...genForm, quota_mb: Number(e.target.value) })}
-                sx={{ flex: 1 }}
-              />
               <TextField
                 size="small"
                 type="number"
@@ -401,7 +431,7 @@ export const HotspotVouchersPage: React.FC = () => {
           <Button onClick={() => setGenOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            disabled={generateMutation.isPending || !genForm.quantity}
+            disabled={generateMutation.isPending || !genForm.quantity || !genForm.package_id || packagesQuery.isLoading || (packagesQuery.data?.length ?? 0) === 0}
             onClick={() => generateMutation.mutate()}
           >
             {generateMutation.isPending ? 'Generating...' : `Create ${genForm.quantity} Vouchers`}
@@ -478,7 +508,7 @@ export const HotspotVouchersPage: React.FC = () => {
                       Rp {new Intl.NumberFormat('id-ID').format(v.price)} · {formatValidity(v.validity_seconds)}
                     </Typography>
                     <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.65rem' }}>
-                      Quota: {formatQuota(v.quota_bytes)}
+                      Data allowance: {formatQuota(v.quota_bytes)}
                     </Typography>
                   </Box>
                 ))}
@@ -524,7 +554,7 @@ export const HotspotVouchersPage: React.FC = () => {
                     </Box>
                     <Stack direction="row" justifyContent="space-between" sx={{ fontSize: '0.72rem' }}>
                       <span>Durasi: <strong>{formatValidity(v.validity_seconds)}</strong></span>
-                      <span>Kuota: <strong>{formatQuota(v.quota_bytes)}</strong></span>
+                      <span>Data allowance: <strong>{formatQuota(v.quota_bytes)}</strong></span>
                     </Stack>
                   </Paper>
                 ))}

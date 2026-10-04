@@ -57,7 +57,7 @@ This is the canonical planning surface and task source: milestone status, guardr
 
 **Priority override, 2026-10-05:** M18 containment precedes optional feature expansion and the historical queue below. The [45-card audit backlog](MWX-ISP-audit-backlog-2026-10-05.md) contains precise entry points, evidence levels, dependencies and acceptance criteria. Cards A/H are follow-up repairs or verification within existing baseline capabilities; proposals F01–F10 are not scheduled. Resolve scope drift through A20 before expanding existing portal/voucher/ticket surfaces.
 
-- [ ] M18.1 Contain public payment mutation and protect tenant/customer data (A01–A04; TR-F018/TR-F028/TR-F033); unauthorized requests must not reveal customer data or write payments.
+- [x] M18.1 Contain public payment mutation and protect tenant/customer data (A01–A04; TR-F018/TR-F028/TR-F033); merged PR #31 (`3168bbd`), regression tests verify unauthorized routes and no payment mutation.
 - [ ] M18.2 Repair batch/document numbering and atomic existing mutations (A05/A08–A12; TR-F012/TR-F017/TR-F027); include duplicate, concurrent and rollback cases.
 - [ ] M18.3 Complete durable application backup coverage and recovery evidence (A13/H06; TR-F017/TR-F020); distinguish JSON export from full PostgreSQL backups.
 - [ ] M18.4 Verify existing voucher authentication/expiry/quota and print/package UI contracts (A06/A07/A15/A16; TR-F007/TR-F008/TR-F012/TR-F013); expansion waits for A20 scope resolution.
@@ -66,7 +66,7 @@ This is the canonical planning surface and task source: milestone status, guardr
 - [ ] M18.7 Verify billing concurrency, suspend runtime, ODP/IPAM integrity, traffic/syslog scope and notification delivery (H04/H05/H07–H11; TR-F012/TR-F017/TR-F027/TR-F028/TR-F030/TR-F031/TR-F033).
 - [ ] M18.8 Complete frontend error/cache/language checks, deployment matrix and safe fixtures (H12–H15; TR-F013/TR-F020/TR-F022/TR-F023/TR-F029/TR-F032).
 
-M18 is **Planned**, not delivered. The 2026-10-05 change only creates planning artifacts. Existing milestone completion below is preserved as historical evidence.
+M18 is **In progress**. M18.1 is delivered by PR #31; the remaining M18.2–M18.8 work is open. The original 2026-10-05 planning artifacts remain the detailed acceptance baseline. Existing milestone completion below is preserved as historical evidence.
 
 The scheduled **M5 vendor VSA expansion** batch (M5.1 inventory + M5.2/M5.3/M5.4 parsers/enhancers) is delivered — M5.4 shipped the Cisco `cisco-avpair` Access-Accept enhancer (#543) — and the remaining vendor enhancers stay demand-driven. **M10.1** (TLS 1.3 negotiation + RFC 9190 protected success indication, #562), **M10.2** (version-branched MSK derivation → MS-MPPE keys on pure EAP-TLS Accepts, #564), and **M10.3** (tolerate the peer's `close_notify` after the success point, #607) are delivered; M10.4's CI acceptance-test scope is satisfied incrementally by each subtask's `test/integration/` subtests, so the next pickable subtask is **M10.5** (identity protection / anonymous NAI, needs an auth-pipeline reorder). M14.6 now has CI-backed OpenLDAP acceptance coverage; M14.5 remains blocked until load evidence justifies connection pooling / reconnect work.
 

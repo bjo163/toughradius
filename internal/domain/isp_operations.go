@@ -32,6 +32,7 @@ type HotspotVoucher struct {
 	TenantID        int64      `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_hotspot_voucher_tenant_code,priority:1;index"`
 	BatchID         int64      `json:"batch_id,string" gorm:"index"`
 	PackageID       int64      `json:"package_id,string" gorm:"index"`
+	RadiusUserID    int64      `json:"-" gorm:"index"`
 	Code            string     `json:"code" gorm:"uniqueIndex:udx_isp_hotspot_voucher_tenant_code,priority:2;size:32"` // Username / Voucher code
 	Password        string     `json:"password" gorm:"size:32"`
 	Price           int64      `json:"price"`

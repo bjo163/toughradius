@@ -257,6 +257,13 @@ func RecordPayment(db *gorm.DB, payment *domain.Payment, now time.Time, autoReac
 }
 
 func nextMonthlySerial(tx *gorm.DB, kind, period string) (int64, error) {
+	return NextDocumentSerial(tx, kind, period)
+}
+
+// NextDocumentSerial atomically allocates the next serial for a document kind
+// and period within the tenant scope attached to tx. Call it inside the same
+// transaction that persists the numbered record.
+func NextDocumentSerial(tx *gorm.DB, kind, period string) (int64, error) {
 	sequence := domain.DocumentSequence{Kind: kind, Period: period, Value: 1}
 	err := tx.Clauses(
 		clause.OnConflict{
