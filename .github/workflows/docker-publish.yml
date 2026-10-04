@@ -2,6 +2,9 @@ name: MWX-ISP Container Release
 
 on:
   push:
+    branches:
+      - main
+      - dev
     tags:
       - 'v*'
 
@@ -22,16 +25,26 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Extract version
+      - name: Resolve image tags
         id: version
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          if [ -z "$version" ] || [ "$version" = "$GITHUB_REF_NAME" ]; then
-            echo "Expected a v-prefixed release tag, got: $GITHUB_REF_NAME" >&2
-            exit 1
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            if [ -z "$version" ] || [ "$version" = "$GITHUB_REF_NAME" ]; then
+              echo "Expected a v-prefixed release tag, got: $GITHUB_REF_NAME" >&2
+              exit 1
+            fi
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "rolling_tag=latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+              echo "rolling_tag=latest" >> "$GITHUB_OUTPUT"
+            else
+              echo "rolling_tag=dev" >> "$GITHUB_OUTPUT"
+            fi
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
@@ -53,7 +66,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
-            ghcr.io/${{ github.repository_owner }}/mwx-isp:latest
+            ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.rolling_tag }}
             ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.version }}
           labels: |
             org.opencontainers.image.title=MWX-ISP
@@ -72,3 +85,9 @@ jobs:
             echo '- Image: `ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.version }}`'
             echo '- Digest: `${{ steps.image.outputs.digest }}`'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Make GHCR image publicly pullable
+        if: github.repository_owner == 'bjo163'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api --method PUT /user/packages/container/mwx-isp/visibility -f visibility=public

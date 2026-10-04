@@ -1,0 +1,10 @@
+[Unit]
+Description=Update MWX-ISP container to the latest published image
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=MWX_ISP_DIR=/opt/mwx-isp
+ExecStart=/opt/mwx-isp/scripts/vps-auto-update.sh

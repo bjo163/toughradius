@@ -1,0 +1,70 @@
+name: mwx-isp
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mwxisp}
+      POSTGRES_USER: ${POSTGRES_USER:-mwxisp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [backend]
+
+  app:
+    image: ghcr.io/bjo163/mwx-isp:${MWX_ISP_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ:-Asia/Jakarta}
+      TOUGHRADIUS_SYSTEM_WORKER_DIR: /var/toughradius
+      TOUGHRADIUS_SYSTEM_DEBUG: "false"
+      TOUGHRADIUS_WEB_HOST: 0.0.0.0
+      TOUGHRADIUS_WEB_PORT: 1816
+      TOUGHRADIUS_WEB_TLS_ENABLED: "false"
+      TOUGHRADIUS_WEB_SECRET: ${MWX_ISP_WEB_SECRET:?Set MWX_ISP_WEB_SECRET in .env}
+      TOUGHRADIUS_ADMIN_PASSWORD: ${MWX_ISP_ADMIN_PASSWORD:?Set MWX_ISP_ADMIN_PASSWORD in .env}
+      TOUGHRADIUS_DB_TYPE: postgres
+      TOUGHRADIUS_DB_HOST: db
+      TOUGHRADIUS_DB_PORT: 5432
+      TOUGHRADIUS_DB_NAME: ${POSTGRES_DB:-mwxisp}
+      TOUGHRADIUS_DB_USER: ${POSTGRES_USER:-mwxisp}
+      TOUGHRADIUS_DB_PWD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      TOUGHRADIUS_RADIUS_ENABLED: "true"
+      TOUGHRADIUS_RADIUS_HOST: 0.0.0.0
+      TOUGHRADIUS_RADIUS_AUTHPORT: 1812
+      TOUGHRADIUS_RADIUS_ACCTPORT: 1813
+      TOUGHRADIUS_RADIUS_RADSEC_PORT: 2083
+      TOUGHRADIUS_LOGGER_MODE: production
+      TOUGHRADIUS_LOGGER_FILE_ENABLE: "false"
+    ports:
+      # Keep the admin UI/API private by default. Publish it only behind a TLS reverse proxy.
+      - "127.0.0.1:${MWX_ISP_WEB_PORT:-1816}:1816/tcp"
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+      - "2083:2083/tcp"
+    volumes:
+      - mwx_isp_data:/var/toughradius
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:1816/admin/", "-o", "/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks: [backend]
+
+volumes:
+  postgres_data:
+  mwx_isp_data:
+
+networks:
+  backend:

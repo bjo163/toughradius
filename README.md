@@ -28,6 +28,24 @@ Payment gateways, customer portal, WhatsApp, ticketing, fiber inventory, multi-t
 - Node.js 18 or newer for frontend development
 - PostgreSQL for production, or SQLite for local development
 
+## VPS deployment with Docker Compose
+
+The repository root includes a production Compose stack with PostgreSQL, persistent database/application volumes, required secrets, health checks, and RADIUS ports. The admin UI is bound to `127.0.0.1:1816` by default so it is not exposed directly to the public internet; put it behind a TLS reverse proxy such as Caddy or Nginx.
+
+Install Docker Engine and the Docker Compose plugin on an Ubuntu/Debian VPS, then run:
+
+```bash
+git clone https://github.com/bjo163/mwx-isp.git
+cd mwx-isp
+sudo bash scripts/vps-install.sh
+```
+
+The installer creates `/opt/mwx-isp/.env` with unique database, JWT, and admin credentials, starts the release container, and enables a daily systemd update timer when systemd is available. **Save the generated admin password printed by the installer.** Keep `/opt/mwx-isp/.env` private; it contains secrets. To update manually, run `sudo /opt/mwx-isp/scripts/vps-update.sh`. The updater waits for the container health check and attempts to restore the previous image if startup fails.
+
+For a source checkout, copy `.env.vps.example` to `.env`, replace the `CHANGE_ME` values, and run `docker compose up -d`. Set `MWX_ISP_VERSION` to a release version (for example `0.1.0`) when you want pinned updates; `latest` tracks the most recently published release image. Automatic image updates require `latest` and a publicly pullable GHCR package. The daily timer updates the app image and preserves both Docker volumes; keep regular off-host backups of the PostgreSQL volume before relying on upgrades.
+
+Allow only the required NAS traffic in the VPS firewall: UDP 1812 (RADIUS auth), UDP 1813 (accounting), and TCP 2083 only when using RadSec. Do not expose PostgreSQL. For remote admin access, forward the local web port through a TLS reverse proxy. Check service state/logs with `cd /opt/mwx-isp && docker compose ps` and `docker compose logs -f app`.
+
 ## Build from this checkout
 
 ```bash
