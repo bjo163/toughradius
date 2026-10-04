@@ -43,6 +43,9 @@ update and backup timers when systemd is available. Review the
 [`README.md`](https://github.com/bjo163/mwx-isp/blob/main/README.md) before
 production use.
 
+For a safe online repair or uninstall, use the commands in the
+[VPS operations guide](./ops-guide.md#repair-and-uninstall-a-vps-deployment).
+
 Set `MWX_ISP_DOMAIN` in `/opt/mwx-isp/.env` to the public DNS name for automatic
 HTTPS. The default `localhost` keeps the admin service private. Do not expose
 PostgreSQL to the public network. Allow TCP 80/443 for Caddy and only the RADIUS

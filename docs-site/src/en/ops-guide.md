@@ -212,6 +212,45 @@ remains the catch-all for back-pressure and response-write drops. System gauges
 For external monitoring, probe the service ports and watch the log file; treat
 process exit as the failure signal (the process model is fail-fast).
 
+## Repair and uninstall a VPS deployment
+
+The online repair command downloads the current official installer from the
+`main` branch and runs its safe upgrade path. It checks the host, validates the
+Compose configuration, backs up a running existing installation, and restores
+the published services while keeping `.env` and persistent data:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
+```
+
+Pass `--check` to run the installer's non-mutating preflight. Repair requires
+the existing install directory and the matching `.env` when data volumes exist.
+If PostgreSQL and the app are stopped, start them and create a backup before
+repair so the installer can verify and protect the data.
+
+Uninstall the services and checkout while preserving PostgreSQL/app data:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-uninstall.sh | sudo bash
+```
+
+The script also disables the MWX-ISP update and backup timers. It saves the
+matching `.env` as `/opt/mwx-isp.env.uninstalled` for a future restore; keep that
+file private because it contains database credentials. Backups under
+`/var/backups/mwx-isp` are preserved. To permanently remove the database and app
+data volumes, add `-s -- --purge` to the remote command. To delete local backups
+as well, pass both `--purge` and `--remove-backups`. Both modes ask for the
+literal confirmation `uninstall`; add `--yes` only for automation.
+
+After a data-preserving uninstall, restore the saved configuration before
+reinstalling so Compose reconnects to the existing database:
+
+```bash
+sudo git clone --depth 1 --single-branch --branch main https://github.com/bjo163/mwx-isp.git /opt/mwx-isp
+sudo install -m 0600 -o root -g root /opt/mwx-isp.env.uninstalled /opt/mwx-isp/.env
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash
+```
+
 ## Backup and restore
 
 **System Config → Backup** is restricted to a platform administrator and
