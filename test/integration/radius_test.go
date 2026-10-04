@@ -15,6 +15,7 @@ import (
 	"layeh.com/radius/rfc2865"
 
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
@@ -66,6 +67,46 @@ func TestRadiusPAPAuthentication(t *testing.T) {
 		assert.Equalf(t, radius.CodeAccessReject, resp.Code, "expected Access-Reject, got %v", resp.Code)
 		releaseIntegrationAuthRateLimit(username)
 	})
+}
+
+func TestRadiusAuthenticationSelectsTenantFromNASBeforeUserLookup(t *testing.T) {
+	db := h.appCtx.DB()
+	suffix := uniqueSuffix()
+	username := "shared-radius-user-" + suffix
+	serverAddr := fmt.Sprintf("127.0.0.1:%d", h.cfg.Radiusd.AuthPort)
+	type tenantAuth struct {
+		id                                int64
+		sourceIP, nasID, secret, password string
+	}
+	configs := make([]tenantAuth, 0, 2)
+	for _, label := range []string{"a", "b"} {
+		tenant := domain.Tenant{Name: "RADIUS tenant " + label, Slug: fmt.Sprintf("it-radius-tenant-%s-%d", label, common.UUIDint64()), Kind: "isp", Status: "active"}
+		require.NoError(t, db.Create(&tenant).Error)
+		tenantDB := db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID))
+		sourceIP := uniqueNASIP()
+		nasID, secret, password := "nas-"+label+"-"+suffix, "nas-secret-"+label+"-"+suffix, "tenant-password-"+label
+		nas := domain.NetNas{ID: common.UUIDint64(), Identifier: nasID, Ipaddr: sourceIP, Secret: secret, VendorCode: "0", Status: common.ENABLED}
+		require.NoError(t, tenantDB.Create(&nas).Error)
+		profile := domain.RadiusProfile{ID: common.UUIDint64(), Name: "Tenant profile " + label + " " + suffix, Status: common.ENABLED}
+		require.NoError(t, tenantDB.Create(&profile).Error)
+		user := domain.RadiusUser{ID: common.UUIDint64(), ProfileId: profile.ID, Username: username, Password: password, Status: common.ENABLED, ExpireTime: time.Now().AddDate(1, 0, 0)}
+		require.NoError(t, tenantDB.Create(&user).Error)
+		configs = append(configs, tenantAuth{id: tenant.ID, sourceIP: sourceIP, nasID: nasID, secret: secret, password: password})
+	}
+
+	for _, tenant := range configs {
+		resp := exchange(t, serverAddr, tenant.secret, username, tenant.password, tenant.nasID, tenant.sourceIP)
+		require.Equalf(t, radius.CodeAccessAccept, resp.Code, "NAS for tenant %s should authenticate its own duplicate username", tenant.id)
+		h.radiusSvc.ReleaseAuthRateLimitForTenant(tenant.id, username)
+	}
+
+	for index := range configs {
+		other := configs[(index+1)%len(configs)]
+		wrongCredential := configs[index]
+		resp := exchange(t, serverAddr, other.secret, username, wrongCredential.password, other.nasID, other.sourceIP)
+		require.Equalf(t, radius.CodeAccessReject, resp.Code, "credentials from another tenant must not authenticate at NAS %s", other.nasID)
+		h.radiusSvc.ReleaseAuthRateLimitForTenant(other.id, username)
+	}
 }
 
 // exchange sends a single PAP Access-Request with a bounded timeout so a stuck
