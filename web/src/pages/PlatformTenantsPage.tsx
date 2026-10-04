@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNotify } from 'react-admin';
 import {
-  Alert, Box, Button, Card, CardContent, Chip, CircularProgress, MenuItem,
-  Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
+  Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions,
+  DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableHead,
+  TableRow, TextField, Typography,
 } from '@mui/material';
-import { AddBusiness, Business, Refresh } from '@mui/icons-material';
+import { AddBusiness, Business, Edit, Refresh } from '@mui/icons-material';
 import { apiRequest } from '../utils/apiClient';
 
 type Tenant = {
@@ -38,6 +39,10 @@ const hasPlatformPermission = () => {
 
 export const PlatformTenantsPage = () => {
   const [form, setForm] = useState(initialForm);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '', company_name: '', tax_id: '', billing_address: '', contact_email: '', contact_phone: '',
+  });
   const queryClient = useQueryClient();
   const notify = useNotify();
   const allowed = hasPlatformPermission();
@@ -60,6 +65,15 @@ export const PlatformTenantsPage = () => {
     mutationFn: ({ tenant, status }: { tenant: Tenant; status: Tenant['status'] }) =>
       apiRequest(`/platform/tenants/${tenant.id}`, { method: 'PUT', body: JSON.stringify({ status }) }),
     onSuccess: async () => { await refresh(); notify('Tenant status updated', { type: 'success' }); },
+    onError: (error: Error) => notify(error.message || 'Tenant update failed', { type: 'error' }),
+  });
+  const updateIdentity = useMutation({
+    mutationFn: () => apiRequest(`/platform/tenants/${editingTenant?.id}`, { method: 'PUT', body: JSON.stringify(editForm) }),
+    onSuccess: async () => {
+      setEditingTenant(null);
+      await refresh();
+      notify('Tenant identity updated', { type: 'success' });
+    },
     onError: (error: Error) => notify(error.message || 'Tenant update failed', { type: 'error' }),
   });
   const set = (key: keyof typeof initialForm) => (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -115,15 +129,43 @@ export const PlatformTenantsPage = () => {
               <TableCell>{tenant.name}</TableCell><TableCell><Typography fontFamily="monospace">{tenant.slug}</Typography></TableCell>
               <TableCell>{tenant.kind === 'rtrw' ? 'RT/RW Net' : 'ISP'}</TableCell><TableCell>{tenant.company_name || '—'}</TableCell>
               <TableCell><Chip size="small" color={tenant.status === 'active' ? 'success' : 'default'} label={tenant.status} /></TableCell>
-              <TableCell align="right">{tenant.slug === 'default' ? <Chip size="small" variant="outlined" label="Legacy tenant" /> :
+              <TableCell align="right">{tenant.slug === 'default' ? <Chip size="small" variant="outlined" label="Legacy tenant" /> : <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                <Button size="small" startIcon={<Edit />} onClick={() => {
+                  setEditingTenant(tenant);
+                  setEditForm({
+                    name: tenant.name, company_name: tenant.company_name || '', tax_id: tenant.tax_id || '',
+                    billing_address: tenant.billing_address || '', contact_email: tenant.contact_email || '',
+                    contact_phone: tenant.contact_phone || '',
+                  });
+                }}>Edit details</Button>
                 <Button size="small" color={tenant.status === 'active' ? 'warning' : 'success'} disabled={updateStatus.isPending}
                   onClick={() => updateStatus.mutate({ tenant, status: tenant.status === 'active' ? 'suspended' : 'active' })}>
                   {tenant.status === 'active' ? 'Suspend' : 'Activate'}
-                </Button>}</TableCell>
+                </Button></Stack>}</TableCell>
             </TableRow>)}
             {!tenants.length && <TableRow><TableCell colSpan={6} align="center">No tenants yet.</TableCell></TableRow>}
           </TableBody></Table></Box>}
       </CardContent>
     </Card>
+    <Dialog open={Boolean(editingTenant)} onClose={() => setEditingTenant(null)} fullWidth maxWidth="sm">
+      <DialogTitle>Edit tenant identity</DialogTitle>
+      <DialogContent>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>These fields appear on tenant billing documents and contact records.</Typography>
+        <Stack spacing={1.5}>
+          <TextField required label="Tenant name" value={editForm.name} onChange={event => setEditForm(current => ({ ...current, name: event.target.value }))} />
+          <TextField label="Company / invoice name" value={editForm.company_name} onChange={event => setEditForm(current => ({ ...current, company_name: event.target.value }))} />
+          <TextField label="Tax ID" value={editForm.tax_id} onChange={event => setEditForm(current => ({ ...current, tax_id: event.target.value }))} />
+          <TextField label="Billing address" multiline minRows={2} value={editForm.billing_address} onChange={event => setEditForm(current => ({ ...current, billing_address: event.target.value }))} />
+          <TextField label="Contact email" type="email" value={editForm.contact_email} onChange={event => setEditForm(current => ({ ...current, contact_email: event.target.value }))} />
+          <TextField label="Contact phone" value={editForm.contact_phone} onChange={event => setEditForm(current => ({ ...current, contact_phone: event.target.value }))} />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setEditingTenant(null)} disabled={updateIdentity.isPending}>Cancel</Button>
+        <Button variant="contained" onClick={() => updateIdentity.mutate()} disabled={updateIdentity.isPending || !editForm.name.trim()}>
+          {updateIdentity.isPending ? 'Saving…' : 'Save identity'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   </Box>;
 };

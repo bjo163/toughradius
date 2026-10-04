@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -64,4 +65,31 @@ func TestCreatePlatformTenantRejectsWeakCredentials(t *testing.T) {
 
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+}
+
+func TestPlatformTenantUpdateCompanyIdentity(t *testing.T) {
+	db := setupTestDB(t)
+	appCtx := setupTestApp(t, db)
+	tenant := domain.Tenant{Name: "Before", Slug: "before", Kind: "rtrw", Status: "active"}
+	require.NoError(t, db.Create(&tenant).Error)
+	e := setupTestEcho()
+	body := `{"name":"After","company_name":"After Networks","tax_id":"ID-123","billing_address":"Jalan Utama 1","contact_email":"ops@example.test","contact_phone":"081234567890"}`
+	req := httptest.NewRequest(http.MethodPut, "/platform/tenants/"+strconv.FormatInt(tenant.ID, 10), strings.NewReader(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := CreateTestContext(e, db, req, rec, appCtx)
+	c.SetParamNames("id")
+	c.SetParamValues(strconv.FormatInt(tenant.ID, 10))
+	c.Set("current_operator", &domain.SysOpr{ID: 1, TenantID: domain.DefaultTenantID, Level: LevelSuper, Status: common.ENABLED, PlatformAdmin: true})
+
+	require.NoError(t, requirePlatformAdmin()(updatePlatformTenant)(c))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var updated domain.Tenant
+	require.NoError(t, db.First(&updated, tenant.ID).Error)
+	require.Equal(t, "After", updated.Name)
+	require.Equal(t, "After Networks", updated.CompanyName)
+	require.Equal(t, "ID-123", updated.TaxID)
+	require.Equal(t, "Jalan Utama 1", updated.BillingAddress)
+	require.Equal(t, "ops@example.test", updated.ContactEmail)
+	require.Equal(t, "081234567890", updated.ContactPhone)
 }
