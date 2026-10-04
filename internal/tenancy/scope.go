@@ -82,7 +82,7 @@ func scopeCreate(db *gorm.DB) {
 	value := reflect.ValueOf(db.Statement.Dest)
 	for value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface {
 		if value.IsNil() {
-			db.AddError(fmt.Errorf("tenant record is nil"))
+			db.Error = db.AddError(fmt.Errorf("tenant record is nil"))
 			return
 		}
 		value = value.Elem()
@@ -99,11 +99,11 @@ func scopeCreate(db *gorm.DB) {
 		}
 		current, isZero := field.ValueOf(db.Statement.Context, record)
 		if !isZero && current.(int64) != id {
-			db.AddError(fmt.Errorf("tenant_id does not match authenticated tenant"))
+			db.Error = db.AddError(fmt.Errorf("tenant_id does not match authenticated tenant"))
 			return false
 		}
 		if err := field.Set(db.Statement.Context, record, id); err != nil {
-			db.AddError(err)
+			db.Error = db.AddError(err)
 			return false
 		}
 		return true
@@ -123,8 +123,9 @@ func scopeCreate(db *gorm.DB) {
 	if clauseValue, exists := db.Statement.Clauses["ON CONFLICT"]; exists {
 		if conflict, ok := clauseValue.Expression.(clause.OnConflict); ok && (conflict.UpdateAll || len(conflict.DoUpdates) > 0) {
 			conflict.Where.Exprs = append(conflict.Where.Exprs,
-				clause.Eq{Column: clause.Column{Name: "tenant_id"}, Value: id})
-			db.Statement.Clauses["ON CONFLICT"] = clause.Clause{Expression: conflict}
+				clause.Eq{Column: clause.Column{Table: db.Statement.Schema.Table, Name: "tenant_id"}, Value: id})
+			clauseValue.Expression = conflict
+			db.Statement.Clauses["ON CONFLICT"] = clauseValue
 		}
 	}
 }
@@ -135,7 +136,7 @@ func scopeUpdate(db *gorm.DB) {
 		return
 	}
 	if updatesTenantID(db.Statement.Dest, id) {
-		db.AddError(fmt.Errorf("tenant_id cannot be changed by a tenant-scoped request"))
+		db.Error = db.AddError(fmt.Errorf("tenant_id cannot be changed by a tenant-scoped request"))
 		return
 	}
 	addTenantPredicate(db, id)
