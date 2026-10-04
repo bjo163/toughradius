@@ -1,12 +1,14 @@
 package adminapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -20,7 +22,7 @@ import (
 )
 
 // backupVersion identifies the backup payload schema.
-const backupVersion = "9.0"
+const backupVersion = "9.1"
 
 // supportedBackupMajor is the only schema major version restoreSystem accepts.
 const supportedBackupMajor = "9"
@@ -32,10 +34,11 @@ const maxRestoreRecords = 100000
 // SystemBackup is the on-disk JSON snapshot exchanged by backupSystem and
 // restoreSystem.
 //
-// The payload is versioned by Version and contains the core configuration
-// tables that define runtime behavior (nodes, NAS, profiles, users, configs,
-// operators, and managed certificates). The snapshot intentionally preserves
-// primary keys so restore can upsert records deterministically.
+// The payload is versioned by Version and contains deployment configuration,
+// tenant identity, and durable tenant ISP/RADIUS/monitoring/notification data.
+// Tenant ownership is carried separately in TenantIDs because normal API JSON
+// intentionally hides TenantID. Active RadiusOnline rows are omitted because
+// they become stale when a service is restored.
 //
 // Sensitive data notice: the payload includes security-relevant credentials
 // (for example RadiusUser passwords, SysOpr password hashes, and SysCert
@@ -46,6 +49,12 @@ type SystemBackup struct {
 	Version string `json:"version"`
 	// CreatedAt is the server timestamp when the backup was generated.
 	CreatedAt time.Time `json:"created_at"`
+	// Tenants stores the organizations and their company/invoice identity.
+	Tenants []domain.Tenant `json:"tenants,omitempty"`
+	// TenantIDs maps tenant-owned table and row IDs to their owning tenant.
+	TenantIDs map[string]map[string]int64 `json:"tenant_ids,omitempty"`
+	// OprLogs stores tenant-owned operator audit history.
+	OprLogs []domain.SysOprLog `json:"operator_logs,omitempty"`
 	// Nodes stores exported network node definitions.
 	Nodes []domain.NetNode `json:"nodes"`
 	// Nas stores exported NAS device records.
@@ -63,6 +72,140 @@ type SystemBackup struct {
 	// working after a restore. Restores older backups without this field
 	// simply skip the table.
 	Certs []SystemBackupCert `json:"certs,omitempty"`
+	// Accounting stores finalized RADIUS session history.
+	Accounting []domain.RadiusAccounting `json:"accounting,omitempty"`
+	// SessionActions stores durable CoA/Disconnect audit records.
+	SessionActions []domain.RadiusSessionActionAudit `json:"session_actions,omitempty"`
+	// Customers stores commercial subscriber records.
+	Customers []domain.Customer `json:"customers,omitempty"`
+	// Packages stores tenant ISP service packages.
+	Packages []domain.InternetPackage `json:"packages,omitempty"`
+	// Subscriptions stores customer service subscriptions.
+	Subscriptions []domain.Subscription `json:"subscriptions,omitempty"`
+	// Invoices stores generated billing documents.
+	Invoices []domain.Invoice `json:"invoices,omitempty"`
+	// InvoiceItems stores line items for invoices.
+	InvoiceItems []domain.InvoiceItem `json:"invoice_items,omitempty"`
+	// Payments stores tenant payment records.
+	Payments []domain.Payment `json:"payments,omitempty"`
+	// BillingEvents stores subscription and payment lifecycle history.
+	BillingEvents []domain.BillingEvent `json:"billing_events,omitempty"`
+	// Sequences stores tenant-local document numbering state.
+	Sequences []domain.DocumentSequence `json:"document_sequences,omitempty"`
+	// MonitorTargets stores tenant-owned probe configuration and encrypted secrets.
+	MonitorTargets []SystemBackupMonitorTarget `json:"monitor_targets,omitempty"`
+	// MonitorSamples stores bounded network probe history.
+	MonitorSamples []domain.NetMonitorSample `json:"monitor_samples,omitempty"`
+	// MonitorIncidents stores network incident history.
+	MonitorIncidents []domain.NetMonitorIncident `json:"monitor_incidents,omitempty"`
+	// NotificationSettings stores per-tenant alert preferences.
+	NotificationSettings []domain.NotificationSettings `json:"notification_settings,omitempty"`
+	// NotificationOutbox stores tenant delivery history and pending notifications.
+	NotificationOutbox []domain.NotificationOutbox `json:"notification_outbox,omitempty"`
+}
+
+// SystemBackupMonitorTarget preserves encrypted SNMP credentials that the
+// ordinary monitor API deliberately omits from JSON responses.
+type SystemBackupMonitorTarget struct {
+	domain.NetMonitorTarget
+	SNMPCommunityEncrypted []byte `json:"snmp_community_encrypted,omitempty"`
+	SNMPAuthEncrypted      []byte `json:"snmp_auth_encrypted,omitempty"`
+	SNMPPrivacyEncrypted   []byte `json:"snmp_privacy_encrypted,omitempty"`
+}
+
+func newSystemBackupMonitorTarget(target domain.NetMonitorTarget) SystemBackupMonitorTarget {
+	return SystemBackupMonitorTarget{
+		NetMonitorTarget: target, SNMPCommunityEncrypted: target.SNMPCommunityEncrypted,
+		SNMPAuthEncrypted: target.SNMPAuthEncrypted, SNMPPrivacyEncrypted: target.SNMPPrivacyEncrypted,
+	}
+}
+
+func (b SystemBackupMonitorTarget) toMonitorTarget() domain.NetMonitorTarget {
+	target := b.NetMonitorTarget
+	target.SNMPCommunityEncrypted = b.SNMPCommunityEncrypted
+	target.SNMPAuthEncrypted = b.SNMPAuthEncrypted
+	target.SNMPPrivacyEncrypted = b.SNMPPrivacyEncrypted
+	return target
+}
+
+func tenantOwnedBackupRows(b *SystemBackup) map[string]any {
+	return map[string]any{
+		"sys_opr": b.Operators, "sys_opr_log": b.OprLogs,
+		"net_node": b.Nodes, "net_nas": b.Nas, "radius_profile": b.Profiles,
+		"radius_user": b.Users, "radius_accounting": b.Accounting,
+		"radius_session_action_audit": b.SessionActions,
+		"isp_customer":                b.Customers, "isp_package": b.Packages,
+		"isp_subscription": b.Subscriptions, "isp_invoice": b.Invoices,
+		"isp_invoice_item": b.InvoiceItems, "isp_payment": b.Payments,
+		"isp_billing_event": b.BillingEvents, "isp_document_sequence": b.Sequences,
+		"net_monitor_target": b.MonitorTargets, "net_monitor_sample": b.MonitorSamples,
+		"net_monitor_incident":  b.MonitorIncidents,
+		"notification_settings": b.NotificationSettings, "notification_outbox": b.NotificationOutbox,
+	}
+}
+
+func captureTenantIDs(b *SystemBackup) error {
+	b.TenantIDs = make(map[string]map[string]int64)
+	for table, rows := range tenantOwnedBackupRows(b) {
+		values := reflect.ValueOf(rows)
+		if values.Kind() != reflect.Slice {
+			return fmt.Errorf("backup table %s is not a record slice", table)
+		}
+		ids := make(map[string]int64, values.Len())
+		for i := 0; i < values.Len(); i++ {
+			row := values.Index(i)
+			if row.Kind() == reflect.Pointer {
+				row = row.Elem()
+			}
+			idField, tenantField := row.FieldByName("ID"), row.FieldByName("TenantID")
+			if !idField.IsValid() || idField.Kind() != reflect.Int64 || !tenantField.IsValid() || tenantField.Kind() != reflect.Int64 {
+				return fmt.Errorf("backup table %s does not expose int64 ID and TenantID fields", table)
+			}
+			if idField.Int() <= 0 || tenantField.Int() <= 0 {
+				return fmt.Errorf("backup table %s row %d has invalid tenant ownership", table, i)
+			}
+			ids[fmt.Sprintf("%d", idField.Int())] = tenantField.Int()
+		}
+		b.TenantIDs[table] = ids
+	}
+	return nil
+}
+
+func applyTenantIDs(b *SystemBackup) error {
+	legacy := b.Version == "9.0"
+	knownTenants := make(map[int64]bool, len(b.Tenants))
+	for _, tenant := range b.Tenants {
+		if tenant.ID <= 0 || strings.TrimSpace(tenant.Slug) == "" {
+			return fmt.Errorf("tenant record is missing a valid ID or slug")
+		}
+		knownTenants[tenant.ID] = true
+	}
+	for table, rows := range tenantOwnedBackupRows(b) {
+		values := reflect.ValueOf(rows)
+		ids := b.TenantIDs[table]
+		for i := 0; i < values.Len(); i++ {
+			row := values.Index(i)
+			if row.Kind() == reflect.Pointer {
+				row = row.Elem()
+			}
+			idField, tenantField := row.FieldByName("ID"), row.FieldByName("TenantID")
+			if !idField.IsValid() || idField.Kind() != reflect.Int64 || !tenantField.IsValid() || tenantField.Kind() != reflect.Int64 || !tenantField.CanSet() {
+				return fmt.Errorf("backup table %s does not expose a writable tenant owner", table)
+			}
+			tenantID, exists := ids[fmt.Sprintf("%d", idField.Int())]
+			if !exists && legacy {
+				tenantID, exists = domain.DefaultTenantID, true
+			}
+			if !exists || tenantID <= 0 {
+				return fmt.Errorf("backup table %s row %d is missing tenant ownership metadata", table, i)
+			}
+			if len(b.Tenants) > 0 && !knownTenants[tenantID] {
+				return fmt.Errorf("backup table %s row %d references unknown tenant %d", table, i, tenantID)
+			}
+			tenantField.SetInt(tenantID)
+		}
+	}
+	return nil
 }
 
 // SystemBackupCert is the backup serialization of a domain.SysCert record.
@@ -109,7 +252,9 @@ func registerSystemBackupRoutes() {
 // include their PEM private keys. Both the downloaded file and the on-disk
 // copy in the backup directory must be handled and stored securely.
 func backupSystem(c echo.Context) error {
-	db := GetDB(c)
+	// A platform backup is installation-wide; an authenticated tenant context
+	// must not silently produce a partial backup of only the current tenant.
+	db := GetAppContext(c).DB().WithContext(context.Background())
 
 	backup := SystemBackup{
 		Version:   backupVersion,
@@ -134,6 +279,31 @@ func backupSystem(c echo.Context) error {
 	if err := db.Find(&backup.Operators).Error; err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export operators", err.Error())
 	}
+	loads := []struct {
+		name string
+		out  any
+	}{
+		{"tenant organizations", &backup.Tenants}, {"operator logs", &backup.OprLogs},
+		{"RADIUS accounting", &backup.Accounting}, {"session action audits", &backup.SessionActions},
+		{"customers", &backup.Customers}, {"packages", &backup.Packages},
+		{"subscriptions", &backup.Subscriptions}, {"invoices", &backup.Invoices},
+		{"invoice items", &backup.InvoiceItems}, {"payments", &backup.Payments},
+		{"billing events", &backup.BillingEvents}, {"document sequences", &backup.Sequences},
+		{"monitor samples", &backup.MonitorSamples}, {"monitor incidents", &backup.MonitorIncidents},
+		{"notification settings", &backup.NotificationSettings}, {"notification outbox", &backup.NotificationOutbox},
+	}
+	for _, load := range loads {
+		if err := db.Find(load.out).Error; err != nil {
+			return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export "+load.name, err.Error())
+		}
+	}
+	var monitorTargets []domain.NetMonitorTarget
+	if err := db.Find(&monitorTargets).Error; err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export monitor targets", err.Error())
+	}
+	for _, target := range monitorTargets {
+		backup.MonitorTargets = append(backup.MonitorTargets, newSystemBackupMonitorTarget(target))
+	}
 	var certs []domain.SysCert
 	if err := db.Find(&certs).Error; err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export certificates", err.Error())
@@ -141,13 +311,16 @@ func backupSystem(c echo.Context) error {
 	for _, cert := range certs {
 		backup.Certs = append(backup.Certs, newSystemBackupCert(cert))
 	}
+	if err := captureTenantIDs(&backup); err != nil {
+		return fail(c, http.StatusInternalServerError, "BACKUP_ERROR", "Failed to capture tenant ownership", err.Error())
+	}
 
 	bs, err := json.MarshalIndent(backup, "", "  ")
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, "ENCODE_ERROR", "Failed to encode backup", err.Error())
 	}
 
-	filename := fmt.Sprintf("toughradius-backup-%s.json", backup.CreatedAt.Format("20060102-150405"))
+	filename := fmt.Sprintf("mwx-isp-backup-%s.json", backup.CreatedAt.Format("20060102-150405"))
 
 	// Best-effort: persist a copy of the backup to the backup directory.
 	if cfg := GetAppContext(c).Config(); cfg != nil {
@@ -168,6 +341,8 @@ func backupSystem(c echo.Context) error {
 // A zero value for a field means either the table was absent from the payload
 // or the payload contained no records for that table.
 type SystemRestoreResult struct {
+	// Tenants is the number of tenant organizations restored.
+	Tenants int `json:"tenants"`
 	// Nodes is the number of net_node records restored.
 	Nodes int `json:"nodes"`
 	// Nas is the number of net_nas records restored.
@@ -182,6 +357,38 @@ type SystemRestoreResult struct {
 	Operators int `json:"operators"`
 	// Certs is the number of sys_cert records restored.
 	Certs int `json:"certs"`
+	// Accounting is the number of finalized RADIUS records restored.
+	Accounting int `json:"accounting"`
+	// SessionActions is the number of CoA/Disconnect audit records restored.
+	SessionActions int `json:"session_actions"`
+	// Customers is the number of ISP customers restored.
+	Customers int `json:"customers"`
+	// Packages is the number of commercial packages restored.
+	Packages int `json:"packages"`
+	// Subscriptions is the number of subscriptions restored.
+	Subscriptions int `json:"subscriptions"`
+	// Invoices is the number of invoices restored.
+	Invoices int `json:"invoices"`
+	// InvoiceItems is the number of invoice line items restored.
+	InvoiceItems int `json:"invoice_items"`
+	// Payments is the number of payment records restored.
+	Payments int `json:"payments"`
+	// BillingEvents is the number of billing lifecycle events restored.
+	BillingEvents int `json:"billing_events"`
+	// Sequences is the number of tenant document sequences restored.
+	Sequences int `json:"sequences"`
+	// MonitorTargets is the number of network monitor targets restored.
+	MonitorTargets int `json:"monitor_targets"`
+	// MonitorSamples is the number of network monitor samples restored.
+	MonitorSamples int `json:"monitor_samples"`
+	// MonitorIncidents is the number of network incidents restored.
+	MonitorIncidents int `json:"monitor_incidents"`
+	// NotificationSettings is the number of tenant notification settings restored.
+	NotificationSettings int `json:"notification_settings"`
+	// NotificationOutbox is the number of notifications restored.
+	NotificationOutbox int `json:"notification_outbox"`
+	// OprLogs is the number of operator audit logs restored.
+	OprLogs int `json:"operator_logs"`
 }
 
 // restoreSystem imports a previously exported backup file, upserting records
@@ -206,6 +413,9 @@ func restoreSystem(c echo.Context) error {
 	if err := json.Unmarshal(bs, &backup); err != nil {
 		return fail(c, http.StatusBadRequest, "INVALID_BACKUP", "Invalid backup file format", err.Error())
 	}
+	if err := applyTenantIDs(&backup); err != nil {
+		return fail(c, http.StatusBadRequest, "INVALID_BACKUP", "Backup tenant ownership metadata is invalid", err.Error())
+	}
 
 	// Strong validation: reject arbitrary, incompatible, or malformed payloads
 	// before touching the database.
@@ -229,6 +439,7 @@ func restoreSystem(c echo.Context) error {
 	// PlatformAdmin is intentionally omitted from exported operator JSON. Keep
 	// the existing platform authority of matching operator IDs during restore,
 	// and never grant that authority from an uploaded backup payload.
+	globalDB := GetAppContext(c).DB().WithContext(context.Background())
 	platformAdmins := make(map[int64]bool)
 	if len(backup.Operators) > 0 {
 		operatorIDs := make([]int64, 0, len(backup.Operators))
@@ -236,7 +447,7 @@ func restoreSystem(c echo.Context) error {
 			operatorIDs = append(operatorIDs, operator.ID)
 		}
 		var existing []domain.SysOpr
-		if err := GetDB(c).Select("id", "platform_admin").Where("id IN ?", operatorIDs).Find(&existing).Error; err != nil {
+		if err := globalDB.Select("id", "platform_admin").Where("id IN ?", operatorIDs).Find(&existing).Error; err != nil {
 			return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to preserve platform administrator access", err.Error())
 		}
 		for _, operator := range existing {
@@ -253,7 +464,13 @@ func restoreSystem(c echo.Context) error {
 		UpdateAll: true,
 	}
 
-	err = GetDB(c).Transaction(func(tx *gorm.DB) error {
+	err = globalDB.Transaction(func(tx *gorm.DB) error {
+		if len(backup.Tenants) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Tenants).Error; err != nil {
+				return err
+			}
+			result.Tenants = len(backup.Tenants)
+		}
 		if len(backup.Nodes) > 0 {
 			if err := tx.Clauses(upsert).Create(&backup.Nodes).Error; err != nil {
 				return err
@@ -277,6 +494,106 @@ func restoreSystem(c echo.Context) error {
 				return err
 			}
 			result.Users = len(backup.Users)
+		}
+		if len(backup.Accounting) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Accounting).Error; err != nil {
+				return err
+			}
+			result.Accounting = len(backup.Accounting)
+		}
+		if len(backup.SessionActions) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.SessionActions).Error; err != nil {
+				return err
+			}
+			result.SessionActions = len(backup.SessionActions)
+		}
+		if len(backup.Customers) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Customers).Error; err != nil {
+				return err
+			}
+			result.Customers = len(backup.Customers)
+		}
+		if len(backup.Packages) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Packages).Error; err != nil {
+				return err
+			}
+			result.Packages = len(backup.Packages)
+		}
+		if len(backup.Subscriptions) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Subscriptions).Error; err != nil {
+				return err
+			}
+			result.Subscriptions = len(backup.Subscriptions)
+		}
+		if len(backup.Invoices) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Invoices).Error; err != nil {
+				return err
+			}
+			result.Invoices = len(backup.Invoices)
+		}
+		if len(backup.InvoiceItems) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.InvoiceItems).Error; err != nil {
+				return err
+			}
+			result.InvoiceItems = len(backup.InvoiceItems)
+		}
+		if len(backup.Payments) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Payments).Error; err != nil {
+				return err
+			}
+			result.Payments = len(backup.Payments)
+		}
+		if len(backup.BillingEvents) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.BillingEvents).Error; err != nil {
+				return err
+			}
+			result.BillingEvents = len(backup.BillingEvents)
+		}
+		if len(backup.Sequences) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.Sequences).Error; err != nil {
+				return err
+			}
+			result.Sequences = len(backup.Sequences)
+		}
+		if len(backup.MonitorTargets) > 0 {
+			targets := make([]domain.NetMonitorTarget, 0, len(backup.MonitorTargets))
+			for _, target := range backup.MonitorTargets {
+				targets = append(targets, target.toMonitorTarget())
+			}
+			if err := tx.Clauses(upsert).Create(&targets).Error; err != nil {
+				return err
+			}
+			result.MonitorTargets = len(targets)
+		}
+		if len(backup.MonitorSamples) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.MonitorSamples).Error; err != nil {
+				return err
+			}
+			result.MonitorSamples = len(backup.MonitorSamples)
+		}
+		if len(backup.MonitorIncidents) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.MonitorIncidents).Error; err != nil {
+				return err
+			}
+			result.MonitorIncidents = len(backup.MonitorIncidents)
+		}
+		if len(backup.NotificationSettings) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.NotificationSettings).Error; err != nil {
+				return err
+			}
+			result.NotificationSettings = len(backup.NotificationSettings)
+		}
+		if len(backup.NotificationOutbox) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.NotificationOutbox).Error; err != nil {
+				return err
+			}
+			result.NotificationOutbox = len(backup.NotificationOutbox)
+		}
+		if len(backup.OprLogs) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.OprLogs).Error; err != nil {
+				return err
+			}
+			result.OprLogs = len(backup.OprLogs)
 		}
 		if len(backup.Configs) > 0 {
 			if err := tx.Clauses(upsert).Create(&backup.Configs).Error; err != nil {
@@ -326,18 +643,29 @@ func validateBackup(b *SystemBackup) error {
 	if major != supportedBackupMajor {
 		return fmt.Errorf("incompatible backup version %q, expected %s.x", b.Version, supportedBackupMajor)
 	}
+	if b.Version == backupVersion && len(b.Tenants) == 0 {
+		return fmt.Errorf("backup version %s must include tenant organizations", backupVersion)
+	}
 
 	for name, n := range map[string]int{
-		"nodes":     len(b.Nodes),
-		"nas":       len(b.Nas),
-		"profiles":  len(b.Profiles),
-		"users":     len(b.Users),
-		"configs":   len(b.Configs),
-		"operators": len(b.Operators),
-		"certs":     len(b.Certs),
+		"tenants": len(b.Tenants), "operator_logs": len(b.OprLogs),
+		"nodes": len(b.Nodes), "nas": len(b.Nas), "profiles": len(b.Profiles),
+		"users": len(b.Users), "configs": len(b.Configs), "operators": len(b.Operators),
+		"certs": len(b.Certs), "accounting": len(b.Accounting), "session_actions": len(b.SessionActions),
+		"customers": len(b.Customers), "packages": len(b.Packages), "subscriptions": len(b.Subscriptions),
+		"invoices": len(b.Invoices), "invoice_items": len(b.InvoiceItems), "payments": len(b.Payments),
+		"billing_events": len(b.BillingEvents), "document_sequences": len(b.Sequences),
+		"monitor_targets": len(b.MonitorTargets), "monitor_samples": len(b.MonitorSamples),
+		"monitor_incidents": len(b.MonitorIncidents), "notification_settings": len(b.NotificationSettings),
+		"notification_outbox": len(b.NotificationOutbox),
 	} {
 		if n > maxRestoreRecords {
 			return fmt.Errorf("table %q has %d records, exceeding the limit of %d", name, n, maxRestoreRecords)
+		}
+	}
+	for i := range b.Tenants {
+		if b.Tenants[i].ID <= 0 || strings.TrimSpace(b.Tenants[i].Slug) == "" || strings.TrimSpace(b.Tenants[i].Name) == "" {
+			return fmt.Errorf("tenants[%d]: id, slug, and name are required", i)
 		}
 	}
 

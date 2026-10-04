@@ -453,7 +453,7 @@ export const SystemConfigPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       notify(translate('pages.system_config.backup.success', { _: 'Backup complete' }), { type: 'success' });
       notify(
-        translate('pages.system_config.backup.notice', { _: 'The backup contains plaintext passwords and credentials. Store it securely.' }),
+        translate('pages.system_config.backup.notice', { _: 'Installation-wide backup includes every organization, subscriber credentials, password hashes, certificate private keys, and encrypted network secrets. Store it securely.' }),
         { type: 'info', autoHideDuration: 8000 }
       );
     } catch (error) {
@@ -762,7 +762,7 @@ export const SystemConfigPage: React.FC = () => {
         <DialogContent>
           <DialogContentText id="restore-dialog-description">
             {translate('pages.system_config.restore.confirm_warning', {
-              _: 'System restore will replace existing settings (nodes, NAS devices, packages, users, system configuration, and operators) with data from the backup. This also replaces the current admin account and password, so you may need to sign in with the backup credentials. Are you sure you want to continue?',
+              _: 'System restore imports installation-wide data for all organizations, including network configuration, subscribers, billing, monitoring, notifications, system settings, and operators. It preserves current platform administrator access. Active online sessions are not restored and will be rebuilt as devices reconnect. Continue?',
             })}
           </DialogContentText>
         </DialogContent>
