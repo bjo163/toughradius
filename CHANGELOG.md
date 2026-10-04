@@ -1,5 +1,14 @@
 # MWX-ISP Changelog
 
+## v0.7.3 — 2026-10-05
+
+Changes since v0.7.2:
+
+### Fixes and Improvements
+
+- recover clean VPS installs without env
+- close unverified public billing flows
+
 ## v0.7.2 — 2026-10-05
 
 Changes since v0.7.1:
