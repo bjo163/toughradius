@@ -25,7 +25,7 @@ import (
 func TestRadiusPAPAuthentication(t *testing.T) {
 	const secret = "it-radius-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.200.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-nas-" + suffix
 
 	nas := &domain.NetNas{
@@ -58,13 +58,13 @@ func TestRadiusPAPAuthentication(t *testing.T) {
 	t.Run("accept valid credentials", func(t *testing.T) {
 		resp := exchange(t, serverAddr, secret, username, password, nasID, nasIP)
 		assert.Equalf(t, radius.CodeAccessAccept, resp.Code, "expected Access-Accept, got %v", resp.Code)
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 	})
 
 	t.Run("reject wrong password", func(t *testing.T) {
 		resp := exchange(t, serverAddr, secret, username, "wrong-password", nasID, nasIP)
 		assert.Equalf(t, radius.CodeAccessReject, resp.Code, "expected Access-Reject, got %v", resp.Code)
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 	})
 }
 
@@ -80,7 +80,7 @@ func exchange(t *testing.T, serverAddr, secret, username, password, nasID, nasIP
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }

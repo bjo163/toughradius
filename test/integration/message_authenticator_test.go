@@ -50,7 +50,7 @@ func newAccessRequest(secret, username, password, nasID, nasIP string) *radius.P
 func TestRadiusMessageAuthenticator(t *testing.T) {
 	const secret = "it-msgauth-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.201.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-msgauth-nas-" + suffix
 
 	nas := &domain.NetNas{
@@ -91,7 +91,7 @@ func TestRadiusMessageAuthenticator(t *testing.T) {
 		packet := newAccessRequest(secret, username, password, nasID, nasIP)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		resp, err := radius.Exchange(ctx, packet, serverAddr)
+		resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 		require.NoError(t, err)
 		assert.Equal(t, radius.CodeAccessAccept, resp.Code)
 
@@ -102,7 +102,7 @@ func TestRadiusMessageAuthenticator(t *testing.T) {
 		require.Len(t, mac, md5.Size)
 		assert.True(t, validResponseMessageAuthenticator(t, resp, packet.Authenticator[:], secret))
 
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 	})
 
 	t.Run("enforce accepts request with valid message-authenticator", func(t *testing.T) {
@@ -112,11 +112,11 @@ func TestRadiusMessageAuthenticator(t *testing.T) {
 		signAccessRequest(t, packet, secret)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		resp, err := radius.Exchange(ctx, packet, serverAddr)
+		resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 		require.NoError(t, err)
 		assert.Equal(t, radius.CodeAccessAccept, resp.Code)
 
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 	})
 
 	t.Run("enforce discards request without message-authenticator", func(t *testing.T) {
@@ -125,12 +125,12 @@ func TestRadiusMessageAuthenticator(t *testing.T) {
 		packet := newAccessRequest(secret, username, password, nasID, nasIP)
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		_, err := radius.Exchange(ctx, packet, serverAddr)
+		_, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 		// The server silently discards the packet (RFC 3579 §3.2), so the client
 		// gets no reply and the bounded context deadline fires.
 		require.Error(t, err)
 
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 	})
 }
 

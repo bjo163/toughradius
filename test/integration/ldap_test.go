@@ -46,7 +46,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 
 	const secret = "it-ldap-secret"
 	suffix := uniqueSuffix()
-	nasIP := net.ParseIP("10.204.0.1")
+	nasIP := net.ParseIP(uniqueNASIP())
 	nasID := "it-ldap-nas-" + suffix
 
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -65,7 +65,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 
 	t.Run("bare PAP bind success ignores local password", func(t *testing.T) {
 		resp := exchange(t, serverAddr, secret, ldapEnv.username, ldapEnv.password, nasID, nasIP.String())
-		h.radiusSvc.ReleaseAuthRateLimit(ldapEnv.username)
+		releaseIntegrationAuthRateLimit(ldapEnv.username)
 		assert.Equalf(t, radius.CodeAccessAccept, resp.Code,
 			"LDAP-backed PAP must authenticate through OpenLDAP bind, got %v (%q)",
 			resp.Code, rfc2865.ReplyMessage_GetString(resp))
@@ -74,7 +74,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 	t.Run("bare PAP wrong password rejects as credential failure", func(t *testing.T) {
 		before := app.GetRadiusMetrics(app.MetricsRadiusRejectPasswdError)
 		resp := exchange(t, serverAddr, secret, ldapEnv.username, ldapEnv.password+"-wrong", nasID, nasIP.String())
-		h.radiusSvc.ReleaseAuthRateLimit(ldapEnv.username)
+		releaseIntegrationAuthRateLimit(ldapEnv.username)
 		assert.Equalf(t, radius.CodeAccessReject, resp.Code, "wrong LDAP password must reject, got %v", resp.Code)
 		assert.Equal(t, before+1, app.GetRadiusMetrics(app.MetricsRadiusRejectPasswdError))
 	})
@@ -89,7 +89,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 
 		before := app.GetRadiusMetrics(app.MetricsRadiusRejectLdapError)
 		resp := exchange(t, serverAddr, secret, ldapEnv.username, ldapEnv.password, nasID, nasIP.String())
-		h.radiusSvc.ReleaseAuthRateLimit(ldapEnv.username)
+		releaseIntegrationAuthRateLimit(ldapEnv.username)
 		assert.Equalf(t, radius.CodeAccessReject, resp.Code, "unreachable LDAP must reject, got %v", resp.Code)
 		assert.Equal(t, before+1, app.GetRadiusMetrics(app.MetricsRadiusRejectLdapError))
 		assert.Contains(t, strings.ToLower(rfc2865.ReplyMessage_GetString(resp)), "ldap backend unavailable")
@@ -98,7 +98,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 	t.Run("non-PAP request rejects explicitly while LDAP is active", func(t *testing.T) {
 		before := app.GetRadiusMetrics(app.MetricsRadiusRejectLdapError)
 		resp := exchangeCHAP(t, serverAddr, secret, ldapEnv.username, nasID, nasIP.String())
-		h.radiusSvc.ReleaseAuthRateLimit(ldapEnv.username)
+		releaseIntegrationAuthRateLimit(ldapEnv.username)
 		assert.Equalf(t, radius.CodeAccessReject, resp.Code, "LDAP-backed CHAP must reject, got %v", resp.Code)
 		assert.Equal(t, before+1, app.GetRadiusMetrics(app.MetricsRadiusRejectLdapError))
 		reply := strings.ToLower(rfc2865.ReplyMessage_GetString(resp))
@@ -128,7 +128,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 			innerMethod: ttlsInnerPAP,
 		}
 		resp := sup.authenticate(t)
-		h.radiusSvc.ReleaseAuthRateLimit(ldapEnv.username)
+		releaseIntegrationAuthRateLimit(ldapEnv.username)
 		require.Equalf(t, radius.CodeAccessAccept, resp.Code,
 			"valid TTLS-PAP LDAP bind must authenticate, got %v (%q)",
 			resp.Code, rfc2865.ReplyMessage_GetString(resp))
@@ -256,7 +256,7 @@ func exchangeCHAP(t *testing.T, serverAddr, secret, username, nasID, nasIP strin
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }

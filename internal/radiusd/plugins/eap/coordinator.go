@@ -299,7 +299,7 @@ func safeReplyMessage(reason error) string {
 func (c *Coordinator) CleanupState(r *radius.Request, tenantID int64) {
 	stateID := rfc2865.State_GetString(r.Packet)
 	if stateID != "" {
-		manager := EAPStateManager(c.stateManager)
+		manager := c.stateManager
 		if tenantID > 0 {
 			manager = tenantStateManager{base: c.stateManager, tenantID: tenantID}
 		}
