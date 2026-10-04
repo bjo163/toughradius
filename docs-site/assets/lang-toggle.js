@@ -21,7 +21,7 @@
   "use strict";
 
 // counterpart returns the toggle target for the given pathname, or null
-  // for pages outside the en/zh tree (handled as "neutral" pages).
+  // for pages outside the en/id tree (handled as "neutral" pages).
   function counterpart(pathname) {
     var enMatch = pathname.match(/^(.*)\/en\/([^/]*)$/);
     if (enMatch) {
