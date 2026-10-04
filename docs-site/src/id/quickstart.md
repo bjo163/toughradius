@@ -7,28 +7,26 @@ PostgreSQL, lalu memandu login awal dan uji koneksi RADIUS.
 
 ## 1. Instalasi VPS
 
-Pasang Docker Engine dan plugin Docker Compose pada Ubuntu atau Debian. Arahkan
-DNS domain ke server jika ingin Caddy mengurus sertifikat HTTPS otomatis, lalu:
+Jalankan satu perintah ini pada VPS Ubuntu atau Debian. Installer memasang
+Docker Engine dan Compose jika belum tersedia, membuat kredensial aman, lalu
+menjalankan MWX-ISP tanpa pertanyaan setup:
 
 ```bash
-git clone https://github.com/bjo163/mwx-isp.git
-cd mwx-isp
-sudo bash scripts/vps-install.sh
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash'
 ```
 
-Jalankan pemeriksaan host tanpa perubahan:
+Installer memakai hostname server yang bisa di-resolve bila tersedia. Jika tidak,
+halaman admin tetap privat di localhost dan installer mencetak perintah SSH
+tunnel untuk akses jarak jauh yang aman. Untuk memakai domain dan zona waktu
+sendiri, berikan nilainya langsung di perintah:
 
 ```bash
-sudo bash scripts/vps-install.sh --check
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash'
 ```
 
-Pada instalasi baru interaktif, installer menanyakan domain publik dan zona
-waktu. Untuk otomasi, tambahkan `--yes`;
-default aman adalah `localhost` dan `Asia/Jakarta`. Contoh domain publik:
-
-```bash
-sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash scripts/vps-install.sh --yes
-```
+Pemeriksaan lokal opsional: `sudo bash scripts/vps-install.sh --check` tanpa
+mengubah server. Jika ingin menjawab pertanyaan setup, ganti `sudo bash` pada
+perintah instalasi dengan `sudo bash -s -- --interactive`.
 
 Installer membuat kredensial privat, menarik image rilis PostgreSQL dan MWX-ISP,
 lalu menjalankan PostgreSQL, MWX-ISP, dan Caddy. Simpan password admin satu-kali

@@ -9,25 +9,25 @@ RadSec uses TCP `2083`.
 
 ## 1. Install on a VPS
 
-Install Docker Engine and the Docker Compose plugin on an Ubuntu or Debian VPS.
-Point a DNS name at the server before installing if you want Caddy to issue a
-public HTTPS certificate automatically. Then run:
+Run this one command on an Ubuntu or Debian VPS. It installs Docker Engine and
+Compose if needed, creates secure credentials, and starts MWX-ISP with no setup
+prompts:
 
 ```bash
-git clone https://github.com/bjo163/mwx-isp.git
-cd mwx-isp
-sudo bash scripts/vps-install.sh
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash'
 ```
 
-Run a read-only host check first with `sudo bash scripts/vps-install.sh --check`
-if you want to inspect prerequisites before making changes. On a new interactive
-install, the installer asks for the public hostname and timezone. For automation,
-pass `--yes`; safe defaults are `localhost` and `Asia/Jakarta`. Preconfigure a
-public hostname and timezone without prompts like this:
+The installer uses a resolvable server hostname when available. Otherwise it
+keeps the admin UI on localhost and prints an SSH tunnel command for secure
+remote access. To use a public domain and timezone, pass them inline:
 
 ```bash
-sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash scripts/vps-install.sh --yes
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash'
 ```
+
+The optional `sudo bash scripts/vps-install.sh --check` command checks a local
+checkout without making changes. To use setup prompts, replace `sudo bash` in
+the install command with `sudo bash -s -- --interactive`.
 
 The installer creates private credentials in `/opt/mwx-isp/.env`, pulls the
 PostgreSQL and MWX-ISP release images, and starts PostgreSQL, MWX-ISP, and Caddy.

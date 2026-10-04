@@ -44,7 +44,7 @@ This is the canonical planning surface and task source: milestone status, guardr
 | M14 | LDAP / AD bind authentication backend for PAP-family methods | TR-F025 | P2 | In progress |
 | M15 | Multi-tenant ISP and RT/RW Net isolation | TR-F033 | P1 | Delivered |
 | M16 | Automated dev-to-main versioning, changelog, and releases | TR-F022 | P2 | Delivered |
-| M17 | Safe VPS installation and first-run onboarding | TR-F020 / TR-F016 | P1 | Delivered |
+| M17 | Safe VPS installation and first-run onboarding | TR-F020 / TR-F016 | P1 | In progress |
 
 ## Cross-Cutting Baseline
 
@@ -64,7 +64,7 @@ The scheduled **M5 vendor VSA expansion** batch (M5.1 inventory + M5.2/M5.3/M5.4
 | 4 | M14.5 LDAP connection robustness | Blocked: waiting for load evidence | Revisit pooling/reconnect design only when connection cost or cancellation evidence justifies the complexity |
 | 5 | M15 multi-tenant ISP operations | Delivered | PR #8 merged to `main`; PostgreSQL/OpenLDAP acceptance, tenant isolation, RADIUS NAS-first routing, operational scoping, UI, recovery, and handbook coverage are CI-verified |
 | 6 | M16 release automation | Delivered | Only `dev` and `main`; reviewed promotions; automated SemVer/changelog; `v0.2.0`–`v0.2.2` releases, platform assets, GHCR images, and safe unpublished-tag recovery verified |
-| 7 | M17 safe VPS installation and first-run onboarding | Delivered | PR #20 merged to `main` (`e67399e`); CI passed. Preflight, guided setup, serialized deploy/restore, backup-protected resume, PostgreSQL/app/Caddy local readiness, and bilingual onboarding |
+| 7 | M17 safe VPS installation and first-run onboarding | In progress | PR #20 delivered the safe deployment foundation; M17.4 is simplifying it to a no-prompt, one-command install with automatic defaults and bilingual quickstarts |
 
 Agent-facing unchecked tasks:
 
@@ -84,6 +84,7 @@ Agent-facing unchecked tasks:
 - [x] M17.1 Add non-mutating installer preflight, supported-host checks, Docker daemon recovery, and safe generated configuration for first installs while preserving existing secrets/data. Delivered in PR #20: `--check` is read-only; guided/automatic setup validates domain/timezone, protects `.env`, and preserves existing configuration and volumes.
 - [x] M17.2 Serialize install/update/restore operations, resume only installer-marked incomplete first installs, and verify PostgreSQL, app, and Caddy readiness before declaring success. Delivered in PR #20: shared deployment lock is acquired before host mutation; interrupted installs back up existing data before resuming; readiness checks cover database, app HTTP, and local Caddy routing.
 - [x] M17.3 Align English/Indonesian VPS quickstarts with the guided setup, safe automation flags, failure recovery, and first-login/network onboarding. Delivered in PR #20: README and EN/ID quickstarts document preflight, guided and unattended setup, recovery, firewall ownership, and ISP first-use sequence.
+- [ ] M17.4 Make the default VPS install a no-prompt, one-command bootstrap with detected hostname/timezone, secure localhost/SSH-tunnel fallback, and concise EN/ID quickstarts; keep preflight and interactive setup optional.
 - [x] M5.1 Inventory pending vendor VSA gaps and dictionary differences. Delivered: `docs/vendor-vsa-gap-baseline.md` refreshed to HEAD `9882f79e` — registered parsers `default + huawei + h3c + zte + radback + alcatel + aruba + juniper`, response enhancers `default + huawei + h3c + zte + mikrotik + ikuai + aruba`, a corrected gap matrix, a delta-since-#433 section, and the next-batch backlog. (The first baseline #433 was superseded once M5.2/M5.3 landed; `#470` had re-opened this checkbox.)
 - [x] M5.2 Add request-side vendor parsers for genuine MAC/VLAN request VSAs. Delivered: `radback` (#449), `alcatel` (#450), `aruba` (#451), and `juniper` (#453) request parsers, plus the `vendors.CodeAlcatel` / `CodeAruba` constants.
 - [x] M5.3 Add the first vendor Access-Accept response enhancer. Delivered: `aruba` response enhancer registered in `plugins/init.go` (#456) with sample-based tests.
