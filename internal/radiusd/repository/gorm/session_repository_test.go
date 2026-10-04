@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,32 @@ func newSessionTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&domain.RadiusOnline{}))
 	return db
+}
+
+func TestSessionCountCacheSeparatesTenants(t *testing.T) {
+	db := newSessionTestDB(t)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	repo := NewGormSessionRepository(db)
+	ctxA := tenancy.WithTenantID(context.Background(), 1)
+	ctxB := tenancy.WithTenantID(context.Background(), 2)
+
+	_, err := repo.Create(ctxA, &domain.RadiusOnline{ID: 101, TenantID: 1, Username: "shared", AcctSessionId: "same-a"})
+	require.NoError(t, err)
+	_, err = repo.Create(ctxB, &domain.RadiusOnline{ID: 202, TenantID: 2, Username: "shared", AcctSessionId: "same-b"})
+	require.NoError(t, err)
+
+	countA, err := repo.CountByUsername(ctxA, "shared")
+	require.NoError(t, err)
+	countB, err := repo.CountByUsername(ctxB, "shared")
+	require.NoError(t, err)
+	require.Equal(t, 1, countA)
+	require.Equal(t, 1, countB)
+
+	_, err = repo.Create(ctxB, &domain.RadiusOnline{ID: 203, TenantID: 2, Username: "shared", AcctSessionId: "second-b"})
+	require.NoError(t, err)
+	countB, err = repo.CountByUsername(ctxB, "shared")
+	require.NoError(t, err)
+	require.Equal(t, 2, countB)
 }
 
 func countOnline(t *testing.T, db *gorm.DB, sessionId string) int64 {

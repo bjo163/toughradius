@@ -79,6 +79,7 @@ func buildOnlineFromRequest(acctCtx *accounting.AccountingContext, vr *vendorpar
 	acctOutputGigawords := int(rfc2869.AcctOutputGigawords_Get(r.Packet))
 
 	return domain.RadiusOnline{
+		TenantID:          acctCtx.NAS.TenantID,
 		AcctSessionId:     rfc2866.AcctSessionID_GetString(r.Packet),
 		AcctSessionTime:   int(rfc2866.AcctSessionTime_Get(r.Packet)),
 		AcctInputTotal:    int64(acctInputOctets) + int64(acctInputGigawords)*4*1024*1024*1024,

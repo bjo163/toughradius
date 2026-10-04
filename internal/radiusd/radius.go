@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/panjf2000/ants/v2"
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/internal/domain"
@@ -22,7 +21,9 @@ import (
 	repogorm "github.com/bjo163/mwx-isp/internal/radiusd/repository/gorm"
 	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
 	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/huawei"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/common"
+	"github.com/panjf2000/ants/v2"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"layeh.com/radius"
@@ -128,12 +129,14 @@ func (s *RadiusService) RADIUSSecret(ctx context.Context, remoteAddr net.Addr) (
 // GetNas looks up a NAS device by source IP (preferred) or identifier. Results
 // are cached, and a missing record is mapped to an unauthorized-NAS error.
 func (s *RadiusService) GetNas(ip, identifier string) (nas *domain.NetNas, err error) {
-	cacheKey := fmt.Sprintf("%s|%s", ip, identifier)
+	// RFC 2865 sections 2.4 and 5.32 require source-IP selection for the
+	// shared secret; NAS-Identifier must never act as a fallback authority.
+	cacheKey := ip
 	if cached, ok := s.nasCache.Get(cacheKey); ok {
 		return cached, nil
 	}
 	// Adapter: delegate to repository layer
-	nas, err = s.NasRepo.GetByIPOrIdentifier(context.Background(), ip, identifier)
+	nas, err = s.NasRepo.GetByIP(context.Background(), ip)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, radiuserrors.NewUnauthorizedNasError(ip, identifier, err)
@@ -147,12 +150,27 @@ func (s *RadiusService) GetNas(ip, identifier string) (nas *domain.NetNas, err e
 // GetValidUser retrieves a user by username (or MAC address for MAC auth),
 // caches the result, and rejects disabled or expired accounts.
 func (s *RadiusService) GetValidUser(usernameOrMac string, macauth bool) (user *domain.RadiusUser, err error) {
-	cacheKey := fmt.Sprintf("%t|%s", macauth, usernameOrMac)
-	if cached, ok := s.userCache.Get(cacheKey); ok {
-		return cached, nil
+	return s.getValidUser(0, usernameOrMac, macauth)
+}
+
+// GetValidUserForTenant loads an account only from the tenant identified by
+// the already-authenticated NAS source address.
+func (s *RadiusService) GetValidUserForTenant(tenantID int64, usernameOrMac string, macauth bool) (user *domain.RadiusUser, err error) {
+	if tenantID <= 0 {
+		return nil, errors.New("RADIUS NAS has no tenant identity")
+	}
+	return s.getValidUser(tenantID, usernameOrMac, macauth)
+}
+
+func (s *RadiusService) getValidUser(tenantID int64, usernameOrMac string, macauth bool) (user *domain.RadiusUser, err error) {
+	cacheKey := radiusUserCacheKey(tenantID, macauth, usernameOrMac)
+	if s.userCache != nil {
+		if cached, ok := s.userCache.Get(cacheKey); ok {
+			return cached, nil
+		}
 	}
 	// Adapter: delegate to repository layer
-	ctx := context.Background()
+	ctx := tenancy.WithTenantID(context.Background(), tenantID)
 	if macauth {
 		user, err = s.UserRepo.GetByMacAddr(ctx, usernameOrMac)
 	} else {
@@ -174,8 +192,14 @@ func (s *RadiusService) GetValidUser(usernameOrMac string, macauth bool) (user *
 	if user.ExpireTime.Before(time.Now()) {
 		return nil, radiuserrors.NewUserExpiredError()
 	}
-	s.userCache.Set(cacheKey, user)
+	if s.userCache != nil {
+		s.userCache.Set(cacheKey, user)
+	}
 	return user, nil
+}
+
+func radiusUserCacheKey(tenantID int64, macauth bool, identity string) string {
+	return fmt.Sprintf("%d|%t|%s", tenantID, macauth, identity)
 }
 
 // UpdateUserMac persists the most recently seen MAC address for a user.
@@ -183,9 +207,27 @@ func (s *RadiusService) UpdateUserMac(username string, macaddr string) {
 	_ = s.UserRepo.UpdateMacAddr(context.Background(), username, macaddr)
 }
 
+func (s *RadiusService) updateUserMacForTenant(tenantID int64, username, oldMAC, macaddr string) {
+	ctx := tenancy.WithTenantID(context.Background(), tenantID)
+	_ = s.UserRepo.UpdateMacAddr(ctx, username, macaddr)
+	if s.userCache != nil {
+		s.userCache.Delete(radiusUserCacheKey(tenantID, false, username))
+		s.userCache.Delete(radiusUserCacheKey(tenantID, true, oldMAC))
+		s.userCache.Delete(radiusUserCacheKey(tenantID, true, macaddr))
+	}
+}
+
 // UpdateUserLastOnline records the user's last-online timestamp.
 func (s *RadiusService) UpdateUserLastOnline(username string) {
 	_ = s.UserRepo.UpdateLastOnline(context.Background(), username)
+}
+
+func (s *RadiusService) updateUserLastOnlineForTenant(tenantID int64, username string) {
+	_ = s.UserRepo.UpdateLastOnline(tenancy.WithTenantID(context.Background(), tenantID), username)
+}
+
+func (s *RadiusService) updateUserVLANForTenant(tenantID int64, username string, vlan1, vlan2 int) {
+	_ = s.UserRepo.UpdateVlanId(tenancy.WithTenantID(context.Background(), tenantID), username, vlan1, vlan2)
 }
 
 func (s *RadiusService) GetEapMethod() string {
@@ -224,6 +266,7 @@ func GetNetRadiusOnlineFromRequest(r *radius.Request, vr *VendorRequest, nas *do
 	}
 	return domain.RadiusOnline{
 		ID:                  0,
+		TenantID:            nas.TenantID,
 		Username:            rfc2865.UserName_GetString(r.Packet),
 		NasId:               common.IfEmptyStr(rfc2865.NASIdentifier_GetString(r.Packet), common.NA),
 		NasAddr:             nas.Ipaddr,
@@ -256,11 +299,26 @@ func GetNetRadiusOnlineFromRequest(r *radius.Request, vr *VendorRequest, nas *do
 // Each username may authenticate only once every configured interval, backed by
 // a sharded limiter so different users do not contend on a single global lock.
 func (s *RadiusService) CheckAuthRateLimit(username string) error {
-	return s.authRate.check(username, time.Duration(RadiusAuthRateInterval)*time.Second)
+	return s.CheckAuthRateLimitForTenant(0, username)
+}
+
+func (s *RadiusService) CheckAuthRateLimitForTenant(tenantID int64, username string) error {
+	return s.authRate.check(authRateCacheKey(tenantID, username), time.Duration(RadiusAuthRateInterval)*time.Second)
+}
+
+func authRateCacheKey(tenantID int64, username string) string {
+	if tenantID <= 0 {
+		return username
+	}
+	return fmt.Sprintf("%d|%s", tenantID, username)
 }
 
 func (s *RadiusService) ReleaseAuthRateLimit(username string) {
 	s.authRate.release(username)
+}
+
+func (s *RadiusService) ReleaseAuthRateLimitForTenant(tenantID int64, username string) {
+	s.authRate.release(authRateCacheKey(tenantID, username))
 }
 
 func (s *RadiusService) Release() {
@@ -308,7 +366,7 @@ func (s *AuthService) GetLocalPassword(user *domain.RadiusUser, isMacAuth bool) 
 
 func (s *AuthService) UpdateBind(user *domain.RadiusUser, vendorReq *VendorRequest) {
 	if user.MacAddr != vendorReq.MacAddr {
-		s.UpdateUserMac(user.Username, vendorReq.MacAddr)
+		s.updateUserMacForTenant(user.TenantID, user.Username, user.MacAddr, vendorReq.MacAddr)
 	}
 	reqvid1 := int(vendorReq.Vlanid1)
 	reqvid2 := int(vendorReq.Vlanid2)
@@ -316,7 +374,7 @@ func (s *AuthService) UpdateBind(user *domain.RadiusUser, vendorReq *VendorReque
 	// when either differs. Updating them via the single-field helpers would zero
 	// out the other column (and the old code also wrote vlanid1 into vlanid2).
 	if user.Vlanid1 != reqvid1 || user.Vlanid2 != reqvid2 {
-		_ = s.UserRepo.UpdateVlanId(context.Background(), user.Username, reqvid1, reqvid2)
+		s.updateUserVLANForTenant(user.TenantID, user.Username, reqvid1, reqvid2)
 	}
 }
 

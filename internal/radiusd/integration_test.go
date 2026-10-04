@@ -111,6 +111,11 @@ func setupTestEnv(t *testing.T) (*app.Application, *config.AppConfig) {
 	return application, cfg
 }
 
+func exchangeRadiusFrom(ctx context.Context, packet *radius.Packet, addr, sourceIP string) (*radius.Packet, error) {
+	client := &radius.Client{Dialer: net.Dialer{LocalAddr: &net.UDPAddr{IP: net.ParseIP(sourceIP)}}}
+	return client.Exchange(ctx, packet, addr)
+}
+
 func TestRadiusIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -151,7 +156,7 @@ func TestRadiusIntegration(t *testing.T) {
 	nas := &domain.NetNas{
 		ID:         1,
 		Identifier: "test-nas",
-		Ipaddr:     "10.0.0.1",
+		Ipaddr:     "127.0.0.1",
 		Secret:     "secret",
 		VendorCode: "0",
 		Status:     common.ENABLED,
@@ -164,7 +169,7 @@ func TestRadiusIntegration(t *testing.T) {
 	mikrotikNas := &domain.NetNas{
 		ID:         2,
 		Identifier: "nas-mikrotik",
-		Ipaddr:     "10.0.0.2",
+		Ipaddr:     "127.0.0.2",
 		Secret:     "secret",
 		VendorCode: vendors.CodeMikrotik,
 		Status:     common.ENABLED,
@@ -177,7 +182,7 @@ func TestRadiusIntegration(t *testing.T) {
 	huaweiNas := &domain.NetNas{
 		ID:         3,
 		Identifier: "nas-huawei",
-		Ipaddr:     "10.0.0.3",
+		Ipaddr:     "127.0.0.3",
 		Secret:     "secret",
 		VendorCode: vendors.CodeHuawei,
 		Status:     common.ENABLED,
@@ -236,7 +241,7 @@ func TestRadiusIntegration(t *testing.T) {
 		_ = rfc2865.NASIdentifier_SetString(packet, "test-nas")
 		_ = rfc2865.NASIPAddress_Set(packet, net.ParseIP("10.0.0.1"))
 
-		response, err := radius.Exchange(context.Background(), packet, serverAddr)
+		response, err := exchangeRadiusFrom(context.Background(), packet, serverAddr, "127.0.0.1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -254,7 +259,7 @@ func TestRadiusIntegration(t *testing.T) {
 		_ = rfc2865.NASIdentifier_SetString(packet, "test-nas")
 		_ = rfc2865.NASIPAddress_Set(packet, net.ParseIP("10.0.0.1"))
 
-		response, err := radius.Exchange(context.Background(), packet, serverAddr)
+		response, err := exchangeRadiusFrom(context.Background(), packet, serverAddr, "127.0.0.1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -278,7 +283,7 @@ func TestRadiusIntegration(t *testing.T) {
 		_ = rfc2869.NASPortID_SetString(packet, "Gi0/1/0:100.200")
 		_ = rfc2865.FramedIPAddress_Set(packet, net.ParseIP("192.168.88.10"))
 
-		response, err := radius.Exchange(context.Background(), packet, serverAddr)
+		response, err := exchangeRadiusFrom(context.Background(), packet, serverAddr, "127.0.0.2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,7 +313,7 @@ func TestRadiusIntegration(t *testing.T) {
 		_ = rfc2869.NASPortID_SetString(packet, "vlanid=310;vlanid2=320;")
 		_ = rfc2865.FramedIPAddress_Set(packet, net.ParseIP("10.10.10.20"))
 
-		response, err := radius.Exchange(context.Background(), packet, serverAddr)
+		response, err := exchangeRadiusFrom(context.Background(), packet, serverAddr, "127.0.0.3")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -344,7 +349,7 @@ func TestRadiusIntegration(t *testing.T) {
 		_ = rfc2866.AcctStatusType_Set(packet, rfc2866.AcctStatusType_Value_Start)
 		_ = rfc2866.AcctSessionID_SetString(packet, "session-1")
 
-		response, err := radius.Exchange(context.Background(), packet, acctAddr)
+		response, err := exchangeRadiusFrom(context.Background(), packet, acctAddr, "127.0.0.1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -365,7 +370,7 @@ func TestRadiusIntegration(t *testing.T) {
 		_ = rfc2866.AcctInputOctets_Set(packet, 1000)
 		_ = rfc2866.AcctOutputOctets_Set(packet, 2000)
 
-		response, err := radius.Exchange(context.Background(), packet, acctAddr)
+		response, err := exchangeRadiusFrom(context.Background(), packet, acctAddr, "127.0.0.1")
 		if err != nil {
 			t.Fatal(err)
 		}

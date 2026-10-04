@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -66,12 +67,20 @@ func TestNasRepository_GetByIPOrIdentifier(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "by-ip", got.Name)
 
-	// Matches on identifier when IP does not match.
-	got, err = repo.GetByIPOrIdentifier(ctx, "192.168.0.1", "id-2")
-	require.NoError(t, err)
-	require.Equal(t, "by-id", got.Name)
+	// An identifier must not select another NAS when its source address differs.
+	_, err = repo.GetByIPOrIdentifier(ctx, "192.168.0.1", "id-2")
+	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 
 	// Neither matches.
 	_, err = repo.GetByIPOrIdentifier(ctx, "192.168.0.1", "id-missing")
 	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+}
+
+func TestNasRepository_RejectsAmbiguousSourceIPAcrossTenants(t *testing.T) {
+	db := newNasTestDB(t)
+	repo := NewGormNasRepository(db)
+	seedNas(t, db, &domain.NetNas{ID: 1, TenantID: 1, Name: "tenant-a", Ipaddr: "10.0.0.1"})
+	seedNas(t, db, &domain.NetNas{ID: 2, TenantID: 2, Name: "tenant-b", Ipaddr: "10.0.0.1"})
+	_, err := repo.GetByIP(context.Background(), "10.0.0.1")
+	require.ErrorIs(t, err, repository.ErrAmbiguousNASIP)
 }

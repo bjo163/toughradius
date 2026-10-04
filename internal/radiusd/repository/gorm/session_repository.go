@@ -2,11 +2,13 @@ package gorm
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bjo163/mwx-isp/internal/domain"
 	cachepkg "github.com/bjo163/mwx-isp/internal/radiusd/cache"
 	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -45,7 +47,7 @@ func (r *GormSessionRepository) Create(ctx context.Context, session *domain.Radi
 	}
 	created := result.RowsAffected > 0
 	if created {
-		r.invalidate(session.Username)
+		r.invalidate(ctx, session.Username)
 	}
 	return created, nil
 }
@@ -71,7 +73,7 @@ func (r *GormSessionRepository) Delete(ctx context.Context, sessionId string) er
 		Where("acct_session_id = ?", sessionId).
 		Delete(&domain.RadiusOnline{}).Error
 	if err == nil {
-		r.invalidate(username)
+		r.invalidate(ctx, username)
 	}
 	return err
 }
@@ -88,8 +90,9 @@ func (r *GormSessionRepository) GetBySessionId(ctx context.Context, sessionId st
 }
 
 func (r *GormSessionRepository) CountByUsername(ctx context.Context, username string) (int, error) {
+	cacheKey := sessionCountCacheKey(ctx, username)
 	if username != "" {
-		if cached, ok := r.countCache.Get(username); ok {
+		if cached, ok := r.countCache.Get(cacheKey); ok {
 			return cached, nil
 		}
 	}
@@ -99,7 +102,7 @@ func (r *GormSessionRepository) CountByUsername(ctx context.Context, username st
 		Where("username = ?", username).
 		Count(&count).Error
 	if err == nil && username != "" {
-		r.countCache.Set(username, int(count))
+		r.countCache.Set(cacheKey, int(count))
 	}
 	return int(count), err
 }
@@ -138,11 +141,18 @@ func (r *GormSessionRepository) BatchDeleteByNas(ctx context.Context, nasAddr, n
 	return nil
 }
 
-func (r *GormSessionRepository) invalidate(username string) {
+func (r *GormSessionRepository) invalidate(ctx context.Context, username string) {
 	if username == "" {
 		return
 	}
-	r.countCache.Delete(username)
+	r.countCache.Delete(sessionCountCacheKey(ctx, username))
+}
+
+func sessionCountCacheKey(ctx context.Context, username string) string {
+	if tenantID, ok := tenancy.TenantID(ctx); ok {
+		return fmt.Sprintf("%d|%s", tenantID, username)
+	}
+	return username
 }
 
 func (r *GormSessionRepository) lookupUsernameBySession(ctx context.Context, sessionId string) string {

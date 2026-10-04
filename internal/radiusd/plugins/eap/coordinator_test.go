@@ -4,11 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2869"
@@ -743,7 +743,7 @@ func TestCleanupState_WithState(t *testing.T) {
 	_ = rfc2865.State_SetString(packet, "test-state-123") //nolint:errcheck
 	req := &radius.Request{Packet: packet}
 
-	coordinator.CleanupState(req)
+	coordinator.CleanupState(req, 0)
 
 	// State should be deleted
 	_, err := stateManager.GetState("test-state-123")
@@ -760,7 +760,7 @@ func TestCleanupState_WithoutState(t *testing.T) {
 	req := &radius.Request{Packet: packet}
 
 	// Should not panic
-	coordinator.CleanupState(req)
+	coordinator.CleanupState(req, 0)
 }
 
 func TestCleanupState_StateNotInManager(t *testing.T) {
@@ -772,7 +772,26 @@ func TestCleanupState_StateNotInManager(t *testing.T) {
 	req := &radius.Request{Packet: packet}
 
 	// Should not panic even if state doesn't exist
-	coordinator.CleanupState(req)
+	coordinator.CleanupState(req, 0)
+}
+
+func TestTenantEAPStateIsIsolated(t *testing.T) {
+	stateManager := newMockStateManager()
+	coordinator := NewCoordinator(stateManager, &mockPasswordProvider{}, newMockHandlerRegistry(), false)
+	stateID := "captured-radius-state"
+
+	managerA := tenantStateManager{base: stateManager, tenantID: 101}
+	managerB := tenantStateManager{base: stateManager, tenantID: 202}
+	require.NoError(t, managerA.SetState(stateID, &EAPState{StateID: stateID, Username: "tenant-a-user"}))
+	_, err := managerB.GetState(stateID)
+	assert.ErrorIs(t, err, ErrStateNotFound, "another tenant must not load a captured State value")
+
+	packet := radius.New(radius.CodeAccessRequest, []byte("secret"))
+	require.NoError(t, rfc2865.State_SetString(packet, stateID))
+	coordinator.CleanupState(&radius.Request{Packet: packet}, 202)
+	state, err := managerA.GetState(stateID)
+	require.NoError(t, err, "one tenant must not delete another tenant's handshake")
+	assert.Equal(t, "tenant-a-user", state.Username)
 }
 
 // Integration test: Full EAP-MD5 authentication flow simulation

@@ -88,8 +88,8 @@ func (h *EAPAuthHelper) SendEAPFailure(
 }
 
 // CleanupState Cleanup EAP Status
-func (h *EAPAuthHelper) CleanupState(r *radius.Request) {
-	h.coordinator.CleanupState(r)
+func (h *EAPAuthHelper) CleanupState(r *radius.Request, tenantID int64) {
+	h.coordinator.CleanupState(r, tenantID)
 }
 
 // GetCoordinator Get underlying coordinator(for advanced usage)
