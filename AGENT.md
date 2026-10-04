@@ -1,9 +1,9 @@
 # MWX-ISP AI Agent Development Guide
 
 > **Canonical.** This file holds the authoritative agent development rules and is
-> referenced directly by the agent tooling. A bilingual handbook digest is
+> referenced directly by the agent tooling. An English / Indonesian handbook digest is
 > available for discoverability — English: [`docs-site/src/en/agent-guide.md`](docs-site/src/en/agent-guide.md),
-> 中文：[`docs-site/src/zh/agent-guide.md`](docs-site/src/zh/agent-guide.md) — but
+> Bahasa Indonesia: [`docs-site/src/id/agent-guide.md`](docs-site/src/id/agent-guide.md) — but
 > it summarizes rather than replaces this file. When in doubt, follow this file.
 
 ## Product Scope Baseline

@@ -33,7 +33,7 @@ func TestPublicBrandingDefaultsAndValidatedSave(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 	require.Equal(t, "MWX-ISP", response.Data.ProductName)
-	require.Equal(t, "#E6FF00", response.Data.AccentColor)
+	require.Equal(t, "#16A34A", response.Data.AccentColor)
 
 	invalidReq := httptest.NewRequest(http.MethodPut, "/api/v1/system/branding", bytes.NewBufferString(`{"product_name":"Test ISP","short_name":"TEST","accent_color":"red"}`))
 	invalidReq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

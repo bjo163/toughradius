@@ -38,6 +38,7 @@ import {
 } from 'react-admin';
 import {
   Box,
+  Button,
   Typography,
   Card,
   CardContent,
@@ -101,6 +102,9 @@ interface NASDevice extends RaRecord {
   node_id?: string;
   tags?: string;
   remark?: string;
+  online_sessions?: number;
+  health_status?: string;
+  latency_ms?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -722,6 +726,40 @@ const NASListContent = () => {
             <ReferenceField source="node_id" reference="network/nodes" label={translate('resources.network/nas.fields.node_id', { _: 'Associated node' })} link="show">
               <TextField source="name" />
             </ReferenceField>
+            <FunctionField
+              label="Active Sessions"
+              render={(record: any) => (
+                <Chip
+                  size="small"
+                  color={record?.online_sessions ? 'primary' : 'default'}
+                  label={`${record?.online_sessions || 0} online`}
+                  sx={{ fontWeight: 600 }}
+                />
+              )}
+            />
+            <FunctionField
+              label="Live Health"
+              render={(record: any) => {
+                const status = record?.health_status || 'unmonitored';
+                if (status === 'up') {
+                  return (
+                    <Chip
+                      size="small"
+                      color="success"
+                      label={`UP (${record?.latency_ms || 0}ms)`}
+                      sx={{ fontWeight: 700 }}
+                    />
+                  );
+                }
+                if (status === 'down') {
+                  return <Chip size="small" color="error" label="DOWN" sx={{ fontWeight: 700 }} />;
+                }
+                if (status === 'paused') {
+                  return <Chip size="small" variant="outlined" color="warning" label="PAUSED" />;
+                }
+                return <Chip size="small" variant="outlined" label="Unmonitored" sx={{ opacity: 0.6 }} />;
+              }}
+            />
             <DateField
               source="created_at"
               label={translate('resources.network/nas.fields.created_at', { _: 'Created at' })}
@@ -1310,6 +1348,55 @@ const NASHeaderCard = () => {
               {record.coa_port || '-'}
             </Typography>
           </Box>
+
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 0.5,
+              bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <ServerIcon sx={{ fontSize: '1.1rem', color: 'primary.main' }} />
+              <Typography variant="caption" color="text.secondary">
+                Active Sessions
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              {record.online_sessions || 0} online
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 0.5,
+              bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <NetworkIcon
+                sx={{
+                  fontSize: '1.1rem',
+                  color: record.health_status === 'up' ? 'success.main' : record.health_status === 'down' ? 'error.main' : 'text.secondary',
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                Health Status
+              </Typography>
+            </Box>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 700,
+                color: record.health_status === 'up' ? 'success.main' : record.health_status === 'down' ? 'error.main' : 'text.secondary',
+              }}
+            >
+              {record.health_status ? record.health_status.toUpperCase() : 'UNMONITORED'} {record.latency_ms ? `(${record.latency_ms}ms)` : ''}
+            </Typography>
+          </Box>
         </Box>
       </CardContent>
     </Card>
@@ -1474,9 +1561,74 @@ const NASDetails = () => {
               </Typography>
             </Box>
           </DetailSectionCard>
+
+          {/* RouterOS / NAS Provisioning Script */}
+          <DetailSectionCard
+            title="RouterOS Quick Setup (MikroTik CLI)"
+            description="Copy and paste this script directly into your MikroTik Terminal to connect this router to MWX-ISP."
+            icon={<NasIcon />}
+            color="info"
+          >
+            <NASProvisioningBox record={record} />
+          </DetailSectionCard>
         </Stack>
       </Box>
     </>
+  );
+};
+
+const NASProvisioningBox = ({ record }: { record: NASDevice }) => {
+  const notify = useNotify();
+  const [copied, setCopied] = useState(false);
+  const serverHost = window.location.hostname || 'YOUR_SERVER_IP';
+  const secret = record.secret || 'YOUR_SHARED_SECRET';
+  const coaPort = record.coa_port || 3799;
+
+  const script = useMemo(() => {
+    return `/radius add address=${serverHost} secret="${secret}" authentication-port=1812 accounting-port=1813 timeout=3000ms service=ppp,hotspot comment="MWX-ISP RADIUS"
+/radius incoming set accept=yes port=${coaPort}
+/ppp aaa set use-radius=yes accounting=yes interim-update=5m
+/ppp profile add name="mwx-isp-default" only-one=yes use-encryption=yes comment="MWX-ISP default"`;
+  }, [serverHost, secret, coaPort]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(script);
+    setCopied(true);
+    notify('RouterOS script copied to clipboard', { type: 'success' });
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <Box
+        component="pre"
+        sx={{
+          p: 2,
+          borderRadius: 1,
+          bgcolor: 'action.hover',
+          fontFamily: 'monospace',
+          fontSize: '0.82rem',
+          overflowX: 'auto',
+          whiteSpace: 'pre-wrap',
+          border: '1px solid',
+          borderColor: 'divider',
+          m: 0,
+        }}
+      >
+        {script}
+      </Box>
+      <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          size="small"
+          variant="contained"
+          color={copied ? 'success' : 'primary'}
+          startIcon={<CopyIcon />}
+          onClick={handleCopy}
+        >
+          {copied ? 'Copied!' : 'Copy RouterOS Script'}
+        </Button>
+      </Box>
+    </Box>
   );
 };
 

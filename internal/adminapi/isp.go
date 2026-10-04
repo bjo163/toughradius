@@ -8,25 +8,34 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/internal/billing"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/notify"
 	"github.com/bjo163/mwx-isp/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/mikrotik"
 	"github.com/bjo163/mwx-isp/internal/webserver"
 	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"layeh.com/radius"
 )
 
 type customerInput struct {
-	Name       string `json:"name" validate:"required,max=150"`
-	Phone      string `json:"phone" validate:"omitempty,max=32"`
-	Email      string `json:"email" validate:"omitempty,email,max=150"`
-	Address    string `json:"address" validate:"omitempty,max=500"`
-	City       string `json:"city" validate:"omitempty,max=100"`
-	Province   string `json:"province" validate:"omitempty,max=100"`
-	IdentityNo string `json:"identity_no" validate:"omitempty,max=100"`
-	Status     string `json:"status" validate:"omitempty,oneof=active inactive suspended terminated"`
-	Notes      string `json:"notes" validate:"omitempty,max=1000"`
+	Name       string  `json:"name" validate:"required,max=150"`
+	Phone      string  `json:"phone" validate:"omitempty,max=32"`
+	Email      string  `json:"email" validate:"omitempty,email,max=150"`
+	Address    string  `json:"address" validate:"omitempty,max=500"`
+	City       string  `json:"city" validate:"omitempty,max=100"`
+	Province   string  `json:"province" validate:"omitempty,max=100"`
+	IdentityNo string  `json:"identity_no" validate:"omitempty,max=100"`
+	Status     string  `json:"status" validate:"omitempty,oneof=active inactive suspended terminated"`
+	Notes      string  `json:"notes" validate:"omitempty,max=1000"`
+	ODPID      int64   `json:"odp_id,string"`
+	ODPCode    string  `json:"odp_code"`
+	ODPPort    int     `json:"odp_port"`
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
 }
 
 type packageInput struct {
@@ -36,6 +45,9 @@ type packageInput struct {
 	RadiusProfileID int64  `json:"radius_profile_id,string" validate:"required,gt=0"`
 	Description     string `json:"description" validate:"omitempty,max=1000"`
 	BillingCycle    string `json:"billing_cycle" validate:"omitempty,oneof=monthly"`
+	FupLimitGB      int64  `json:"fup_limit_gb" validate:"gte=0"`
+	FupRateDown     int    `json:"fup_rate_down" validate:"gte=0"`
+	FupRateUp       int    `json:"fup_rate_up" validate:"gte=0"`
 	Status          string `json:"status" validate:"omitempty,oneof=active inactive"`
 }
 
@@ -80,6 +92,16 @@ func registerISPRoutes() {
 	webserver.ApiGET("/isp/payments", listPayments)
 	webserver.ApiGET("/isp/payments/:id", getPayment)
 	webserver.ApiPOST("/isp/payments", createPayment, admin)
+	webserver.ApiPOST("/isp/invoices/:id/send-whatsapp", sendInvoiceWhatsApp, admin)
+	webserver.ApiPOST("/isp/payments/:id/send-whatsapp", sendPaymentWhatsApp, admin)
+	webserver.ApiPOST("/isp/subscriptions/:id/apply-fup", applySubscriptionFUP, admin)
+	webserver.ApiPOST("/isp/subscriptions/:id/reset-fup", resetSubscriptionFUP, admin)
+	webserver.ApiGET("/portal/lookup", lookupCustomerPortal)
+	webserver.ApiGET("/portal/invoices/:id/payment-channel", getInvoicePaymentChannel)
+	webserver.ApiPOST("/portal/invoices/:id/simulate-pay", simulateInvoicePayment)
+	webserver.ApiPOST("/portal/payments/webhook", handlePaymentWebhook)
+	webserver.ApiGET("/public/packages", listPublicPackages)
+	webserver.ApiPOST("/public/register", registerPublicCustomer)
 	webserver.ApiGET("/dashboard/isp-stats", getISPDashboardStats)
 }
 
@@ -107,22 +129,82 @@ func listCustomers(c echo.Context) error {
 		RadiusUsername string `json:"radius_username"`
 		Outstanding    int64  `json:"outstanding"`
 	}
-	result := make([]customerRow, 0, len(rows))
-	for _, row := range rows {
-		view := customerRow{Customer: row}
-		var sub domain.Subscription
-		if GetDB(c).Where("customer_id = ?", row.ID).Order("id DESC").First(&sub).Error == nil {
-			var pkg domain.InternetPackage
-			if GetDB(c).First(&pkg, sub.PackageID).Error == nil {
-				view.PackageName = pkg.Name
-			}
-			var user domain.RadiusUser
-			if sub.RadiusUserID > 0 && GetDB(c).First(&user, sub.RadiusUserID).Error == nil {
-				view.RadiusUsername = user.Username
-			}
+	result := make([]customerRow, len(rows))
+	if len(rows) == 0 {
+		return paged(c, result, total, page, size)
+	}
+	customerIDs := make([]int64, 0, len(rows))
+	for i, row := range rows {
+		result[i].Customer = row
+		customerIDs = append(customerIDs, row.ID)
+	}
+	// Load only the newest subscription for each customer in one query, then
+	// batch-load the referenced packages and RADIUS users for this page.
+	type subscriptionSummary struct {
+		CustomerID   int64
+		PackageID    int64
+		RadiusUserID int64
+	}
+	var subscriptions []subscriptionSummary
+	if err := GetDB(c).Model(&domain.Subscription{}).
+		Select("customer_id, package_id, radius_user_id").
+		Where("customer_id IN (?) AND id IN (?)", customerIDs,
+			GetDB(c).Model(&domain.Subscription{}).Select("MAX(id)").Where("customer_id IN ?", customerIDs).Group("customer_id")).
+		Find(&subscriptions).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to query customer subscriptions", err.Error())
+	}
+	packageIDs := make([]int64, 0, len(subscriptions))
+	userIDs := make([]int64, 0, len(subscriptions))
+	for _, sub := range subscriptions {
+		packageIDs = append(packageIDs, sub.PackageID)
+		if sub.RadiusUserID > 0 {
+			userIDs = append(userIDs, sub.RadiusUserID)
 		}
-		GetDB(c).Model(&domain.Invoice{}).Where("customer_id = ? AND balance > 0", row.ID).Select("COALESCE(SUM(balance), 0)").Scan(&view.Outstanding)
-		result = append(result, view)
+	}
+	packageNames := make(map[int64]string)
+	if len(packageIDs) > 0 {
+		var packages []domain.InternetPackage
+		if err := GetDB(c).Select("id, name").Where("id IN ?", packageIDs).Find(&packages).Error; err != nil {
+			return fail(c, 500, "DATABASE_ERROR", "Failed to query customer packages", err.Error())
+		}
+		for _, pkg := range packages {
+			packageNames[pkg.ID] = pkg.Name
+		}
+	}
+	usernames := make(map[int64]string)
+	if len(userIDs) > 0 {
+		var users []domain.RadiusUser
+		if err := GetDB(c).Select("id, username").Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+			return fail(c, 500, "DATABASE_ERROR", "Failed to query customer RADIUS users", err.Error())
+		}
+		for _, user := range users {
+			usernames[user.ID] = user.Username
+		}
+	}
+	rowByCustomer := make(map[int64]int, len(rows))
+	for i, row := range rows {
+		rowByCustomer[row.ID] = i
+	}
+	for _, sub := range subscriptions {
+		if i, ok := rowByCustomer[sub.CustomerID]; ok {
+			result[i].PackageName = packageNames[sub.PackageID]
+			result[i].RadiusUsername = usernames[sub.RadiusUserID]
+		}
+	}
+	type outstandingSummary struct {
+		CustomerID  int64
+		Outstanding int64
+	}
+	var balances []outstandingSummary
+	if err := GetDB(c).Model(&domain.Invoice{}).
+		Select("customer_id, COALESCE(SUM(balance), 0) AS outstanding").
+		Where("customer_id IN ? AND balance > 0", customerIDs).Group("customer_id").Find(&balances).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to query customer balances", err.Error())
+	}
+	for _, balance := range balances {
+		if i, ok := rowByCustomer[balance.CustomerID]; ok {
+			result[i].Outstanding = balance.Outstanding
+		}
 	}
 	return paged(c, result, total, page, size)
 }
@@ -140,11 +222,14 @@ func getCustomer(c echo.Context) error {
 	}
 	type subscriptionView struct {
 		domain.Subscription
-		PackageName  string `json:"package_name"`
-		PackagePrice int64  `json:"package_price"`
-		Username     string `json:"radius_username"`
-		Online       bool   `json:"online"`
-		CurrentIP    string `json:"current_ip"`
+		PackageName   string `json:"package_name"`
+		PackagePrice  int64  `json:"package_price"`
+		Username      string `json:"radius_username"`
+		Online        bool   `json:"online"`
+		CurrentIP     string `json:"current_ip"`
+		TotalUpload   int64  `json:"total_upload_bytes"`
+		TotalDownload int64  `json:"total_download_bytes"`
+		TotalTraffic  int64  `json:"total_traffic_bytes"`
 	}
 	var subscriptions []domain.Subscription
 	GetDB(c).Where("customer_id = ?", id).Order("id DESC").Find(&subscriptions)
@@ -162,7 +247,21 @@ func getCustomer(c echo.Context) error {
 				var session domain.RadiusOnline
 				if GetDB(c).Where("username = ?", user.Username).First(&session).Error == nil {
 					view.Online, view.CurrentIP = true, session.FramedIpaddr
+					view.TotalUpload += session.AcctInputTotal
+					view.TotalDownload += session.AcctOutputTotal
 				}
+				type acctTotals struct {
+					Input  int64
+					Output int64
+				}
+				var totals acctTotals
+				GetDB(c).Model(&domain.RadiusAccounting{}).
+					Where("username = ?", user.Username).
+					Select("COALESCE(SUM(acct_input_total), 0) as input, COALESCE(SUM(acct_output_total), 0) as output").
+					Scan(&totals)
+				view.TotalUpload += totals.Input
+				view.TotalDownload += totals.Output
+				view.TotalTraffic = view.TotalUpload + view.TotalDownload
 			}
 		}
 		views = append(views, view)
@@ -194,7 +293,29 @@ func createCustomer(c echo.Context) error {
 	if status == "" {
 		status = domain.CustomerActive
 	}
-	row := domain.Customer{CustomerNo: fmt.Sprintf("TMP-%d", common.UUIDint64()), Name: strings.TrimSpace(in.Name), Phone: in.Phone, Email: in.Email, Address: in.Address, City: in.City, Province: in.Province, IdentityNo: in.IdentityNo, Status: status, Notes: in.Notes}
+	row := domain.Customer{
+		CustomerNo: fmt.Sprintf("TMP-%d", common.UUIDint64()),
+		Name:       strings.TrimSpace(in.Name),
+		Phone:      in.Phone,
+		Email:      in.Email,
+		Address:    in.Address,
+		City:       in.City,
+		Province:   in.Province,
+		IdentityNo: in.IdentityNo,
+		Status:     status,
+		Notes:      in.Notes,
+		ODPID:      in.ODPID,
+		ODPCode:    in.ODPCode,
+		ODPPort:    in.ODPPort,
+		Latitude:   in.Latitude,
+		Longitude:  in.Longitude,
+	}
+	if row.ODPID > 0 && row.ODPCode == "" {
+		var odp domain.ODP
+		if GetDB(c).First(&odp, row.ODPID).Error == nil {
+			row.ODPCode = odp.Code
+		}
+	}
 	err := GetDB(c).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&row).Error; err != nil {
 			return err
@@ -224,7 +345,31 @@ func updateCustomer(c echo.Context) error {
 	if err := GetDB(c).First(&row, id).Error; err != nil {
 		return fail(c, 404, "NOT_FOUND", "Customer not found", nil)
 	}
-	if err := GetDB(c).Model(&row).Updates(map[string]interface{}{"name": strings.TrimSpace(in.Name), "phone": in.Phone, "email": in.Email, "address": in.Address, "city": in.City, "province": in.Province, "identity_no": in.IdentityNo, "status": in.Status, "notes": in.Notes, "updated_at": time.Now()}).Error; err != nil {
+	odpCode := in.ODPCode
+	if in.ODPID > 0 && odpCode == "" {
+		var odp domain.ODP
+		if GetDB(c).First(&odp, in.ODPID).Error == nil {
+			odpCode = odp.Code
+		}
+	}
+	updates := map[string]interface{}{
+		"name":        strings.TrimSpace(in.Name),
+		"phone":       in.Phone,
+		"email":       in.Email,
+		"address":     in.Address,
+		"city":        in.City,
+		"province":    in.Province,
+		"identity_no": in.IdentityNo,
+		"status":      in.Status,
+		"notes":       in.Notes,
+		"odp_id":      in.ODPID,
+		"odp_code":    odpCode,
+		"odp_port":    in.ODPPort,
+		"latitude":    in.Latitude,
+		"longitude":   in.Longitude,
+		"updated_at":  time.Now(),
+	}
+	if err := GetDB(c).Model(&row).Updates(updates).Error; err != nil {
 		return fail(c, 500, "DATABASE_ERROR", "Failed to update customer", err.Error())
 	}
 	GetDB(c).First(&row, id)
@@ -280,6 +425,211 @@ func getPackage(c echo.Context) error {
 	return ok(c, row)
 }
 
+type publicPackageDTO struct {
+	ID           int64  `json:"id,string"`
+	Code         string `json:"code"`
+	Name         string `json:"name"`
+	Price        int64  `json:"price"`
+	Description  string `json:"description"`
+	BillingCycle string `json:"billing_cycle"`
+	FupLimitGB   int64  `json:"fup_limit_gb"`
+	UpRateKbps   int    `json:"up_rate_kbps"`
+	DownRateKbps int    `json:"down_rate_kbps"`
+	SpeedDisplay string `json:"speed_display"`
+	Category     string `json:"category"`
+}
+
+func listPublicPackages(c echo.Context) error {
+	db := GetDB(c)
+	var pkgs []domain.InternetPackage
+	if err := db.Where("status = ?", "active").Order("price ASC, id ASC").Find(&pkgs).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to query packages", err.Error())
+	}
+
+	if len(pkgs) == 0 {
+		demo := []publicPackageDTO{
+			{
+				ID: 1, Code: "HOME-20", Name: "Home Fiber Starter", Price: 199000,
+				Description:  "Koneksi stabil dan hemat untuk kebutuhan harian, streaming HD & browsing keluarga.",
+				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 20480, DownRateKbps: 20480,
+				SpeedDisplay: "20 Mbps", Category: "Home Broadband",
+			},
+			{
+				ID: 2, Code: "HOME-50", Name: "Home Fiber Ultra", Price: 325000,
+				Description:  "Kecepatan tinggi tanpa kompromi, optimal untuk gaming rendah latensi, WFH & 4K multi-device.",
+				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 51200, DownRateKbps: 51200,
+				SpeedDisplay: "50 Mbps", Category: "Home Broadband",
+			},
+			{
+				ID: 3, Code: "BIZ-100", Name: "Business Pro Dedicated", Price: 750000,
+				Description:  "Koneksi simetris prioritas bisnis dengan jaminan SLA 99.8%, 1 IP Public Statis & dukungan NOC 24/7.",
+				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 102400, DownRateKbps: 102400,
+				SpeedDisplay: "100 Mbps", Category: "Corporate / Dedicated",
+			},
+			{
+				ID: 4, Code: "ENT-300", Name: "Enterprise GigaLine", Price: 1950000,
+				Description:  "Dedicated leased-line 1:1 langsung ke IIX/OpenIXP & global Tier-1 upstream, SLA 99.98%, MTTR < 2 Jam.",
+				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 307200, DownRateKbps: 307200,
+				SpeedDisplay: "300 Mbps", Category: "Enterprise / Leased Line",
+			},
+		}
+		return ok(c, demo)
+	}
+
+	profileIDs := make([]int64, 0, len(pkgs))
+	for _, p := range pkgs {
+		if p.RadiusProfileID > 0 {
+			profileIDs = append(profileIDs, p.RadiusProfileID)
+		}
+	}
+
+	profileMap := make(map[int64]domain.RadiusProfile)
+	if len(profileIDs) > 0 {
+		var profiles []domain.RadiusProfile
+		if err := db.Where("id IN ?", profileIDs).Find(&profiles).Error; err == nil {
+			for _, prof := range profiles {
+				profileMap[prof.ID] = prof
+			}
+		}
+	}
+
+	result := make([]publicPackageDTO, 0, len(pkgs))
+	for _, p := range pkgs {
+		prof, hasProf := profileMap[p.RadiusProfileID]
+		up := 0
+		down := 0
+		if hasProf {
+			up = prof.UpRate
+			down = prof.DownRate
+		}
+
+		speedDisplay := ""
+		if down >= 1000000 {
+			speedDisplay = fmt.Sprintf("%d Gbps", down/1000000)
+		} else if down >= 1000 {
+			speedDisplay = fmt.Sprintf("%d Mbps", down/1000)
+		} else if down > 0 {
+			speedDisplay = fmt.Sprintf("%d Kbps", down)
+		} else {
+			lowerName := strings.ToLower(p.Name)
+			if strings.Contains(lowerName, "gbps") || strings.Contains(lowerName, "mbps") {
+				speedDisplay = p.Name
+			} else {
+				speedDisplay = "High Speed"
+			}
+		}
+
+		cat := "Home Broadband"
+		lowerName := strings.ToLower(p.Name)
+		if strings.Contains(lowerName, "business") || strings.Contains(lowerName, "biz") {
+			cat = "Corporate / Dedicated"
+		} else if strings.Contains(lowerName, "enterprise") || strings.Contains(lowerName, "leased") || strings.Contains(lowerName, "giga") {
+			cat = "Enterprise / Leased Line"
+		} else if strings.Contains(lowerName, "hotspot") || strings.Contains(lowerName, "voucher") {
+			cat = "Prepaid Hotspot"
+		}
+
+		result = append(result, publicPackageDTO{
+			ID:           p.ID,
+			Code:         p.Code,
+			Name:         p.Name,
+			Price:        p.Price,
+			Description:  p.Description,
+			BillingCycle: p.BillingCycle,
+			FupLimitGB:   p.FupLimitGB,
+			UpRateKbps:   up,
+			DownRateKbps: down,
+			SpeedDisplay: speedDisplay,
+			Category:     cat,
+		})
+	}
+
+	return ok(c, result)
+}
+
+type publicRegisterInput struct {
+	Name      string `json:"name"`
+	Phone     string `json:"phone"`
+	Email     string `json:"email"`
+	Address   string `json:"address"`
+	City      string `json:"city"`
+	PackageID int64  `json:"package_id,string"`
+	Notes     string `json:"notes"`
+}
+
+func registerPublicCustomer(c echo.Context) error {
+	var in publicRegisterInput
+	if err := c.Bind(&in); err != nil {
+		return fail(c, 400, "INVALID_REQUEST", "Format formulir pendaftaran tidak valid", err.Error())
+	}
+	name := strings.TrimSpace(in.Name)
+	phone := strings.TrimSpace(in.Phone)
+	if name == "" || phone == "" {
+		return fail(c, 400, "REQUIRED_FIELDS", "Nama lengkap dan nomor WhatsApp wajib diisi", nil)
+	}
+
+	db := GetDB(c)
+	now := time.Now()
+
+	var pkg domain.InternetPackage
+	pkgName := "Broadband Fiber"
+	if in.PackageID > 0 {
+		if err := db.First(&pkg, in.PackageID).Error; err == nil {
+			pkgName = pkg.Name
+		}
+	}
+
+	notes := in.Notes
+	if notes == "" {
+		notes = fmt.Sprintf("Pendaftaran pasang baru via website publik. Paket: %s", pkgName)
+	} else {
+		notes = fmt.Sprintf("Pendaftaran pasang baru via website publik. Paket: %s. Catatan: %s", pkgName, notes)
+	}
+
+	customer := domain.Customer{
+		CustomerNo: fmt.Sprintf("TMP-%d", common.UUIDint64()),
+		Name:       name,
+		Phone:      phone,
+		Email:      strings.TrimSpace(in.Email),
+		Address:    strings.TrimSpace(in.Address),
+		City:       strings.TrimSpace(in.City),
+		Status:     domain.CustomerPending,
+		Notes:      notes,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	if err := db.Create(&customer).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Gagal menyimpan data calon pelanggan", err.Error())
+	}
+
+	customer.CustomerNo = fmt.Sprintf("MWX-%06d", customer.ID)
+	_ = db.Model(&customer).Update("customer_no", customer.CustomerNo)
+
+	// Create trouble ticket for field survey & installation
+	ticketNo := fmt.Sprintf("WO-%s-%04d", now.Format("060102"), customer.ID%10000)
+	ticket := domain.TroubleTicket{
+		TicketNo:    ticketNo,
+		CustomerID:  customer.ID,
+		Subject:     fmt.Sprintf("Pasang Baru: %s (%s)", customer.Name, pkgName),
+		Category:    "installation",
+		Priority:    "normal",
+		Status:      "open",
+		Description: fmt.Sprintf("Permohonan Pemasangan Baru:\n- Nama: %s\n- No WhatsApp: %s\n- Email: %s\n- Alamat Pemasangan: %s, %s\n- Pilihan Paket: %s\n- Catatan: %s", customer.Name, customer.Phone, customer.Email, customer.Address, customer.City, pkgName, in.Notes),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	_ = db.Create(&ticket)
+
+	return ok(c, map[string]any{
+		"success":     true,
+		"customer_no": customer.CustomerNo,
+		"ticket_no":   ticket.TicketNo,
+		"package":     pkgName,
+		"message":     "Pendaftaran berhasil diterima! Tim teknisi kami akan segera menghubungi Anda untuk jadwal survei dan instalasi.",
+	})
+}
+
 func savePackage(c echo.Context, id int64) error {
 	var in packageInput
 	if err := c.Bind(&in); err != nil {
@@ -298,7 +648,17 @@ func savePackage(c echo.Context, id int64) error {
 	if err := GetDB(c).First(&profile, in.RadiusProfileID).Error; err != nil {
 		return fail(c, 400, "PROFILE_NOT_FOUND", "RADIUS profile not found", nil)
 	}
-	row := domain.InternetPackage{Name: strings.TrimSpace(in.Name), Price: in.Price, RadiusProfileID: in.RadiusProfileID, Description: in.Description, BillingCycle: in.BillingCycle, Status: in.Status}
+	row := domain.InternetPackage{
+		Name:            strings.TrimSpace(in.Name),
+		Price:           in.Price,
+		RadiusProfileID: in.RadiusProfileID,
+		Description:     in.Description,
+		BillingCycle:    in.BillingCycle,
+		FupLimitGB:      in.FupLimitGB,
+		FupRateDown:     in.FupRateDown,
+		FupRateUp:       in.FupRateUp,
+		Status:          in.Status,
+	}
 	if id == 0 {
 		err := GetDB(c).Transaction(func(tx *gorm.DB) error {
 			row.Code = fmt.Sprintf("TMP-%d", common.UUIDint64())
@@ -313,7 +673,18 @@ func savePackage(c echo.Context, id int64) error {
 		}
 		return c.JSON(http.StatusCreated, Response{Data: row})
 	}
-	if err := GetDB(c).Model(&domain.InternetPackage{}).Where("id = ?", id).Updates(map[string]interface{}{"name": row.Name, "price": row.Price, "radius_profile_id": row.RadiusProfileID, "description": row.Description, "billing_cycle": row.BillingCycle, "status": row.Status, "updated_at": time.Now()}).Error; err != nil {
+	if err := GetDB(c).Model(&domain.InternetPackage{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":              row.Name,
+		"price":             row.Price,
+		"radius_profile_id": row.RadiusProfileID,
+		"description":       row.Description,
+		"billing_cycle":     row.BillingCycle,
+		"fup_limit_gb":      row.FupLimitGB,
+		"fup_rate_down":     row.FupRateDown,
+		"fup_rate_up":       row.FupRateUp,
+		"status":            row.Status,
+		"updated_at":        time.Now(),
+	}).Error; err != nil {
 		return fail(c, 409, "PACKAGE_SAVE_FAILED", "Failed to update package", err.Error())
 	}
 	if err := GetDB(c).First(&row, id).Error; err != nil {
@@ -416,18 +787,71 @@ func getSubscription(c echo.Context) error {
 			}
 		}
 	}
+	var totalUpload, totalDownload int64
+	if username != "" {
+		var session domain.RadiusOnline
+		if GetDB(c).Where("username = ?", username).First(&session).Error == nil {
+			totalUpload += session.AcctInputTotal
+			totalDownload += session.AcctOutputTotal
+		}
+		type trafficTotals struct {
+			Input  int64
+			Output int64
+		}
+		var hist trafficTotals
+		GetDB(c).Model(&domain.RadiusAccounting{}).
+			Where("username = ?", username).
+			Select("COALESCE(SUM(acct_input_total), 0) as input, COALESCE(SUM(acct_output_total), 0) as output").
+			Scan(&hist)
+		totalUpload += hist.Input
+		totalDownload += hist.Output
+	}
 	var outstanding int64
 	GetDB(c).Model(&domain.Invoice{}).Where("subscription_id = ? AND balance > 0", row.ID).Select("COALESCE(SUM(balance), 0)").Scan(&outstanding)
+	totalTraffic := totalUpload + totalDownload
+	fupLimitBytes := pkg.FupLimitGB * 1024 * 1024 * 1024
+	fupTriggered := fupLimitBytes > 0 && totalTraffic >= fupLimitBytes
+	fupStatus := "normal"
+	if fupTriggered {
+		fupStatus = "throttled"
+	}
 	return ok(c, struct {
 		domain.Subscription
-		CustomerName   string `json:"customer_name"`
-		PackageName    string `json:"package_name"`
-		PackagePrice   int64  `json:"package_price"`
-		RadiusUsername string `json:"radius_username"`
-		Online         bool   `json:"online"`
-		CurrentIP      string `json:"current_ip"`
-		Outstanding    int64  `json:"outstanding"`
-	}{Subscription: row, CustomerName: customer.Name, PackageName: pkg.Name, PackagePrice: pkg.Price, RadiusUsername: username, Online: online, CurrentIP: currentIP, Outstanding: outstanding})
+		CustomerName       string `json:"customer_name"`
+		PackageName        string `json:"package_name"`
+		PackagePrice       int64  `json:"package_price"`
+		RadiusUsername     string `json:"radius_username"`
+		Online             bool   `json:"online"`
+		CurrentIP          string `json:"current_ip"`
+		TotalUploadBytes   int64  `json:"total_upload_bytes"`
+		TotalDownloadBytes int64  `json:"total_download_bytes"`
+		TotalTrafficBytes  int64  `json:"total_traffic_bytes"`
+		Outstanding        int64  `json:"outstanding"`
+		FupLimitGB         int64  `json:"fup_limit_gb"`
+		FupLimitBytes      int64  `json:"fup_limit_bytes"`
+		FupTriggered       bool   `json:"fup_triggered"`
+		FupStatus          string `json:"fup_status"`
+		FupRateDown        int    `json:"fup_rate_down"`
+		FupRateUp          int    `json:"fup_rate_up"`
+	}{
+		Subscription:       row,
+		CustomerName:       customer.Name,
+		PackageName:        pkg.Name,
+		PackagePrice:       pkg.Price,
+		RadiusUsername:     username,
+		Online:             online,
+		CurrentIP:          currentIP,
+		TotalUploadBytes:   totalUpload,
+		TotalDownloadBytes: totalDownload,
+		TotalTrafficBytes:  totalTraffic,
+		Outstanding:        outstanding,
+		FupLimitGB:         pkg.FupLimitGB,
+		FupLimitBytes:      fupLimitBytes,
+		FupTriggered:       fupTriggered,
+		FupStatus:          fupStatus,
+		FupRateDown:        pkg.FupRateDown,
+		FupRateUp:          pkg.FupRateUp,
+	})
 }
 
 func createSubscription(c echo.Context) error {
@@ -719,16 +1143,30 @@ func getInvoice(c echo.Context) error {
 	GetDB(c).Where("invoice_id = ?", id).Find(&items)
 	var payments []domain.Payment
 	GetDB(c).Where("invoice_id = ?", id).Order("paid_at DESC").Find(&payments)
+	var customer domain.Customer
+	GetDB(c).First(&customer, row.CustomerID)
+	var sub domain.Subscription
+	if row.SubscriptionID > 0 {
+		GetDB(c).First(&sub, row.SubscriptionID)
+	}
 	return ok(c, struct {
 		domain.Invoice
 		Items          []domain.InvoiceItem `json:"items"`
 		Payments       []domain.Payment     `json:"payments"`
+		CustomerName   string               `json:"customer_name"`
+		CustomerNo     string               `json:"customer_no"`
+		CustomerPhone  string               `json:"customer_phone"`
+		SubscriptionNo string               `json:"subscription_no"`
 		CompanyName    string               `json:"company_name"`
 		CompanyAddress string               `json:"company_address"`
 		CompanyPhone   string               `json:"company_phone"`
 		CompanyEmail   string               `json:"company_email"`
 		Currency       string               `json:"currency"`
 	}{Invoice: row, Items: items, Payments: payments,
+		CustomerName:   customer.Name,
+		CustomerNo:     customer.CustomerNo,
+		CustomerPhone:  customer.Phone,
+		SubscriptionNo: sub.SubscriptionNo,
 		CompanyName:    GetAppContext(c).GetSettingsStringValue("isp", "CompanyName"),
 		CompanyAddress: GetAppContext(c).GetSettingsStringValue("isp", "CompanyAddress"),
 		CompanyPhone:   GetAppContext(c).GetSettingsStringValue("isp", "CompanyPhone"),
@@ -822,4 +1260,578 @@ func getISPDashboardStats(c echo.Context) error {
 	db.Model(&domain.Invoice{}).Where("balance > 0").Select("COALESCE(SUM(balance), 0)").Scan(&s.Outstanding)
 	db.Model(&domain.Invoice{}).Where("status = ? AND balance > 0", domain.InvoiceOverdue).Count(&s.Overdue)
 	return ok(c, s)
+}
+
+func formatIDR(n int64) string {
+	in := strconv.FormatInt(n, 10)
+	var out []byte
+	l := len(in)
+	for i, c := range in {
+		if i > 0 && (l-i)%3 == 0 {
+			out = append(out, '.')
+		}
+		out = append(out, byte(c))
+	}
+	return string(out)
+}
+
+func sendInvoiceWhatsApp(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid invoice ID", nil)
+	}
+	var inv domain.Invoice
+	if err := GetDB(c).First(&inv, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Invoice not found", nil)
+	}
+	var customer domain.Customer
+	if err := GetDB(c).First(&customer, inv.CustomerID).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Customer not found", nil)
+	}
+	rawPhone := strings.TrimSpace(customer.Phone)
+	if rawPhone == "" {
+		return fail(c, 400, "NO_PHONE", "Customer has no phone number", nil)
+	}
+	recipient, err := notify.NormalizeRecipient(rawPhone)
+	if err != nil {
+		return fail(c, 400, "INVALID_PHONE", "Invalid customer phone number: "+err.Error(), nil)
+	}
+	provider, providerOK := GetAppContext(c).(app.NotificationProvider)
+	if !providerOK {
+		return fail(c, 503, "WHATSAPP_UNAVAILABLE", "WhatsApp service unavailable", nil)
+	}
+	manager, err := provider.WhatsAppManager()
+	if err != nil {
+		return fail(c, 503, "WHATSAPP_UNAVAILABLE", "WhatsApp session store is unavailable", nil)
+	}
+	if manager.Status().State != "connected" {
+		return fail(c, 400, "WHATSAPP_NOT_CONNECTED", "WhatsApp is not connected on server. Scan QR code in Operations > WhatsApp.", nil)
+	}
+	body := fmt.Sprintf("Halo %s,\n\nTagihan internet Anda nomor %s sebesar Rp %s telah diterbitkan.\nJatuh tempo: %s\nStatus: %s\n\nSilakan lakukan pembayaran tepat waktu agar koneksi internet tetap lancar. Terima kasih.",
+		customer.Name, inv.InvoiceNo, formatIDR(inv.Total), inv.DueDate.Format("02-01-2006"), inv.Status)
+	if err := manager.Send(c.Request().Context(), recipient, body); err != nil {
+		return fail(c, 503, "SEND_FAILED", "Failed to send WhatsApp message: "+err.Error(), nil)
+	}
+	return ok(c, map[string]any{"sent": true, "recipient": recipient})
+}
+
+func sendPaymentWhatsApp(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid payment ID", nil)
+	}
+	var payment domain.Payment
+	if err := GetDB(c).First(&payment, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Payment not found", nil)
+	}
+	var inv domain.Invoice
+	if err := GetDB(c).First(&inv, payment.InvoiceID).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Invoice not found", nil)
+	}
+	var customer domain.Customer
+	if err := GetDB(c).First(&customer, inv.CustomerID).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Customer not found", nil)
+	}
+	rawPhone := strings.TrimSpace(customer.Phone)
+	if rawPhone == "" {
+		return fail(c, 400, "NO_PHONE", "Customer has no phone number", nil)
+	}
+	recipient, err := notify.NormalizeRecipient(rawPhone)
+	if err != nil {
+		return fail(c, 400, "INVALID_PHONE", "Invalid customer phone number: "+err.Error(), nil)
+	}
+	provider, providerOK := GetAppContext(c).(app.NotificationProvider)
+	if !providerOK {
+		return fail(c, 503, "WHATSAPP_UNAVAILABLE", "WhatsApp service unavailable", nil)
+	}
+	manager, err := provider.WhatsAppManager()
+	if err != nil {
+		return fail(c, 503, "WHATSAPP_UNAVAILABLE", "WhatsApp session store is unavailable", nil)
+	}
+	if manager.Status().State != "connected" {
+		return fail(c, 400, "WHATSAPP_NOT_CONNECTED", "WhatsApp is not connected on server. Scan QR code in Operations > WhatsApp.", nil)
+	}
+	paidDate := payment.PaidAt.Format("02-01-2006 15:04")
+	body := fmt.Sprintf("Halo %s,\n\nPembayaran tagihan %s sebesar Rp %s telah kami terima pada %s via %s (Ref: %s).\nTerima kasih atas kepercayaan Anda menggunakan layanan internet kami.",
+		customer.Name, inv.InvoiceNo, formatIDR(payment.Amount), paidDate, payment.Method, payment.Reference)
+	if err := manager.Send(c.Request().Context(), recipient, body); err != nil {
+		return fail(c, 503, "SEND_FAILED", "Failed to send WhatsApp message: "+err.Error(), nil)
+	}
+	return ok(c, map[string]any{"sent": true, "recipient": recipient})
+}
+
+func lookupCustomerPortal(c echo.Context) error {
+	q := strings.TrimSpace(c.QueryParam("q"))
+	if q == "" {
+		return fail(c, 400, "QUERY_REQUIRED", "Search parameter q is required (customer_no, phone, or identity_no)", nil)
+	}
+	var customer domain.Customer
+	if err := GetDB(c).Where("customer_no = ? OR phone = ? OR identity_no = ?", q, q, q).First(&customer).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Customer not found", nil)
+	}
+	var sub domain.Subscription
+	GetDB(c).Where("customer_id = ?", customer.ID).Order("id DESC").First(&sub)
+	var pkg domain.InternetPackage
+	if sub.PackageID > 0 {
+		GetDB(c).First(&pkg, sub.PackageID)
+	}
+	var invoices []domain.Invoice
+	GetDB(c).Where("customer_id = ?", customer.ID).Order("id DESC").Limit(10).Find(&invoices)
+	var outstanding int64
+	GetDB(c).Model(&domain.Invoice{}).Where("customer_id = ? AND balance > 0", customer.ID).Select("COALESCE(SUM(balance), 0)").Scan(&outstanding)
+
+	type portalResp struct {
+		CustomerNo         string           `json:"customer_no"`
+		Name               string           `json:"name"`
+		Status             string           `json:"status"`
+		PackageName        string           `json:"package_name"`
+		PackagePrice       int64            `json:"package_price"`
+		SubscriptionStatus string           `json:"subscription_status"`
+		Outstanding        int64            `json:"outstanding"`
+		Invoices           []domain.Invoice `json:"invoices"`
+	}
+	return ok(c, portalResp{
+		CustomerNo:         customer.CustomerNo,
+		Name:               customer.Name,
+		Status:             customer.Status,
+		PackageName:        pkg.Name,
+		PackagePrice:       pkg.Price,
+		SubscriptionStatus: sub.Status,
+		Outstanding:        outstanding,
+		Invoices:           invoices,
+	})
+}
+
+type paymentWebhookPayload struct {
+	InvoiceNo string `json:"invoice_no"`
+	Amount    int64  `json:"amount"`
+	Method    string `json:"method"`
+	Reference string `json:"reference"`
+	Status    string `json:"status"`
+	Notes     string `json:"notes"`
+}
+
+func handlePaymentWebhook(c echo.Context) error {
+	var in paymentWebhookPayload
+	if err := c.Bind(&in); err != nil {
+		return fail(c, 400, "INVALID_REQUEST", "Unable to parse webhook payload", err.Error())
+	}
+	invoiceNo := strings.TrimSpace(in.InvoiceNo)
+	if invoiceNo == "" {
+		return fail(c, 400, "INVOICE_REQUIRED", "invoice_no is required", nil)
+	}
+
+	st := strings.ToLower(strings.TrimSpace(in.Status))
+	if st != "" && st != "paid" && st != "settlement" && st != "success" && st != "capture" {
+		return ok(c, map[string]string{"result": "ignored_non_success_status", "status": st})
+	}
+
+	db := GetDB(c)
+	var inv domain.Invoice
+	if err := db.Where("invoice_no = ?", invoiceNo).First(&inv).Error; err != nil {
+		return fail(c, 404, "INVOICE_NOT_FOUND", "Invoice not found", nil)
+	}
+
+	if inv.Status == domain.InvoicePaid || inv.Balance <= 0 {
+		return ok(c, map[string]any{
+			"success":    true,
+			"result":     "already_paid",
+			"invoice_no": inv.InvoiceNo,
+		})
+	}
+
+	amount := in.Amount
+	if amount <= 0 || amount > inv.Balance {
+		amount = inv.Balance
+	}
+
+	method := strings.TrimSpace(in.Method)
+	if method == "" {
+		method = "bank_transfer"
+	}
+	ref := strings.TrimSpace(in.Reference)
+	if ref == "" {
+		ref = fmt.Sprintf("PGW-%d", time.Now().Unix())
+	}
+
+	payment := domain.Payment{
+		InvoiceID: inv.ID,
+		Amount:    amount,
+		Method:    method,
+		Reference: ref,
+		Notes:     strings.TrimSpace(in.Notes),
+	}
+
+	if err := billing.RecordPayment(db, &payment, time.Now(), true); err != nil {
+		return fail(c, 500, "PAYMENT_RECORD_FAILED", "Failed to record payment: "+err.Error(), nil)
+	}
+
+	var customer domain.Customer
+	if db.First(&customer, inv.CustomerID).Error == nil {
+		if rawPhone := strings.TrimSpace(customer.Phone); rawPhone != "" {
+			if recipient, err := notify.NormalizeRecipient(rawPhone); err == nil {
+				if provider, providerOK := GetAppContext(c).(app.NotificationProvider); providerOK {
+					if manager, err := provider.WhatsAppManager(); err == nil && manager.Status().State == "connected" {
+						body := fmt.Sprintf("Halo %s,\n\nPembayaran tagihan %s sebesar Rp %s telah BERHASIL diverifikasi otomatis oleh Payment Gateway (Ref: %s).\nLayanan internet Anda aktif kembali. Terima kasih!",
+							customer.Name, inv.InvoiceNo, formatIDR(payment.Amount), payment.Reference)
+						_ = manager.Send(c.Request().Context(), recipient, body)
+					}
+				}
+			}
+		}
+	}
+
+	return ok(c, map[string]any{
+		"success":    true,
+		"invoice_no": inv.InvoiceNo,
+		"payment_no": payment.PaymentNo,
+		"amount":     payment.Amount,
+		"status":     "paid",
+	})
+}
+
+func applySubscriptionFUP(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid subscription ID", nil)
+	}
+	db := GetDB(c)
+	var sub domain.Subscription
+	if err := db.First(&sub, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Subscription not found", nil)
+	}
+	var pkg domain.InternetPackage
+	if err := db.First(&pkg, sub.PackageID).Error; err != nil {
+		return fail(c, 404, "PACKAGE_NOT_FOUND", "Package not found", nil)
+	}
+	if pkg.FupLimitGB <= 0 || pkg.FupRateDown <= 0 {
+		return fail(c, 400, "FUP_NOT_CONFIGURED", "Package does not have FUP quota or throttled rate configured", nil)
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&sub).Updates(map[string]interface{}{
+			"fup_triggered": true,
+			"updated_at":    time.Now(),
+		}).Error; err != nil {
+			return err
+		}
+		if sub.RadiusUserID > 0 {
+			if err := tx.Model(&domain.RadiusUser{}).Where("id = ?", sub.RadiusUserID).Updates(map[string]interface{}{
+				"up_rate":    pkg.FupRateUp,
+				"down_rate":  pkg.FupRateDown,
+				"updated_at": time.Now(),
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Create(&domain.BillingEvent{
+			CustomerID:     sub.CustomerID,
+			SubscriptionID: sub.ID,
+			Type:           "fup_throttled",
+			Description:    fmt.Sprintf("FUP applied: throttled to %dKbps/%dKbps", pkg.FupRateUp, pkg.FupRateDown),
+			CreatedAt:      time.Now(),
+		}).Error
+	})
+	if err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to apply FUP", err.Error())
+	}
+
+	coaSuccess := false
+	if sub.RadiusUserID > 0 {
+		var user domain.RadiusUser
+		if db.First(&user, sub.RadiusUserID).Error == nil {
+			var sessions []domain.RadiusOnline
+			db.Where("username = ?", user.Username).Find(&sessions)
+			for _, session := range sessions {
+				var nas domain.NetNas
+				if db.Where("ipaddr = ?", session.NasAddr).First(&nas).Error == nil {
+					target, identity := radiusd.CoATargetFromNas(&nas), radiusd.SessionIdentityFromOnline(&session)
+					rateSetter := func(p *radius.Packet) error {
+						return mikrotik.MikrotikRateLimit_SetString(p, fmt.Sprintf("%dk/%dk", pkg.FupRateUp, pkg.FupRateDown))
+					}
+					res, coaErr := sessionCoAService().CoA(c.Request().Context(), target, identity, rateSetter)
+					if coaErr == nil && res.Success {
+						coaSuccess = true
+					} else {
+						_, _ = sessionCoAService().Disconnect(c.Request().Context(), target, identity)
+					}
+				}
+			}
+		}
+	}
+
+	var customer domain.Customer
+	if db.First(&customer, sub.CustomerID).Error == nil && customer.Phone != "" {
+		if recipient, err := notify.NormalizeRecipient(customer.Phone); err == nil {
+			if provider, ok := GetAppContext(c).(app.NotificationProvider); ok {
+				if mgr, err := provider.WhatsAppManager(); err == nil && mgr.Status().State == "connected" {
+					msg := fmt.Sprintf("Halo %s,\n\nPenggunaan kuota internet paket %s Anda telah mencapai batas wajar (FUP). Kecepatan koneksi Anda disesuaikan menjadi %d Kbps sesuai ketentuan. Kuota akan direset otomatis pada awal periode berikutnya. Terima kasih!",
+						customer.Name, pkg.Name, pkg.FupRateDown)
+					_ = mgr.Send(c.Request().Context(), recipient, msg)
+				}
+			}
+		}
+	}
+
+	return ok(c, map[string]any{
+		"subscription_id": sub.ID,
+		"fup_triggered":   true,
+		"fup_rate_up":     pkg.FupRateUp,
+		"fup_rate_down":   pkg.FupRateDown,
+		"coa_applied":     coaSuccess,
+		"message":         "FUP throttle applied successfully",
+	})
+}
+
+func resetSubscriptionFUP(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid subscription ID", nil)
+	}
+	db := GetDB(c)
+	var sub domain.Subscription
+	if err := db.First(&sub, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Subscription not found", nil)
+	}
+	var pkg domain.InternetPackage
+	if err := db.First(&pkg, sub.PackageID).Error; err != nil {
+		return fail(c, 404, "PACKAGE_NOT_FOUND", "Package not found", nil)
+	}
+	var profile domain.RadiusProfile
+	if err := db.First(&profile, pkg.RadiusProfileID).Error; err != nil {
+		return fail(c, 404, "PROFILE_NOT_FOUND", "Profile not found", nil)
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&sub).Updates(map[string]interface{}{
+			"fup_triggered": false,
+			"updated_at":    time.Now(),
+		}).Error; err != nil {
+			return err
+		}
+		if sub.RadiusUserID > 0 {
+			if err := tx.Model(&domain.RadiusUser{}).Where("id = ?", sub.RadiusUserID).Updates(map[string]interface{}{
+				"up_rate":    profile.UpRate,
+				"down_rate":  profile.DownRate,
+				"updated_at": time.Now(),
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Create(&domain.BillingEvent{
+			CustomerID:     sub.CustomerID,
+			SubscriptionID: sub.ID,
+			Type:           "fup_restored",
+			Description:    fmt.Sprintf("FUP reset: restored to %dKbps/%dKbps", profile.UpRate, profile.DownRate),
+			CreatedAt:      time.Now(),
+		}).Error
+	})
+	if err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to reset FUP", err.Error())
+	}
+
+	if sub.RadiusUserID > 0 {
+		var user domain.RadiusUser
+		if db.First(&user, sub.RadiusUserID).Error == nil {
+			var sessions []domain.RadiusOnline
+			db.Where("username = ?", user.Username).Find(&sessions)
+			for _, session := range sessions {
+				var nas domain.NetNas
+				if db.Where("ipaddr = ?", session.NasAddr).First(&nas).Error == nil {
+					target, identity := radiusd.CoATargetFromNas(&nas), radiusd.SessionIdentityFromOnline(&session)
+					rateSetter := func(p *radius.Packet) error {
+						return mikrotik.MikrotikRateLimit_SetString(p, fmt.Sprintf("%dk/%dk", profile.UpRate, profile.DownRate))
+					}
+					res, coaErr := sessionCoAService().CoA(c.Request().Context(), target, identity, rateSetter)
+					if coaErr != nil || !res.Success {
+						_, _ = sessionCoAService().Disconnect(c.Request().Context(), target, identity)
+					}
+				}
+			}
+		}
+	}
+
+	var customer domain.Customer
+	if db.First(&customer, sub.CustomerID).Error == nil && customer.Phone != "" {
+		if recipient, err := notify.NormalizeRecipient(customer.Phone); err == nil {
+			if provider, ok := GetAppContext(c).(app.NotificationProvider); ok {
+				if mgr, err := provider.WhatsAppManager(); err == nil && mgr.Status().State == "connected" {
+					speedMbps := profile.DownRate / 1024
+					if speedMbps == 0 {
+						speedMbps = 10
+					}
+					msg := fmt.Sprintf("Halo %s,\n\nKuota internet paket %s Anda telah direset kembali normal! Kecepatan telah dipulihkan ke kecepatan maksimal (%d Mbps). Selamat menikmati layanan internet kami!",
+						customer.Name, pkg.Name, speedMbps)
+					_ = mgr.Send(c.Request().Context(), recipient, msg)
+				}
+			}
+		}
+	}
+
+	return ok(c, map[string]any{
+		"subscription_id":    sub.ID,
+		"fup_triggered":      false,
+		"restored_rate_up":   profile.UpRate,
+		"restored_rate_down": profile.DownRate,
+		"message":            "FUP reset and normal speed restored",
+	})
+}
+
+type vaChannelInfo struct {
+	BankName      string `json:"bank_name"`
+	BankCode      string `json:"bank_code"`
+	AccountNumber string `json:"account_number"`
+	AccountName   string `json:"account_name"`
+	Instructions  string `json:"instructions"`
+}
+
+func getInvoicePaymentChannel(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid invoice ID", nil)
+	}
+	db := GetDB(c)
+	var inv domain.Invoice
+	if err := db.First(&inv, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Invoice not found", nil)
+	}
+	var customer domain.Customer
+	db.First(&customer, inv.CustomerID)
+	var pkg domain.InternetPackage
+	var sub domain.Subscription
+	if db.First(&sub, inv.SubscriptionID).Error == nil {
+		db.First(&pkg, sub.PackageID)
+	}
+
+	bcaVA := fmt.Sprintf("8277%08d", customer.ID)
+	mandiriVA := fmt.Sprintf("88908%07d", customer.ID)
+	briVA := fmt.Sprintf("10248%08d", customer.ID)
+	bniVA := fmt.Sprintf("988%09d", customer.ID)
+
+	// Standard Indonesian QRIS Payload Generation (EMVCo Compatible)
+	qrisPayload := fmt.Sprintf("00020101021226670016ID.CO.MWXISP.WWW01189360000000000000000215%015d520448145303360540%d5802ID5914MWX ISP NETWORK6007JAKARTA62070703A016304ABCD",
+		inv.ID, inv.Balance)
+
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if !inv.DueDate.IsZero() && inv.DueDate.After(time.Now()) {
+		expiresAt = inv.DueDate.Add(23*time.Hour + 59*time.Minute)
+	}
+
+	channels := []vaChannelInfo{
+		{
+			BankName:      "BCA Virtual Account",
+			BankCode:      "BCA",
+			AccountNumber: bcaVA,
+			AccountName:   "MWX-ISP - " + customer.Name,
+			Instructions:  "Transfer via BCA Mobile / KlikBCA / ATM BCA pilih menu Transfer > Virtual Account.",
+		},
+		{
+			BankName:      "Bank Mandiri Virtual Account",
+			BankCode:      "MANDIRI",
+			AccountNumber: mandiriVA,
+			AccountName:   "MWX-ISP - " + customer.Name,
+			Instructions:  "Transfer via Livin' by Mandiri / ATM Mandiri pilih menu Bayar > Multi Payment > Masukkan No VA.",
+		},
+		{
+			BankName:      "BRI Virtual Account (BRIVA)",
+			BankCode:      "BRI",
+			AccountNumber: briVA,
+			AccountName:   "MWX-ISP - " + customer.Name,
+			Instructions:  "Transfer via BRImo / ATM BRI pilih menu Pembayaran > BRIVA > Masukkan No BRIVA.",
+		},
+		{
+			BankName:      "BNI Virtual Account",
+			BankCode:      "BNI",
+			AccountNumber: bniVA,
+			AccountName:   "MWX-ISP - " + customer.Name,
+			Instructions:  "Transfer via BNI Mobile Banking / ATM BNI pilih menu Transfer > Virtual Account Billing.",
+		},
+	}
+
+	return ok(c, map[string]any{
+		"invoice_id":    inv.ID,
+		"invoice_no":    inv.InvoiceNo,
+		"customer_id":   customer.ID,
+		"customer_no":   customer.CustomerNo,
+		"customer_name": customer.Name,
+		"package_name":  pkg.Name,
+		"amount":        inv.Balance,
+		"total":         inv.Total,
+		"paid_amount":   inv.PaidAmount,
+		"status":        inv.Status,
+		"due_date":      inv.DueDate.Format("2006-01-02"),
+		"expires_at":    expiresAt.Format(time.RFC3339),
+		"qris_payload":  qrisPayload,
+		"merchant_name": "MWX-ISP Broadband Enterprise",
+		"va_channels":   channels,
+	})
+}
+
+type simulatePayInput struct {
+	Method    string `json:"method"`
+	Reference string `json:"reference"`
+}
+
+func simulateInvoicePayment(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid invoice ID", nil)
+	}
+	db := GetDB(c)
+	var inv domain.Invoice
+	if err := db.First(&inv, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Invoice not found", nil)
+	}
+	if inv.Status == domain.InvoicePaid || inv.Balance <= 0 {
+		return ok(c, map[string]any{
+			"success":    true,
+			"result":     "already_paid",
+			"invoice_no": inv.InvoiceNo,
+		})
+	}
+	var in simulatePayInput
+	_ = c.Bind(&in)
+	method := strings.TrimSpace(in.Method)
+	if method == "" {
+		method = "qris_instant"
+	}
+	ref := strings.TrimSpace(in.Reference)
+	if ref == "" {
+		ref = fmt.Sprintf("SIM-%d", time.Now().UnixNano()%1000000000)
+	}
+
+	payment := domain.Payment{
+		InvoiceID: inv.ID,
+		Amount:    inv.Balance,
+		Method:    method,
+		Reference: ref,
+		Notes:     "Pembayaran instan diverifikasi otomatis",
+	}
+
+	if err := billing.RecordPayment(db, &payment, time.Now(), true); err != nil {
+		return fail(c, 500, "PAYMENT_RECORD_FAILED", "Failed to record payment: "+err.Error(), nil)
+	}
+
+	var customer domain.Customer
+	if db.First(&customer, inv.CustomerID).Error == nil && customer.Phone != "" {
+		if recipient, err := notify.NormalizeRecipient(customer.Phone); err == nil {
+			if provider, providerOK := GetAppContext(c).(app.NotificationProvider); providerOK {
+				if manager, err := provider.WhatsAppManager(); err == nil && manager.Status().State == "connected" {
+					body := fmt.Sprintf("Halo %s,\n\nPembayaran tagihan %s sebesar Rp %s telah BERHASIL diverifikasi via %s (Ref: %s).\nLayanan internet Anda aktif normal. Terima kasih atas kepercayaan Anda!",
+						customer.Name, inv.InvoiceNo, formatIDR(payment.Amount), strings.ToUpper(payment.Method), payment.Reference)
+					_ = manager.Send(c.Request().Context(), recipient, body)
+				}
+			}
+		}
+	}
+
+	return ok(c, map[string]any{
+		"success":    true,
+		"invoice_no": inv.InvoiceNo,
+		"payment_no": payment.PaymentNo,
+		"amount":     payment.Amount,
+		"status":     "paid",
+		"reference":  payment.Reference,
+		"method":     payment.Method,
+	})
 }

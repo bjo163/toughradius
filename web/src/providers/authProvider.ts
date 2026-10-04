@@ -199,10 +199,10 @@ export const authProvider: AuthProvider = {
     const token = localStorage.getItem('token');
     const route = window.location.hash.replace(/^#/, '').split('?')[0].replace(/\/+$/, '');
 
-    // React Admin can run the auth check while resolving its public login
-    // route. Rejecting repeatedly there leaves the unauthenticated shell in
-    // its loading state; the login route itself grants no access to resources.
-    if (!token && route === '/login') {
+    // React Admin can run the auth check while resolving its public login,
+    // public customer portal route, or public landing page. Rejecting repeatedly there leaves the
+    // unauthenticated shell in its loading state; these routes grant no access to admin resources.
+    if (!token && (route === '/login' || route === '/portal' || route === '' || route === '/' || route === '/home')) {
       return Promise.resolve();
     }
 

@@ -35,4 +35,13 @@ var Tables = []interface{}{
 	&Payment{},
 	&BillingEvent{},
 	&DocumentSequence{},
+	// Telemetry, MRTG and Syslog
+	&RadiusTrafficSample{},
+	&SyslogEvent{},
+	// Operations: Hotspot, IPAM, and Tickets
+	&HotspotBatch{},
+	&HotspotVoucher{},
+	&IPAMPool{},
+	&TroubleTicket{},
+	&ODP{},
 }

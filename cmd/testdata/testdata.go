@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	defaultConfigPath = "toughradius.yml" // Default configuration file path
+	defaultConfigPath = "mwx-isp.yml" // Default configuration file path
 	defaultNasIP      = "127.0.0.1"       // Default NAS IP for test fixtures
 	defaultNasSecret  = "testing123"      // Standard test shared secret
 
@@ -62,7 +62,7 @@ const (
 
 // commandOptions holds parsed command-line arguments.
 type commandOptions struct {
-	ConfigPath string // Path to toughradius.yml configuration
+	ConfigPath string // Path to MWX-ISP configuration
 	NasIP      string // NAS IP address for test NAS record
 	NasSecret  string // Shared secret for test NAS authentication
 }
@@ -103,8 +103,8 @@ func printUsage() {
 	fmt.Println("testdata seeds or clears fixed benchmark fixtures.")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  apply [-c toughradius.yml] [--nas-ip 127.0.0.1] [--nas-secret testing123]")
-	fmt.Println("  clear [-c toughradius.yml]")
+	fmt.Println("  apply [-c mwx-isp.yml] [--nas-ip 127.0.0.1] [--nas-secret testing123]")
+	fmt.Println("  clear [-c mwx-isp.yml]")
 }
 
 // parseApplyFlags parses command-line arguments for the "apply" command.

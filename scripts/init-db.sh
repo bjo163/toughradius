@@ -57,7 +57,7 @@ if [ -z "$DB_TYPE" ]; then
     echo ""
     echo -e "${GREEN}Default admin account:${NC}"
     echo -e "  Username: ${YELLOW}admin${NC}"
-    echo -e "  Password: ${YELLOW}toughradius${NC}"
+    echo -e "  Password: ${YELLOW}admin${NC}"
     echo ""
     echo -e "${GREEN}API user account:${NC}"
     echo -e "  Username: ${YELLOW}apiuser${NC}"
@@ -74,7 +74,11 @@ case "$DB_TYPE" in
         echo ""
         
         # Create a temporary configuration file
-        TEMP_CONFIG="/tmp/toughradius-sqlite.yml"
+        TEMP_CONFIG="/tmp/mwx-isp-sqlite.yml"
+        WEB_SECRET="${MWX_ISP_WEB_SECRET:-}"
+        if [ -z "$WEB_SECRET" ]; then
+            WEB_SECRET=$(openssl rand -hex 32)
+        fi
         cat > "$TEMP_CONFIG" <<EOF
 system:
   appid: MWX-ISP
@@ -87,7 +91,7 @@ web:
   port: 1816
   tls_enabled: true
   tls_port: 1817
-  secret: 9b6de5cc-0731-1203-xxtt-0f568ac9da37
+  secret: $WEB_SECRET
 
 database:
   type: sqlite
@@ -149,9 +153,9 @@ EOF
         echo -e "  ${YELLOW}/var/toughradius/data/toughradius.db${NC}"
         echo ""
         echo -e "${GREEN}Start command (using SQLite):${NC}"
-        echo -e "  ${YELLOW}./mwx-isp -c $TEMP_CONFIG${NC}"
+        echo -e "  ${YELLOW}./mwx-isp -c /tmp/mwx-isp-sqlite.yml${NC}"
         echo ""
-        echo -e "${GREEN}Or modify toughradius.yml configuration file:${NC}"
+        echo -e "${GREEN}Or modify mwx-isp.yml configuration file:${NC}"
         cat <<EOF
   ${YELLOW}database:
     type: sqlite
@@ -171,17 +175,22 @@ EOF
         read -p "PostgreSQL port [5432]: " PG_PORT
         PG_PORT=${PG_PORT:-5432}
         
-        read -p "Database name [toughradius]: " PG_DB
-        PG_DB=${PG_DB:-toughradius}
+        read -p "Database name [mwxisp]: " PG_DB
+        PG_DB=${PG_DB:-mwxisp}
         
         read -p "Database user [postgres]: " PG_USER
         PG_USER=${PG_USER:-postgres}
         
         read -sp "Database password: " PG_PASS
         echo ""
+
+        WEB_SECRET="${MWX_ISP_WEB_SECRET:-}"
+        if [ -z "$WEB_SECRET" ]; then
+            WEB_SECRET=$(openssl rand -hex 32)
+        fi
         
         # Create a temporary configuration file
-        TEMP_CONFIG="/tmp/toughradius-postgres.yml"
+        TEMP_CONFIG="/tmp/mwx-isp-postgres.yml"
         cat > "$TEMP_CONFIG" <<EOF
 system:
   appid: MWX-ISP
@@ -194,7 +203,7 @@ web:
   port: 1816
   tls_enabled: true
   tls_port: 1817
-  secret: 9b6de5cc-0731-1203-xxtt-0f568ac9da37
+  secret: $WEB_SECRET
 
 database:
   type: postgres
@@ -274,7 +283,7 @@ esac
 
 echo -e "${GREEN}Default admin account:${NC}"
 echo -e "  Username: ${YELLOW}admin${NC}"
-echo -e "  Password: ${YELLOW}toughradius${NC}"
+echo -e "  Password: ${YELLOW}admin${NC}"
 echo ""
 echo -e "${GREEN}API user account:${NC}"
 echo -e "  Username: ${YELLOW}apiuser${NC}"

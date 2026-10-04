@@ -5,8 +5,13 @@
 
 set -e
 
-CONFIG_FILE="toughradius.yml"
-NEW_PASSWORD="${1:-toughradius}"
+CONFIG_FILE="${MWX_ISP_CONFIG:-mwx-isp.yml}"
+NEW_PASSWORD="${1:-}"
+
+if [ -z "$NEW_PASSWORD" ]; then
+    echo "Usage: $0 <new-password>"
+    exit 2
+fi
 
 echo "========================================"
 echo "MWX-ISP Admin Password Reset Tool"

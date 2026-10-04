@@ -7,7 +7,7 @@ set -e
 
 # 配置变量
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/toughradius.yml"
+CONFIG_FILE="${MWX_ISP_CONFIG:-${SCRIPT_DIR}/mwx-isp.yml}"
 SERVER="127.0.0.1"
 SECRET="testing123"
 TEST_USER="test1"

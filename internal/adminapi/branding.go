@@ -31,20 +31,40 @@ var brandLogoNamePattern = regexp.MustCompile(`^logo-[a-f0-9]{32}\.png$`)
 var brandingAccentPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 type brandingInput struct {
-	ProductName string `json:"product_name"`
-	ShortName   string `json:"short_name"`
-	Tagline     string `json:"tagline"`
-	AccentColor string `json:"accent_color"`
-	RemoveLogo  bool   `json:"remove_logo"`
+	ProductName     string `json:"product_name"`
+	ShortName       string `json:"short_name"`
+	Tagline         string `json:"tagline"`
+	AccentColor     string `json:"accent_color"`
+	RemoveLogo      bool   `json:"remove_logo"`
+	HeroHeadline    string `json:"hero_headline"`
+	HeroSubtitle    string `json:"hero_subtitle"`
+	TickerText      string `json:"ticker_text"`
+	ContactPhone    string `json:"contact_phone"`
+	ContactWhatsApp string `json:"contact_whatsapp"`
+	ContactEmail    string `json:"contact_email"`
+	ContactAddress  string `json:"contact_address"`
+	CoverageAreas   string `json:"coverage_areas"`
+	SlaUptime       string `json:"sla_uptime"`
+	SlaLatency      string `json:"sla_latency"`
 }
 
 type brandingDTO struct {
-	ProductName string    `json:"product_name"`
-	ShortName   string    `json:"short_name"`
-	Tagline     string    `json:"tagline"`
-	AccentColor string    `json:"accent_color"`
-	LogoURL     string    `json:"logo_url,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at,omitempty"`
+	ProductName     string    `json:"product_name"`
+	ShortName       string    `json:"short_name"`
+	Tagline         string    `json:"tagline"`
+	AccentColor     string    `json:"accent_color"`
+	LogoURL         string    `json:"logo_url,omitempty"`
+	HeroHeadline    string    `json:"hero_headline"`
+	HeroSubtitle    string    `json:"hero_subtitle"`
+	TickerText      string    `json:"ticker_text"`
+	ContactPhone    string    `json:"contact_phone"`
+	ContactWhatsApp string    `json:"contact_whatsapp"`
+	ContactEmail    string    `json:"contact_email"`
+	ContactAddress  string    `json:"contact_address"`
+	CoverageAreas   string    `json:"coverage_areas"`
+	SlaUptime       string    `json:"sla_uptime"`
+	SlaLatency      string    `json:"sla_latency"`
+	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
 
 func registerBrandingRoutes() {
@@ -57,8 +77,21 @@ func registerBrandingRoutes() {
 
 func defaultBranding() domain.ProductBranding {
 	return domain.ProductBranding{
-		ID: brandingRecordID, ProductName: "MWX-ISP", ShortName: "MWX",
-		Tagline: "ISP Management + RADIUS + Billing", AccentColor: "#E6FF00",
+		ID:              brandingRecordID,
+		ProductName:     "MWX-ISP",
+		ShortName:       "MWX",
+		Tagline:         "ISP Management + RADIUS + Billing",
+		AccentColor:     "#16A34A",
+		HeroHeadline:    "Internet Simetris, Stabil & Bergaransi SLA 99.98%",
+		HeroSubtitle:    "Solusi jaringan backbone terpercaya untuk perumahan, perkantoran, instansi dan hotspot publik. Didukung multi-homed BGP routing, redundansi GPON optical ring, dan pemantauan NOC aktif 24 jam nonstop.",
+		TickerText:      "[ NOC LIVE STATUS ] Semua gateway BGP & GPON OLT beroperasi optimal | Bantuan 24/7 Hotline & WhatsApp Ready | Peering: OpenIXP, CDIX, Cloudflare, Google Edge",
+		ContactPhone:    "+62 21 5550 1234",
+		ContactWhatsApp: "6281234567890",
+		ContactEmail:    "noc@mwx-isp.net",
+		ContactAddress:  "Cyber Building 1, Lt. 5, Jl. Kuningan Barat No. 8, Jakarta Selatan",
+		CoverageAreas:   "Jakarta, Tangerang, Bekasi, Depok, Bogor, Bandung, Surabaya",
+		SlaUptime:       "99.98%",
+		SlaLatency:      "< 5 ms",
 	}
 }
 
@@ -72,9 +105,64 @@ func loadBranding(db *gorm.DB) (domain.ProductBranding, error) {
 }
 
 func toBrandingDTO(row domain.ProductBranding) brandingDTO {
+	def := defaultBranding()
+	heroHeadline := row.HeroHeadline
+	if heroHeadline == "" {
+		heroHeadline = def.HeroHeadline
+	}
+	heroSubtitle := row.HeroSubtitle
+	if heroSubtitle == "" {
+		heroSubtitle = def.HeroSubtitle
+	}
+	tickerText := row.TickerText
+	if tickerText == "" {
+		tickerText = def.TickerText
+	}
+	contactPhone := row.ContactPhone
+	if contactPhone == "" {
+		contactPhone = def.ContactPhone
+	}
+	contactWhatsApp := row.ContactWhatsApp
+	if contactWhatsApp == "" {
+		contactWhatsApp = def.ContactWhatsApp
+	}
+	contactEmail := row.ContactEmail
+	if contactEmail == "" {
+		contactEmail = def.ContactEmail
+	}
+	contactAddress := row.ContactAddress
+	if contactAddress == "" {
+		contactAddress = def.ContactAddress
+	}
+	coverageAreas := row.CoverageAreas
+	if coverageAreas == "" {
+		coverageAreas = def.CoverageAreas
+	}
+	slaUptime := row.SlaUptime
+	if slaUptime == "" {
+		slaUptime = def.SlaUptime
+	}
+	slaLatency := row.SlaLatency
+	if slaLatency == "" {
+		slaLatency = def.SlaLatency
+	}
+
 	result := brandingDTO{
-		ProductName: row.ProductName, ShortName: row.ShortName,
-		Tagline: row.Tagline, AccentColor: row.AccentColor, UpdatedAt: row.UpdatedAt,
+		ProductName:     row.ProductName,
+		ShortName:       row.ShortName,
+		Tagline:         row.Tagline,
+		AccentColor:     row.AccentColor,
+		HeroHeadline:    heroHeadline,
+		HeroSubtitle:    heroSubtitle,
+		TickerText:      tickerText,
+		ContactPhone:    contactPhone,
+		ContactWhatsApp: contactWhatsApp,
+		ContactEmail:    contactEmail,
+		ContactAddress:  contactAddress,
+		CoverageAreas:   coverageAreas,
+		SlaUptime:       slaUptime,
+		SlaLatency:      slaLatency,
+		UpdatedAt:       row.UpdatedAt,
 	}
 	if row.LogoFile != "" {
 		result.LogoURL = "/api/v1/public/branding/logo?v=" + fmt.Sprint(row.UpdatedAt.UnixNano())
@@ -131,6 +219,16 @@ func saveBranding(c echo.Context) error {
 		input.ShortName = c.FormValue("short_name")
 		input.Tagline = c.FormValue("tagline")
 		input.AccentColor = c.FormValue("accent_color")
+		input.HeroHeadline = c.FormValue("hero_headline")
+		input.HeroSubtitle = c.FormValue("hero_subtitle")
+		input.TickerText = c.FormValue("ticker_text")
+		input.ContactPhone = c.FormValue("contact_phone")
+		input.ContactWhatsApp = c.FormValue("contact_whatsapp")
+		input.ContactEmail = c.FormValue("contact_email")
+		input.ContactAddress = c.FormValue("contact_address")
+		input.CoverageAreas = c.FormValue("coverage_areas")
+		input.SlaUptime = c.FormValue("sla_uptime")
+		input.SlaLatency = c.FormValue("sla_latency")
 		input.RemoveLogo = strings.EqualFold(c.FormValue("remove_logo"), "true")
 		if file, _, err := c.Request().FormFile("logo"); err == nil {
 			defer func() { _ = file.Close() }()
@@ -170,6 +268,36 @@ func saveBranding(c echo.Context) error {
 		row.ShortName = input.ShortName
 		row.Tagline = input.Tagline
 		row.AccentColor = strings.ToUpper(input.AccentColor)
+		if input.HeroHeadline != "" {
+			row.HeroHeadline = strings.TrimSpace(input.HeroHeadline)
+		}
+		if input.HeroSubtitle != "" {
+			row.HeroSubtitle = strings.TrimSpace(input.HeroSubtitle)
+		}
+		if input.TickerText != "" {
+			row.TickerText = strings.TrimSpace(input.TickerText)
+		}
+		if input.ContactPhone != "" {
+			row.ContactPhone = strings.TrimSpace(input.ContactPhone)
+		}
+		if input.ContactWhatsApp != "" {
+			row.ContactWhatsApp = strings.TrimSpace(input.ContactWhatsApp)
+		}
+		if input.ContactEmail != "" {
+			row.ContactEmail = strings.TrimSpace(input.ContactEmail)
+		}
+		if input.ContactAddress != "" {
+			row.ContactAddress = strings.TrimSpace(input.ContactAddress)
+		}
+		if input.CoverageAreas != "" {
+			row.CoverageAreas = strings.TrimSpace(input.CoverageAreas)
+		}
+		if input.SlaUptime != "" {
+			row.SlaUptime = strings.TrimSpace(input.SlaUptime)
+		}
+		if input.SlaLatency != "" {
+			row.SlaLatency = strings.TrimSpace(input.SlaLatency)
+		}
 		if newLogo != "" {
 			row.LogoFile = newLogo
 		} else if input.RemoveLogo {

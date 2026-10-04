@@ -13,6 +13,13 @@ import UserGuidePage from './pages/UserGuidePage';
 import BrandingPage from './pages/BrandingPage';
 import { PlatformTenantsPage } from './pages/PlatformTenantsPage';
 import { LoginPage } from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
+import CustomerPortalPage from './pages/CustomerPortalPage';
+import HotspotVouchersPage from './pages/HotspotVouchersPage';
+import IPAMPage from './pages/IPAMPage';
+import ODPPage from './pages/ODPPage';
+import TroubleTicketsPage from './pages/TroubleTicketsPage';
+import WebsiteEditorPage from './pages/WebsiteEditorPage';
 import { CustomLayout, CustomError } from './components';
 import { createAppTheme } from './theme';
 import { BrandingContext, defaultProductBranding, useBranding } from './branding/BrandingContext';
@@ -197,11 +204,21 @@ const App = ({ initialBranding = defaultProductBranding }: AppProps) => {
     />
 
     {/* Custom routes */}
+    <CustomRoutes noLayout>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/home" element={<LandingPage />} />
+      <Route path="/portal" element={<CustomerPortalPage />} />
+    </CustomRoutes>
     <CustomRoutes>
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
+      <Route path="/system/website" element={<WebsiteEditorPage />} />
       <Route path="/system/branding" element={<BrandingPage />} />
       <Route path="/operations" element={<OperationsPage />} />
+      <Route path="/isp/vouchers" element={<HotspotVouchersPage />} />
+      <Route path="/network/ipam" element={<IPAMPage />} />
+      <Route path="/network/odp" element={<ODPPage />} />
+      <Route path="/isp/tickets" element={<TroubleTicketsPage />} />
       <Route path="/guide" element={<UserGuidePage />} />
       <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
     </CustomRoutes>

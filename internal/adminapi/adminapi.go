@@ -52,4 +52,6 @@ func Init(appCtx app.AppContext) {
 	registerNotificationRoutes()
 	registerBrandingRoutes()
 	registerPlatformTenantRoutes()
+	registerISPOperationsRoutes()
+	registerTelemetryRoutes()
 }

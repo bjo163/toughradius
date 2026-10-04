@@ -35,17 +35,60 @@ type monitorTargetInput struct {
 	SNMPPrivacyPassword string `json:"snmp_privacy_password"`
 }
 
-type monitorTargetDTO struct {
-	domain.NetMonitorTarget
-	SNMPSecretConfigured bool `json:"snmp_secret_configured"`
+type MonitorSampleBrief struct {
+	ID                  int64     `json:"id,string"`
+	CheckedAt           time.Time `json:"checked_at"`
+	Reachable           bool      `json:"reachable"`
+	LatencyMilliseconds int64     `json:"latency_milliseconds"`
+	PacketLossPercent   float64   `json:"packet_loss_percent"`
 }
 
-func toMonitorDTO(row domain.NetMonitorTarget) monitorTargetDTO {
+type monitorTargetDTO struct {
+	domain.NetMonitorTarget
+	SNMPSecretConfigured bool                 `json:"snmp_secret_configured"`
+	UptimePercent        float64              `json:"uptime_percent"`
+	Heartbeats           []MonitorSampleBrief `json:"heartbeats"`
+}
+
+func toMonitorDTO(db *gorm.DB, row domain.NetMonitorTarget) monitorTargetDTO {
 	configured := len(row.SNMPCommunityEncrypted)+len(row.SNMPAuthEncrypted)+len(row.SNMPPrivacyEncrypted) > 0
 	row.SNMPCommunityEncrypted = nil
 	row.SNMPAuthEncrypted = nil
 	row.SNMPPrivacyEncrypted = nil
-	return monitorTargetDTO{NetMonitorTarget: row, SNMPSecretConfigured: configured}
+
+	dto := monitorTargetDTO{
+		NetMonitorTarget:     row,
+		SNMPSecretConfigured: configured,
+		Heartbeats:           make([]MonitorSampleBrief, 0),
+		UptimePercent:        100.0,
+	}
+
+	if db != nil && row.ID > 0 && db.Migrator().HasTable(&domain.NetMonitorSample{}) {
+		var samples []domain.NetMonitorSample
+		if err := db.Where("target_id = ?", row.ID).Order("checked_at DESC").Limit(30).Find(&samples).Error; err == nil && len(samples) > 0 {
+			reachableCount := 0
+			heartbeats := make([]MonitorSampleBrief, 0, len(samples))
+			for i := len(samples) - 1; i >= 0; i-- {
+				s := samples[i]
+				if s.Reachable {
+					reachableCount++
+				}
+				heartbeats = append(heartbeats, MonitorSampleBrief{
+					ID:                  s.ID,
+					CheckedAt:           s.CheckedAt,
+					Reachable:           s.Reachable,
+					LatencyMilliseconds: s.LatencyMilliseconds,
+					PacketLossPercent:   s.PacketLossPercent,
+				})
+			}
+			dto.Heartbeats = heartbeats
+			dto.UptimePercent = float64(int(float64(reachableCount)/float64(len(samples))*1000+0.5)) / 10.0
+		} else if row.LastStatus == "down" {
+			dto.UptimePercent = 0.0
+		}
+	}
+
+	return dto
 }
 
 func registerNetworkMonitorRoutes() {
@@ -54,6 +97,7 @@ func registerNetworkMonitorRoutes() {
 	webserver.ApiPOST("/network/monitor-targets", createMonitorTarget, requireAdmin())
 	webserver.ApiPUT("/network/monitor-targets/:id", updateMonitorTarget, requireAdmin())
 	webserver.ApiDELETE("/network/monitor-targets/:id", deleteMonitorTarget, requireAdmin())
+	webserver.ApiPOST("/network/monitor-targets/:id/toggle", toggleMonitorTarget, requireAdmin())
 	webserver.ApiPOST("/network/monitor-targets/:id/check", checkMonitorTarget, requireAdmin())
 	webserver.ApiGET("/network/monitor-targets/:id/samples", listMonitorSamples)
 	webserver.ApiGET("/network/monitor-incidents", listMonitorIncidents)
@@ -75,7 +119,7 @@ func listMonitorTargets(c echo.Context) error {
 	}
 	data := make([]monitorTargetDTO, 0, len(rows))
 	for _, row := range rows {
-		data = append(data, toMonitorDTO(row))
+		data = append(data, toMonitorDTO(GetDB(c), row))
 	}
 	return paged(c, data, total, page, size)
 }
@@ -89,7 +133,7 @@ func getMonitorTarget(c echo.Context) error {
 	if err := GetDB(c).First(&row, id).Error; err != nil {
 		return fail(c, 404, "NOT_FOUND", "Monitor target not found", nil)
 	}
-	return ok(c, toMonitorDTO(row))
+	return ok(c, toMonitorDTO(GetDB(c), row))
 }
 
 func validateMonitorInput(in *monitorTargetInput, secretConfigured bool) error {
@@ -108,8 +152,8 @@ func validateMonitorInput(in *monitorTargetInput, secretConfigured bool) error {
 	if in.Kind != "router" && in.Kind != "switch" && in.Kind != "server" && in.Kind != "nas" && in.Kind != "other" {
 		return errors.New("invalid target kind")
 	}
-	if in.ProbeType != "icmp" && in.ProbeType != "tcp" && in.ProbeType != "snmp" {
-		return errors.New("probe type must be icmp, tcp, or snmp")
+	if in.ProbeType != "icmp" && in.ProbeType != "tcp" && in.ProbeType != "snmp" && in.ProbeType != "http" {
+		return errors.New("probe type must be icmp, tcp, snmp, or http")
 	}
 	if in.IntervalSeconds < 30 || in.IntervalSeconds > 3600 {
 		return errors.New("interval must be between 30 and 3600 seconds")
@@ -120,9 +164,11 @@ func validateMonitorInput(in *monitorTargetInput, secretConfigured bool) error {
 	if in.FailureThreshold < 1 || in.FailureThreshold > 10 {
 		return errors.New("failure threshold must be between 1 and 10")
 	}
-	if (in.ProbeType == "tcp" || in.ProbeType == "snmp") && (in.Port < 1 || in.Port > 65535) {
+	if (in.ProbeType == "tcp" || in.ProbeType == "snmp" || in.ProbeType == "http") && (in.Port < 1 || in.Port > 65535) {
 		if in.ProbeType == "snmp" && in.Port == 0 {
 			in.Port = 161
+		} else if in.ProbeType == "http" && in.Port == 0 {
+			in.Port = 80
 		} else {
 			return errors.New("port must be between 1 and 65535")
 		}
@@ -223,7 +269,7 @@ func createMonitorTarget(c echo.Context) error {
 	if err := GetDB(c).Create(&row).Error; err != nil {
 		return fail(c, 400, "TARGET_SAVE_FAILED", "Could not save target; its name may already be used", nil)
 	}
-	return c.JSON(http.StatusCreated, Response{Data: toMonitorDTO(row)})
+	return c.JSON(http.StatusCreated, Response{Data: toMonitorDTO(GetDB(c), row)})
 }
 
 func updateMonitorTarget(c echo.Context) error {
@@ -245,7 +291,7 @@ func updateMonitorTarget(c echo.Context) error {
 	if err := GetDB(c).Save(&row).Error; err != nil {
 		return fail(c, 500, "DATABASE_ERROR", "Failed to save monitor target", nil)
 	}
-	return ok(c, toMonitorDTO(row))
+	return ok(c, toMonitorDTO(GetDB(c), row))
 }
 
 func deleteMonitorTarget(c echo.Context) error {
@@ -268,6 +314,28 @@ func deleteMonitorTarget(c echo.Context) error {
 	return ok(c, map[string]any{"id": strconv.FormatInt(id, 10)})
 }
 
+func toggleMonitorTarget(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return fail(c, 400, "INVALID_ID", "Invalid target ID", nil)
+	}
+	var row domain.NetMonitorTarget
+	if err := GetDB(c).First(&row, id).Error; err != nil {
+		return fail(c, 404, "NOT_FOUND", "Monitor target not found", nil)
+	}
+	row.Enabled = !row.Enabled
+	if !row.Enabled {
+		row.LastStatus = "paused"
+	} else {
+		row.LastStatus = "pending"
+	}
+	row.UpdatedAt = time.Now()
+	if err := GetDB(c).Save(&row).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to toggle monitor target", nil)
+	}
+	return ok(c, toMonitorDTO(GetDB(c), row))
+}
+
 func checkMonitorTarget(c echo.Context) error {
 	id, err := parseIDParam(c, "id")
 	if err != nil {
@@ -284,7 +352,7 @@ func checkMonitorTarget(c echo.Context) error {
 	if err := GetDB(c).First(&row, id).Error; err != nil {
 		return fail(c, 404, "NOT_FOUND", "Monitor target not found", nil)
 	}
-	return ok(c, toMonitorDTO(row))
+	return ok(c, toMonitorDTO(GetDB(c), row))
 }
 
 func listMonitorSamples(c echo.Context) error {

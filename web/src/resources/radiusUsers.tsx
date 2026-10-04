@@ -76,6 +76,7 @@ import {
   UploadFile as UploadIcon
 } from '@mui/icons-material';
 import { ServerPagination, ActiveFilters } from '../components';
+import { StatusChip, Mono } from '../components/Enterprise';
 import { API_BASE } from '../utils/apiClient';
 
 const LARGE_LIST_PER_PAGE = 50;
@@ -775,17 +776,7 @@ const UserSearchHeaderCard = () => {
 // ============ Status指示器组件 ============
 
 const StatusIndicator = ({ isEnabled }: { isEnabled: boolean }) => {
-  const translate = useTranslate();
-  return (
-    <Chip
-      icon={isEnabled ? <EnabledIcon sx={{ fontSize: '0.85rem !important' }} /> : <DisabledIcon sx={{ fontSize: '0.85rem !important' }} />}
-      label={isEnabled ? translate('resources.radius/users.status.enabled', { _: 'Enabled' }) : translate('resources.radius/users.status.disabled', { _: 'Disabled' })}
-      size="small"
-      color={isEnabled ? 'success' : 'default'}
-      variant={isEnabled ? 'filled' : 'outlined'}
-      sx={{ height: 22, fontWeight: 500, fontSize: '0.75rem' }}
-    />
-  );
+  return <StatusChip status={isEnabled ? 'active' : 'disabled'} label={isEnabled ? 'Enabled' : 'Disabled'} />;
 };
 
 // ============ 增强版 Datagrid 字段组件 ============
@@ -800,11 +791,11 @@ const UsernameField = () => {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Avatar
         sx={{
-          width: 32,
-          height: 32,
-          fontSize: '0.85rem',
+          width: 28,
+          height: 28,
+          fontSize: '0.75rem',
           fontWeight: 600,
-          bgcolor: isEnabled ? 'primary.main' : 'grey.400',
+          bgcolor: isEnabled ? 'primary.main' : 'text.disabled',
         }}
       >
         {record.username?.charAt(0).toUpperCase() || 'U'}
@@ -829,13 +820,9 @@ const ExpireTimeField = () => {
   const expireInfo = formatExpireTime(record.expire_time);
 
   return (
-    <Chip
-      label={expireInfo.text}
-      size="small"
-      color={expireInfo.color}
-      variant="outlined"
-      sx={{ fontWeight: 500, fontSize: '0.75rem' }}
-    />
+    <Mono sx={{ fontSize: '0.75rem', color: expireInfo.color === 'error' ? 'error.main' : 'text.secondary' }}>
+      {expireInfo.text}
+    </Mono>
   );
 };
 
@@ -843,15 +830,7 @@ const IpAddressField = () => {
   const record = useRecordContext<RadiusUser>();
   if (!record?.ip_addr) return <Typography variant="body2" color="text.secondary">-</Typography>;
 
-  return (
-    <Chip
-      label={record.ip_addr}
-      size="small"
-      color="info"
-      variant="outlined"
-      sx={{ fontFamily: 'monospace', fontSize: '0.8rem', height: 24 }}
-    />
-  );
+  return <Mono sx={{ fontWeight: 600, color: 'info.main' }}>{record.ip_addr}</Mono>;
 };
 
 // ============ List action toolbar ============

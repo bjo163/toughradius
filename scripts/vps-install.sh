@@ -131,6 +131,8 @@ else
 fi
 docker compose ps
 
+chmod +x scripts/*.sh 2>/dev/null || true
+
 if command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
   cat > /etc/systemd/system/mwx-isp-update.service <<EOF
 [Unit]
@@ -190,3 +192,4 @@ fi
 
 echo "MWX-ISP is running. Admin UI is bound to 127.0.0.1:${MWX_ISP_WEB_PORT:-1816}; configure a TLS reverse proxy before remote browser access."
 echo "RADIUS auth/accounting and RadSec ports are exposed. Configure only the ports your NAS actually uses in the VPS firewall."
+echo "Database maintenance: use '${APP_DIR}/scripts/backup-db.sh' and '${APP_DIR}/scripts/restore-db.sh'."

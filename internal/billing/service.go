@@ -222,7 +222,7 @@ func RecordPayment(db *gorm.DB, payment *domain.Payment, now time.Time, autoReac
 		if err := tx.Create(&domain.BillingEvent{CustomerID: invoice.CustomerID, SubscriptionID: invoice.SubscriptionID, InvoiceID: invoice.ID, Type: "payment_received", Description: payment.PaymentNo, CreatedAt: now}).Error; err != nil {
 			return err
 		}
-		if invoice.Status == domain.InvoicePaid && autoReactivate {
+		if invoice.Status == domain.InvoicePaid && autoReactivate && invoice.SubscriptionID > 0 {
 			var sub domain.Subscription
 			if err := tx.First(&sub, invoice.SubscriptionID).Error; err != nil {
 				return err

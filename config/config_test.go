@@ -310,6 +310,35 @@ func TestLoadConfigNonExistent(t *testing.T) {
 	}
 }
 
+func TestLoadConfigPrefersMWXISPConfigThenLegacyConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	previousDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(previousDir); err != nil {
+			t.Errorf("restore working directory: %v", err)
+		}
+	})
+
+	if err := os.WriteFile("toughradius.yml", []byte("system:\n  appid: Legacy\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := LoadConfig("").System.Appid; got != "Legacy" {
+		t.Fatalf("legacy fallback: got appid %q, want Legacy", got)
+	}
+	if err := os.WriteFile("mwx-isp.yml", []byte("system:\n  appid: MWX\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := LoadConfig("").System.Appid; got != "MWX" {
+		t.Fatalf("MWX-ISP config priority: got appid %q, want MWX", got)
+	}
+}
+
 func TestLoadConfigDefaultsWebTLSEnabledWhenOmitted(t *testing.T) {
 	t.Setenv("TOUGHRADIUS_WEB_TLS_ENABLED", "")
 
