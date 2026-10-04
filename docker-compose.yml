@@ -2,7 +2,7 @@ name: mwx-isp
 
 services:
   db:
-    image: postgres:16-alpine
+    image: ${MWX_ISP_POSTGRES_IMAGE:-postgres:16-alpine3.24}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mwxisp}
@@ -19,10 +19,9 @@ services:
     networks: [backend]
 
   app:
-    image: ${MWX_ISP_IMAGE:-mwx-isp:local}
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${MWX_ISP_IMAGE:-ghcr.io/bjo163/mwx-isp:latest}
+    pull_policy: always
+    init: true
     restart: unless-stopped
     depends_on:
       db:
@@ -52,7 +51,6 @@ services:
       TOUGHRADIUS_LOGGER_MODE: production
       TOUGHRADIUS_LOGGER_FILE_ENABLE: "false"
     ports:
-      # Keep the admin UI/API private by default. Publish it only behind a TLS reverse proxy.
       - "127.0.0.1:${MWX_ISP_WEB_PORT:-1816}:1816/tcp"
       - "1812:1812/udp"
       - "1813:1813/udp"

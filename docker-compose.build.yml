@@ -1,0 +1,8 @@
+# Optional override for building the current checkout instead of using the release image.
+services:
+  app:
+    image: mwx-isp:local
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: Dockerfile

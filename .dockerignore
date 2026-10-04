@@ -19,5 +19,4 @@ rundata
 *.db-wal
 .env
 .env.*
-!.env.vps.example
 *.log
