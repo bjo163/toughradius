@@ -30,7 +30,7 @@ Payment gateways, customer portal, WhatsApp, ticketing, fiber inventory, multi-t
 
 ## VPS deployment with Docker Compose
 
-The repository root includes a production Compose stack with PostgreSQL, persistent database/application volumes, required secrets, health checks, and RADIUS ports. The admin UI is bound to `127.0.0.1:1816` by default so it is not exposed directly to the public internet; put it behind a TLS reverse proxy such as Caddy or Nginx.
+The repository root includes a production Compose stack with PostgreSQL, persistent database/application volumes, required secrets, health checks, and RADIUS ports. The VPS installer builds the app image from the public `main` source checkout, so no GHCR credentials are needed. The admin UI is bound to `127.0.0.1:1816` by default so it is not exposed directly to the public internet; put it behind a TLS reverse proxy such as Caddy or Nginx.
 
 Install Docker Engine and the Docker Compose plugin on an Ubuntu/Debian VPS, then run:
 
@@ -40,9 +40,9 @@ cd mwx-isp
 sudo bash scripts/vps-install.sh
 ```
 
-The installer creates `/opt/mwx-isp/.env` with unique database, JWT, and admin credentials, starts the release container, and enables a daily systemd update timer when systemd is available. **Save the generated admin password printed by the installer.** Keep `/opt/mwx-isp/.env` private; it contains secrets. To update manually, run `sudo /opt/mwx-isp/scripts/vps-update.sh`. The updater waits for the container health check and attempts to restore the previous image if startup fails.
+The installer clones the `main` source, builds the app image, creates `/opt/mwx-isp/.env` with unique database, JWT, and admin credentials, then starts the stack. It enables a daily systemd update timer when systemd is available. **Save the generated admin password printed by the installer.** Keep `/opt/mwx-isp/.env` private; it contains secrets. To update manually, run `sudo /opt/mwx-isp/scripts/vps-update.sh`. The updater rebuilds only when `main` has changed, waits for the container health check, and restores the prior source and image if startup fails. A small VPS needs available memory, CPU, and disk space for a Go and frontend build during initial install and updates.
 
-For a source checkout, copy `.env.vps.example` to `.env`, replace the `CHANGE_ME` values, and run `docker compose up -d`. Set `MWX_ISP_VERSION` to a release version (for example `0.1.0`) when you want pinned updates; `latest` tracks the most recently published release image. Automatic image updates require `latest` and a publicly pullable GHCR package. The daily timer updates the app image and preserves both Docker volumes; keep regular off-host backups of the PostgreSQL volume before relying on upgrades.
+For a source checkout, copy `.env.vps.example` to `.env`, replace the `CHANGE_ME` values, and run `docker compose up -d --build`. The daily updater follows `main` and preserves both Docker volumes; keep regular off-host backups of the PostgreSQL volume before relying on upgrades.
 
 Allow only the required NAS traffic in the VPS firewall: UDP 1812 (RADIUS auth), UDP 1813 (accounting), and TCP 2083 only when using RadSec. Do not expose PostgreSQL. For remote admin access, forward the local web port through a TLS reverse proxy. Check service state/logs with `cd /opt/mwx-isp && docker compose ps` and `docker compose logs -f app`.
 
@@ -69,8 +69,12 @@ system:
   workdir: ./rundata
 
 database:
-  type: sqlite
-  name: mwx-isp.db
+  type: postgres
+  host: 127.0.0.1
+  port: 5432
+  name: mwxisp
+  user: mwxisp
+  passwd: change-this-password
 
 radiusd:
   enabled: true
@@ -79,7 +83,7 @@ radiusd:
   acct_port: 1813
 ```
 
-PostgreSQL is preferred for production. Set a strong `web.secret` and database credentials before exposing the management API. Existing deployments can continue using the established `TOUGHRADIUS_*` environment variable names during this transition.
+PostgreSQL is the default database. Configure its credentials and set a strong `web.secret` before starting the application. SQLite remains available only when explicitly selected for local development. Existing deployments can continue using the established `TOUGHRADIUS_*` environment variable names during this transition.
 
 On first start, the application adds ISP tables through the existing additive AutoMigrate path. A fresh local database starts with `admin` / `admin`; an existing custom admin password is preserved across restart and upgrade. If a previous build generated an admin password, keep using that password or reset it with the password reset tool. Existing RADIUS tables and subscriber data are not dropped by startup migration. Change the default password before exposing the management UI to a network.
 

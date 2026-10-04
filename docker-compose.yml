@@ -19,7 +19,10 @@ services:
     networks: [backend]
 
   app:
-    image: ghcr.io/bjo163/mwx-isp:${MWX_ISP_VERSION:-latest}
+    image: ${MWX_ISP_IMAGE:-mwx-isp:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:

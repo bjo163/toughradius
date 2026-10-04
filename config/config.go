@@ -451,14 +451,14 @@ func setEnvIntValue(name string, val *int) {
 // with YAML and environment variable settings.
 //
 // Default configuration features:
-//   - SQLite database for zero-dependency development
+//   - PostgreSQL database for application runtime
 //   - Debug mode enabled for verbose logging
 //   - Standard RADIUS ports (1812 auth, 1813 acct, 2083 radsec)
 //   - Web interface on port 1816
 //   - All services bound to 0.0.0.0 (all interfaces)
 //
-// Production deployments should override:
-//   - Database.Type to "postgres" for better performance
+// Deployments should configure:
+//   - PostgreSQL credentials and host for the selected database
 //   - Web.Secret to a cryptographically random value
 //   - System.Debug to false
 //   - Logger.Mode to "production"
@@ -479,12 +479,12 @@ var DefaultAppConfig = &AppConfig{
 		Secret:     DefaultWebSecret,
 	},
 	Database: DBConfig{
-		Type:     "sqlite",    // Default to SQLite for development and testing
-		Host:     "127.0.0.1", // PostgreSQL configuration (used when type is postgres)
+		Type:     "postgres",
+		Host:     "127.0.0.1",
 		Port:     5432,
-		Name:     "toughradius.db", // SQLite: database filename; PostgreSQL: database name
-		User:     "postgres",
-		Passwd:   "myroot",
+		Name:     "mwxisp",
+		User:     "mwxisp",
+		Passwd:   "",
 		MaxConn:  100,
 		IdleConn: 10,
 		Debug:    false,

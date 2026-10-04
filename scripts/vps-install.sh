@@ -2,14 +2,12 @@
 set -Eeuo pipefail
 
 APP_DIR="${MWX_ISP_DIR:-/opt/mwx-isp}"
-RAW_URL="${MWX_ISP_RAW_URL:-https://raw.githubusercontent.com/bjo163/mwx-isp/main}"
-
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Run this installer as root: sudo bash scripts/vps-install.sh" >&2
   exit 1
 fi
 
-for command in docker openssl; do
+for command in docker openssl git; do
   if ! command -v "${command}" >/dev/null 2>&1; then
     echo "Missing ${command}. Install Docker Engine and the Docker Compose plugin first." >&2
     echo "Official guide: https://docs.docker.com/engine/install/" >&2
@@ -25,28 +23,12 @@ fi
 mkdir -p "${APP_DIR}"
 chmod 0750 "${APP_DIR}"
 
-if command -v curl >/dev/null 2>&1; then
-  fetch() { curl --fail --silent --show-error --location "$1" -o "$2"; }
-elif command -v wget >/dev/null 2>&1; then
-  fetch() { wget -q "$1" -O "$2"; }
-else
-  echo "curl or wget is required to download the MWX-ISP deployment files." >&2
-  exit 1
-fi
-
-if [[ ! -f "${APP_DIR}/docker-compose.yml" ]]; then
-  fetch "${RAW_URL}/docker-compose.yml" "${APP_DIR}/docker-compose.yml"
-fi
-if [[ ! -f "${APP_DIR}/.env.vps.example" ]]; then
-  fetch "${RAW_URL}/.env.vps.example" "${APP_DIR}/.env.vps.example"
-fi
-if [[ ! -x "${APP_DIR}/scripts/vps-update.sh" || ! -x "${APP_DIR}/scripts/vps-auto-update.sh" ]]; then
-  mkdir -p "${APP_DIR}/scripts"
-  fetch "${RAW_URL}/scripts/vps-update.sh" "${APP_DIR}/scripts/vps-update.sh"
-  fetch "${RAW_URL}/scripts/vps-auto-update.sh" "${APP_DIR}/scripts/vps-auto-update.sh"
-  fetch "${RAW_URL}/scripts/mwx-isp-update.service" "${APP_DIR}/scripts/mwx-isp-update.service"
-  fetch "${RAW_URL}/scripts/mwx-isp-update.timer" "${APP_DIR}/scripts/mwx-isp-update.timer"
-  chmod 0750 "${APP_DIR}/scripts"/*.sh
+if [[ ! -d "${APP_DIR}/.git" ]]; then
+  if [[ -n "$(find "${APP_DIR}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    echo "${APP_DIR} exists and is not an MWX-ISP git checkout; move or back up its contents first." >&2
+    exit 1
+  fi
+  git clone --depth 1 --single-branch --branch main https://github.com/bjo163/mwx-isp.git "${APP_DIR}"
 fi
 
 if [[ ! -f "${APP_DIR}/.env" ]]; then
@@ -68,7 +50,8 @@ fi
 
 cd "${APP_DIR}"
 docker compose config --quiet
-docker compose pull
+docker compose pull db
+docker compose build app
 docker compose up -d
 docker compose ps
 

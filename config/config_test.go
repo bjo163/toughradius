@@ -49,12 +49,12 @@ func TestDefaultAppConfig(t *testing.T) {
 	}
 
 	// TestDatabase configuration
-	if cfg.Database.Type != "sqlite" {
-		t.Errorf("Expected Database.Type 'sqlite', got '%s'", cfg.Database.Type)
+	if cfg.Database.Type != "postgres" {
+		t.Errorf("Expected Database.Type 'postgres', got '%s'", cfg.Database.Type)
 	}
 
-	if cfg.Database.Name != "toughradius.db" {
-		t.Errorf("Expected Database.Name 'toughradius.db', got '%s'", cfg.Database.Name)
+	if cfg.Database.Name != "mwxisp" {
+		t.Errorf("Expected Database.Name 'mwxisp', got '%s'", cfg.Database.Name)
 	}
 
 	if cfg.Database.MaxConn != 100 {
