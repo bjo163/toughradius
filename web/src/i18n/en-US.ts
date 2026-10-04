@@ -4,7 +4,7 @@ import englishMessages from 'ra-language-english';
 const customEnglishMessages: TranslationMessages = {
   ...englishMessages,
   app: {
-    title: 'MWX-ISP',
+    title: 'ISP Management',
     subtitle: 'ISP Management + RADIUS + Billing',
     loading: 'Loading...',
   },
@@ -39,6 +39,7 @@ const customEnglishMessages: TranslationMessages = {
     operators: 'Operators Management',
     certificates: 'Certificates',
     system_config: 'System Configuration',
+    branding: 'Product Branding',
     account_settings: 'Account Settings',
   },
   appbar: {
@@ -49,7 +50,7 @@ const customEnglishMessages: TranslationMessages = {
     collapse_menu: 'Collapse Menu',
   },
   dashboard: {
-    title: 'MWX-ISP Operations',
+    title: 'ISP Operations',
     subtitle: 'Manage customers, internet access, and billing from one place.',
     customers: 'Customers',
     active_subscriptions: 'Active Subscriptions',

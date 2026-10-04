@@ -26,11 +26,31 @@ var (
 // calls idempotent. The function returns the number of inserted invoices and
 // the first database error; callers should run it from a single scheduler.
 func GenerateMonthlyInvoices(db *gorm.DB, now time.Time, dueDays int) (int, error) {
+	return generateMonthlyInvoices(db, now, dueDays, nil)
+}
+
+// GenerateMonthlyInvoicesForSubscriptions creates current-period invoices for
+// only the supplied subscription IDs. It uses the same sequence allocation,
+// item creation, and billing-event behavior as GenerateMonthlyInvoices. An
+// empty ID list is rejected so callers cannot accidentally invoice every
+// active subscription.
+func GenerateMonthlyInvoicesForSubscriptions(db *gorm.DB, now time.Time, dueDays int, subscriptionIDs []int64) (int, error) {
+	if len(subscriptionIDs) == 0 {
+		return 0, fmt.Errorf("at least one subscription ID is required")
+	}
+	return generateMonthlyInvoices(db, now, dueDays, subscriptionIDs)
+}
+
+func generateMonthlyInvoices(db *gorm.DB, now time.Time, dueDays int, subscriptionIDs []int64) (int, error) {
 	if dueDays < 0 || dueDays > 90 {
 		return 0, fmt.Errorf("due days must be between 0 and 90")
 	}
 	var subscriptions []domain.Subscription
-	if err := db.Where("status = ?", domain.SubscriptionActive).Find(&subscriptions).Error; err != nil {
+	query := db.Where("status = ?", domain.SubscriptionActive)
+	if len(subscriptionIDs) > 0 {
+		query = query.Where("id IN ?", subscriptionIDs)
+	}
+	if err := query.Find(&subscriptions).Error; err != nil {
 		return 0, err
 	}
 	created := 0

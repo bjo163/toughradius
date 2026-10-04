@@ -69,6 +69,13 @@ Customer IDs (`MWX-000001`) and package codes (`PKG-000001`) are generated autom
 ./mwx-isp -c mwx-isp.yml
 ```
 
+### Sample data on first install
+
+A completely empty installation automatically receives clearly marked sample records for the main lists during its first startup. No separate seed executable is needed. Existing installations with an operator or any operational/business records are left unchanged; startup never refreshes or overwrites samples.
+
+It creates 3 Nodes, 3 disabled NAS devices, 3 RADIUS Profiles, 6 disabled RADIUS Users, 6 Customers, 3 Packages, 6 Subscriptions, 6 current-period Invoices, 3 Payments, and 3 disabled Network & Alerts targets. IDs and billing document numbers use the normal application generators. Marked synthetic accounting history is included for dashboard charts, but no online sessions or probe results are faked. Sample RADIUS credentials use `123456` but the accounts start disabled; enable them only in an isolated test setup and never expose them to real customers.
+
+The optional `cmd/demo-seed` utility remains available to explicitly refresh or clean marked examples in a test database. To remove only marked examples, run `demo-seed.exe -c mwx-isp.yml -clean` on Windows or `./demo-seed -c mwx-isp.yml -clean` on Linux/macOS. Cleanup preserves sequence counters and operator-created records/dependencies.
 ## Billing defaults
 
 The system settings include a default billing day (1–28), default due days, default grace days, automatic suspension, and automatic reactivation. Subscription billing days are restricted to 1–28. Amounts are integer IDR. Each manual payment is applied to one invoice; partial payments are supported.

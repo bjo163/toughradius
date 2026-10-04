@@ -22,6 +22,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { GettingStartedCard } from '../components/onboarding/GettingStartedCard';
 import { dataSeriesColors, lightDataSeriesColors } from '../theme';
+import { useBranding } from '../branding/BrandingContext';
 
 interface DashboardStats {
   total_users: number;
@@ -102,6 +103,7 @@ const emptyStats: DashboardStats = {
 };
 
 const Dashboard = () => {
+  const { branding } = useBranding();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const chartColors = isDark ? dataSeriesColors : lightDataSeriesColors;
@@ -382,10 +384,10 @@ const Dashboard = () => {
             <Box>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.6 }}>
                 <Box sx={{ width: 9, height: 9, border: '1px solid', borderColor: 'text.primary', bgcolor: 'primary.main', transform: 'rotate(45deg)' }} />
-                <Typography variant="overline" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.15em', lineHeight: 1.3 }}>MWX / NETWORK CONTROL</Typography>
+                <Typography variant="overline" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.15em', lineHeight: 1.3 }}>{branding.short_name} / NETWORK CONTROL</Typography>
               </Stack>
               <Typography variant="h5" sx={{ fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif', textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.035em', mb: 0.4 }}>
-                {translate('dashboard.title')}
+                {branding.product_name} Operations
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 520 }}>
                 {translate('dashboard.subtitle')}

@@ -1,4 +1,5 @@
 export * from './CustomAppBar';
+export * from './BrandMark';
 export * from './CustomLayout';
 export * from './LanguageSwitcher';
 export * from './CustomMenu';

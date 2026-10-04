@@ -118,7 +118,7 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Tambahkan regresi otomatis untuk nomor invoice/payment lintas periode dan kode package otomatis.
 - [x] Simulasikan CoA/Disconnect melalui fake NAS UDP: ACK, NAK, timeout/retry, serta validasi Message-Authenticator.
 - [x] Simulasikan alur Admin API untuk disconnect dan perubahan authorization dengan fake NAS UDP.
-- [ ] Jalankan acceptance integration lengkap berbasis PostgreSQL/OpenLDAP; jalankan di CI atau mesin Docker karena Docker daemon lokal belum tersedia.
+- [ ] Pastikan job integration PostgreSQL/OpenLDAP pada CI lulus untuk perubahan terbaru; job sudah tersedia, tetapi belum dijalankan lokal karena Docker daemon tidak aktif.
 - [ ] Verifikasi autentikasi dan accounting paket end-to-end pada server RADIUS lokal, selain uji CoA/Admin API yang sudah lulus.
 - [ ] Uji autentikasi ulang pelanggan setelah reactivation dengan NAS nyata sebelum produksi; ini pilot kompatibilitas, bukan penghalang untuk pengembangan lokal.
 
@@ -132,10 +132,10 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 
 ### B. Acceptance dan distribusi
 
-- [ ] Jalankan suite integrasi PostgreSQL/OpenLDAP penuh di CI atau host Docker yang berfungsi.
+- [ ] Pastikan suite integrasi PostgreSQL/OpenLDAP penuh pada CI lulus untuk perubahan terbaru; job CI sudah dikonfigurasi.
 - [x] Tambahkan acceptance scenario untuk alur customer, paket, subscription/RADIUS user, invoice idempotent, overdue/grace, suspend/reject, accounting start/stop, pembayaran, reactivation, dan auth ulang.
-- [ ] Jalankan acceptance scenario tersebut pada PostgreSQL/OpenLDAP; source sudah dikompilasi, tetapi runtime belum dapat diverifikasi tanpa database integration.
-- [ ] Dokumentasikan serta otomatisasi build EXE Windows dan deployment server dari clean checkout.
+- [ ] Verifikasi acceptance scenario lifecycle ISP pada PostgreSQL/OpenLDAP di CI; eksekusi lokal tetap menunggu Docker aktif.
+- [x] Otomatiskan build Windows EXE dalam release workflow dan build matrix CI (AMD64); clean-checkout release tetap perlu dibuktikan bersama prosedur upgrade/backup.
 - [ ] Buktikan backup/restore dan upgrade database pada instalasi uji.
 
 ### C. Kesiapan operasional
@@ -201,10 +201,10 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Tampilkan hitungan record `Configured` terpisah dari verifikasi autentikasi/accounting NAS live; endpoint gagal menjadi `Unable to check`, bukan nol.
 - [x] Simpan hanya preferensi tour/collapse dan centang manual di localStorage per operator; tidak menyimpan data bisnis atau secret dan menjelaskan progress lokal.
 - [x] Review copy untuk dampak pengaturan billing, secret jaringan, WhatsApp opsional, serta batas simulasi dan verifikasi produksi.
-- [ ] Visual-check dashboard/guide pada tablet, role operator, serta data parsial/lengkap. Admin sempit (529 px), dark/light, dashboard, guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice sudah dibuka memakai instalasi SQLite sementara; empty states benar dan tidak ada error JS baru setelah backend siap.
+- [ ] Periksa dashboard/guide di tablet dan role Operator, termasuk data parsial/lengkap. Admin sempit (529 px), dark/light, dashboard, guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice sudah dibuka memakai instalasi SQLite sementara; empty states benar dan tidak ada error JS baru setelah backend siap.
 - [x] Pastikan panduan tidak membuat seed data dan tidak menyebut simulasi sebagai validasi produksi.
 
-### J. Audit visual konsisten dan branding yang dapat dikonfigurasi (rencana; TR-F029 perlu revisi scope)
+### J. Audit visual konsisten dan branding yang dapat dikonfigurasi (TR-F029)
 
 - [x] Audit sumber theme, shell, login, dashboard, config perusahaan, favicon/title, dan literal warna/radius/shadow.
 - [x] Audit referensi `X:\REPO\focus\moonwitness\apps\board`: manga-ink paper/dark, lime/pink, display/body/mono typography, halftone, bold outline, offset hard shadow, active sticker, doodle/speedlines, dan reduced motion.
@@ -222,14 +222,22 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Perbaiki overflow horizontal 27 px di Account Settings pada viewport 529 px dengan grid form yang responsif.
 - [x] Inspeksi browser runtime Dashboard, User Guide, Operations, System Config, Account Settings, RADIUS Users, Customer List, dan Invoice List pada empty database terisolasi; tidak menambah data bisnis.
 - [x] Verifikasi tema light/dark pada Operations, User Guide, Dashboard, dan System Config; Account Settings light mode tanpa overflow sesudah perbaikan.
-- [ ] Lengkapi inspeksi browser seluruh route resource, desktop lebar, mode Admin/Operator, dan data parsial/lengkap.
-- [ ] Uji high-contrast keyboard/focus dan empty/loading/error states pada seluruh kelompok resource.
-- [ ] Sebelum coding, ajukan revisi TR-F029 di checklist CN/EN untuk mengubah merek statis MWX-ISP menjadi konfigurasi brand per deployment; pertahankan batas single-instance.
-- [ ] Implementasikan J.1–J.8 secara bertahap setelah acceptance scope diselaraskan, sambil mempertahankan default MWX green dan dark theme.
-- [ ] Verifikasi dark/light, brand default/custom, responsive layouts, peran, aksesibilitas, error states, config legacy, reload, serta logo invalid/terlalu besar.
+- [ ] Selesaikan satu audit browser lintas seluruh route/resource pada desktop, tablet, Admin/Operator, dan data parsial/lengkap; cakup filter/form, empty/loading/error states, keyboard/focus, dan kontras. Audit saat ini sudah mencakup sebagian route dengan Admin pada SQLite; Operator dan seluruh kombinasi belum diperiksa.
+- [x] Selaraskan scope TR-F029 dalam checklist CN/EN agar mencakup konfigurasi brand per deployment dengan batas single-instance.
+- [x] Implementasikan baseline visual, editor brand Admin, penyimpanan aman, preview/save/reset, dan propagasi runtime; default tetap MWX green dan dark theme.
+- [x] Uji API default/custom brand, Admin authorization, upload/read PNG, reject SVG, reset, JWT skip; runtime Admin default/custom Save/Reset, product title/shell propagation, dashboard data sample, customer sample list, dan User Guide tanpa console error.
 
-Urutan eksekusi engineering: A → B → C → D → E → H → I → F → G; onboarding memakai route/fitur lokal dan dapat dikembangkan sebelum NAS nyata tersedia. Simulator fake network dan mock WhatsApp dapat dipakai tanpa hardware/akun produksi; polling jaringan live memerlukan target yang diizinkan, sementara validasi vendor/cutover pada Gelombang F memerlukan NAS nyata.
+### K. Data contoh bisnis otomatis untuk instalasi baru (TR-F032)
+
+- [x] Seed otomatis satu kali ketika belum ada record operasional/bisnis (akun bootstrap admin dan node bawaan tidak menghalangi); instalasi dengan data nyata dilewati, dan penanda startup mencegah seed ulang.
+- [x] Sediakan contoh otomatis 3–6 untuk daftar utama (Node, NAS, Profile, RadiusUser, Customer, Package, Subscription, Invoice, Payment) dan target monitor disabled; akun/NAS contoh disabled demi keamanan.
+- [x] Buat seed idempotent dan bersihkan hanya record demo; invoice/payment memakai sequence service resmi.
+- [x] Uji seed berulang, relasi referensial, jumlah contoh, urutan dokumen otomatis, dan bukti bahwa data tanpa marker tidak dihapus.
+- [x] Dokumentasikan bootstrap data otomatis sehingga user tidak perlu menjalankan executable kedua; CLI tetap opsional untuk perawatan/cleanup.
+- [x] Pastikan panduan aplikasi menjelaskan kapan sampel ditambahkan otomatis, penanda sintetis, disabled credentials, dan batas simulasi monitoring/NAS.
+
+Urutan penutupan yang disarankan: (1) pastikan CI lint/test/integration/build lulus untuk perubahan sekarang; (2) lengkapi audit UI Operator/tablet/keyboard; (3) siapkan dan buktikan prosedur deployment, backup/restore, upgrade, serta scheduler/runbook; (4) jalankan fake SNMP dan simulator NAS yang dapat diulang; (5) lakukan pilot NAS dan pairing WhatsApp uji sebelum dipakai operasional. Butir 1–4 dapat dikerjakan tanpa NAS pelanggan; polling live perlu target yang diizinkan, sedangkan kompatibilitas vendor dan cutover butuh perangkat nyata. Jangan menambah modul baru sebelum gap pilot dan penggunaan menunjukkan kebutuhan.
 
 Catatan hasil terbaru (2026-10-02): tes CoAService terpilih dan tes Admin API disconnect/authorization berhasil dijalankan lokal dengan fake NAS UDP. Acceptance scenario ISP ditambahkan ke `test/integration/isp_lifecycle_test.go` untuk memeriksa satu siklus customer sampai auth ulang plus accounting start/stop. `go test ./...`, `go vet ./...`, frontend production build, dan kompilasi paket integration bertag berhasil pada putaran sebelumnya; audit ini juga menjalankan `go test` terpilih untuk validasi E.164 dan endpoint Operator, serta frontend production build yang berhasil. Audit UI lokal memakai fixture simulasi untuk dashboard, login, Operations, detail invoice/payment, target jaringan, histori interface, insiden, chart, dan polling WhatsApp; tidak ada error JavaScript, nomor relasi terbaca, dan input allowlist tidak ter-reset. Header mobile dan detail payment diperiksa pada 390 px tanpa horizontal overflow. ESLint belum dapat dijalankan karena plugin `@typescript-eslint` gagal memuat `ts-api-utils` (`Cannot read properties of undefined (reading 'Intrinsic')`). Build masih memperingatkan bundle ECharts 1.14 MB. Eksekusi runtime suite PostgreSQL/OpenLDAP belum dilakukan karena Docker daemon lokal tidak aktif dan `TEST_DATABASE_*` tidak tersedia. Uji SNMP agent/NAS nyata serta pairing WhatsApp sungguhan tetap perlu validasi operasional.
 
-Catatan onboarding (2026-10-03): Dashboard checklist dan route User Guide/Quick Tour telah diimplementasikan. `go build ./...`, `go test ./...`, `web npm run type-check`, `web npm run build`, dan `git diff --check` berhasil. ESLint gagal dimulai karena dependency `ts-api-utils` membaca `Intrinsic` dari nilai undefined; `golangci-lint` tidak terpasang. Dev server merespons 200, tetapi sesi Playwright tidak bisa diimpor pada runtime ini, dan backend membutuhkan autentikasi untuk API identity. Karena itu inspeksi visual role/data dan console error masih terbuka; build tetap memperingatkan chunk ECharts 1.14 MB.
+Catatan onboarding (2026-10-03): Dashboard checklist dan route User Guide/Quick Tour telah diimplementasikan. Verifikasi implementasi terakhir menjalankan `go build ./...`, `go test ./... -count=1`, `go vet ./...`, `web npm run type-check`, `web npm run build`, `git diff --check`, serta smoke test startup SQLite untuk seed otomatis; semua lulus. Build memperingatkan chunk ECharts 1.14 MB. CI sudah memiliki lint/test, PostgreSQL/OpenLDAP integration, dan build matrix Windows AMD64; status job untuk revisi saat ini harus diperiksa ketika perubahan didorong. Runtime PostgreSQL/OpenLDAP lokal, keseluruhan audit UI Operator/keyboard, backup-restore/upgrade, fake SNMP packet, serta pilot NAS/WhatsApp nyata masih tersisa.

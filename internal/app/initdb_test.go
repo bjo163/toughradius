@@ -37,6 +37,48 @@ func TestIsWellKnownBootstrapPassword(t *testing.T) {
 	assert.False(t, IsWellKnownBootstrapPassword(""))
 }
 
+func TestFreshInstallSeedsSamplesOnce(t *testing.T) {
+	app := newTestApplication(t)
+
+	app.seedSamplesOnFreshInstall()
+	var customers int64
+	require.NoError(t, app.gormDB.Model(&domain.Customer{}).Count(&customers).Error)
+	require.EqualValues(t, 6, customers)
+	var packages int64
+	require.NoError(t, app.gormDB.Model(&domain.InternetPackage{}).Count(&packages).Error)
+	require.EqualValues(t, 3, packages)
+	var sampleUser domain.RadiusUser
+	require.NoError(t, app.gormDB.Where("username = ?", "demo-alice").First(&sampleUser).Error)
+	require.Equal(t, "disabled", sampleUser.Status, "bootstrap sample credentials must not authenticate by default")
+
+	// Startup after the initial seed must leave samples untouched.
+	require.NoError(t, app.gormDB.Model(&sampleUser).Update("realname", "Operator edit").Error)
+	app.seedSamplesOnFreshInstall()
+	require.NoError(t, app.gormDB.First(&sampleUser, sampleUser.ID).Error)
+	require.Equal(t, "Operator edit", sampleUser.Realname)
+}
+
+func TestFreshInstallSeedingSkipsExistingInstallation(t *testing.T) {
+	app := newTestApplication(t)
+	require.NoError(t, app.gormDB.Create(&domain.NetNode{Name: "operator-node"}).Error)
+
+	app.seedSamplesOnFreshInstall()
+	var customers int64
+	require.NoError(t, app.gormDB.Model(&domain.Customer{}).Count(&customers).Error)
+	require.Zero(t, customers)
+}
+
+func TestFreshInstallSeedingIgnoresBootstrapAdminAndAutoNode(t *testing.T) {
+	app := newTestApplication(t)
+	require.NoError(t, app.gormDB.Create(&domain.SysOpr{ID: common.UUIDint64(), Username: "admin", Level: "super", Status: common.ENABLED}).Error)
+	require.NoError(t, app.gormDB.Create(&domain.NetNode{ID: AutoRegisterPopNodeId, Name: "default"}).Error)
+
+	app.seedSamplesOnFreshInstall()
+	var customers int64
+	require.NoError(t, app.gormDB.Model(&domain.Customer{}).Count(&customers).Error)
+	require.EqualValues(t, 6, customers, "bootstrap-only records must not prevent samples on an otherwise empty install")
+}
+
 func TestCheckSuperCreatesBootstrapAdmin(t *testing.T) {
 	app := newTestApplication(t)
 

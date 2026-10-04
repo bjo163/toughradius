@@ -14,6 +14,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cast"
 	"github.com/talkincode/toughradius/v9/config"
+	"github.com/talkincode/toughradius/v9/internal/demoseed"
 	"github.com/talkincode/toughradius/v9/internal/domain"
 	"github.com/talkincode/toughradius/v9/internal/networkmonitor"
 	"github.com/talkincode/toughradius/v9/internal/notify"
@@ -217,6 +218,8 @@ func (a *Application) Init(cfg *config.AppConfig) {
 	// Ensure database schema is migrated before loading configs
 	if err := a.MigrateDB(false); err != nil {
 		zap.S().Errorf("database migration failed: %v", err)
+	} else {
+		a.seedSamplesOnFreshInstall()
 	}
 
 	// Create or rotate the bootstrap super-admin before the admin API listens
@@ -238,6 +241,63 @@ func (a *Application) Init(cfg *config.AppConfig) {
 	a.profileCache = NewProfileCache(a.gormDB, DefaultProfileCacheTTL)
 
 	a.initJob()
+}
+
+// seedSamplesOnFreshInstall fills a completely empty installation once so the
+// first login has useful examples. Any existing operator, network, RADIUS, or
+// ISP data suppresses seeding, which keeps upgrades and used databases intact.
+func (a *Application) seedSamplesOnFreshInstall() {
+	if a == nil || a.gormDB == nil {
+		return
+	}
+	var initialized int64
+	if err := a.gormDB.Model(&domain.SysConfig{}).Where("type = ? AND name = ?", "internal", "sample_data_initialized").Count(&initialized).Error; err != nil {
+		zap.L().Error("unable to check sample initialization marker", zap.Error(err))
+		return
+	}
+	if initialized > 0 {
+		return
+	}
+	models := []interface{}{
+		&domain.NetNas{}, &domain.RadiusProfile{}, &domain.RadiusUser{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{},
+		&domain.Customer{}, &domain.InternetPackage{}, &domain.Subscription{}, &domain.Invoice{},
+		&domain.Payment{}, &domain.NetMonitorTarget{}, &domain.NetMonitorSample{}, &domain.NetMonitorIncident{}, &domain.SysCert{},
+	}
+	for _, model := range models {
+		var count int64
+		if err := a.gormDB.Model(model).Count(&count).Error; err != nil {
+			zap.L().Error("unable to check for existing data before sample initialization", zap.Error(err))
+			return
+		}
+		if count > 0 {
+			return
+		}
+	}
+	var configuredNodes int64
+	if err := a.gormDB.Model(&domain.NetNode{}).Where("id <> ?", AutoRegisterPopNodeId).Count(&configuredNodes).Error; err != nil {
+		zap.L().Error("unable to check configured network nodes before sample initialization", zap.Error(err))
+		return
+	}
+	if configuredNodes > 0 {
+		a.markSampleInitialization("skipped-existing-data")
+		return
+	}
+	counts, err := demoseed.Seed(a.gormDB, time.Now(), 7)
+	if err != nil {
+		zap.L().Error("failed to initialize first-install sample data", zap.Error(err))
+		return
+	}
+	a.markSampleInitialization("seeded")
+	zap.L().Info("initialized sample data for a fresh installation",
+		zap.Int("customers", counts.Customers), zap.Int("subscriptions", counts.Subscriptions),
+		zap.Int("invoices", counts.Invoices), zap.Int("payments", counts.Payments))
+}
+
+func (a *Application) markSampleInitialization(value string) {
+	row := domain.SysConfig{Type: "internal", Name: "sample_data_initialized", Value: value, Remark: "Managed by first-install sample bootstrap"}
+	if err := a.gormDB.Where("type = ? AND name = ?", row.Type, row.Name).FirstOrCreate(&row).Error; err != nil {
+		zap.L().Error("failed to save sample initialization marker", zap.Error(err))
+	}
 }
 
 func warnInsecureRuntimeDefaults(cfg *config.AppConfig) {

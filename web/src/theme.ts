@@ -1,4 +1,4 @@
-import { alpha, createTheme, PaletteMode } from '@mui/material/styles';
+import { alpha, createTheme, PaletteMode, darken, getContrastRatio, lighten } from '@mui/material/styles';
 
 // Shared manga-ink palette: warm paper/ink, lime highlight, and a restrained pink accent.
 // Operational statuses stay semantically distinct from brand accents.
@@ -102,9 +102,30 @@ export const lightDataSeriesColors = ['#5d7000', '#b01355', '#087e8b', '#925500'
  * Create a theme configuration.
  * @param mode Theme mode: 'light' | 'dark'
  */
-export const createAppTheme = (mode: PaletteMode) => {
+const accessibleAccent = (accent: string, mode: PaletteMode) => {
+  if (!/^#[0-9a-fA-F]{6}$/.test(accent)) return mode === 'dark' ? darkPalette.primary.main : lightPalette.primary.main;
+  const surface = mode === 'dark' ? darkPalette.background.paper : lightPalette.background.paper;
+  let candidate = accent;
+  for (let attempt = 0; attempt < 24 && getContrastRatio(candidate, surface) < 4.5; attempt += 1) {
+    candidate = mode === 'dark' ? lighten(candidate, 0.08) : darken(candidate, 0.08);
+  }
+  return getContrastRatio(candidate, surface) >= 4.5 ? candidate : mode === 'dark' ? '#FFFFFF' : '#111111';
+};
+
+export const createAppTheme = (mode: PaletteMode, accentColor?: string) => {
   const isDark = mode === 'dark';
-  const palette = isDark ? darkPalette : lightPalette;
+  const basePalette = isDark ? darkPalette : lightPalette;
+  const accessibleBrandColor = accentColor ? accessibleAccent(accentColor, mode) : basePalette.primary.main;
+  const palette = accentColor ? {
+    ...basePalette,
+    primary: {
+      ...basePalette.primary,
+      main: accessibleBrandColor,
+      light: lighten(accessibleBrandColor, 0.18),
+      dark: darken(accessibleBrandColor, 0.16),
+      contrastText: getContrastRatio(accessibleBrandColor, '#000000') >= getContrastRatio(accessibleBrandColor, '#FFFFFF') ? '#000000' : '#FFFFFF',
+    },
+  } : basePalette;
 
   return createTheme({
     palette: {
@@ -122,7 +143,6 @@ export const createAppTheme = (mode: PaletteMode) => {
         'Roboto',
         '"Helvetica Neue"',
         'Arial',
-        '"Microsoft YaHei"',
         'sans-serif',
       ].join(','),
       h1: {

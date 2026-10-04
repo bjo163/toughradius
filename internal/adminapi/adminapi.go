@@ -48,4 +48,5 @@ func Init(appCtx app.AppContext) {
 	registerISPRoutes()
 	registerNetworkMonitorRoutes()
 	registerNotificationRoutes()
+	registerBrandingRoutes()
 }

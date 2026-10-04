@@ -1,6 +1,7 @@
 import { Admin, Resource, CustomRoutes } from 'react-admin';
 import { Route } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
 import { dataProvider } from './providers/dataProvider';
 import { authProvider } from './providers/authProvider';
 import { i18nProvider } from './i18n';
@@ -9,9 +10,12 @@ import AccountSettings from './pages/AccountSettings';
 import { SystemConfigPage } from './pages/SystemConfigPage';
 import OperationsPage from './pages/OperationsPage';
 import UserGuidePage from './pages/UserGuidePage';
+import BrandingPage from './pages/BrandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
-import { darkTheme, lightTheme } from './theme';
+import { createAppTheme } from './theme';
+import { BrandingContext, defaultProductBranding, useBranding } from './branding/BrandingContext';
+import type { ProductBranding } from './branding/BrandingContext';
 import {
   CustomerList, CustomerCreate, CustomerEdit, CustomerShow,
   PackageList, PackageCreate, PackageEdit,
@@ -20,6 +24,7 @@ import {
 } from './resources/isp';
 
 const CustomLoading = () => {
+  const { branding } = useBranding();
   return (
     <Box
       sx={{
@@ -34,7 +39,7 @@ const CustomLoading = () => {
       }}
     >
       <CircularProgress size={36} color="primary" />
-      <Typography variant="body2" color="text.secondary">Loading MWX-ISP...</Typography>
+      <Typography variant="body2" color="text.secondary">Loading {branding.product_name}...</Typography>
     </Box>
   );
 };
@@ -80,14 +85,34 @@ import {
   CertificateIcon,
 } from './resources/certificates';
 
-const App = () => (
+type AppProps = { initialBranding?: ProductBranding };
+
+const App = ({ initialBranding = defaultProductBranding }: AppProps) => {
+  const [branding, setBranding] = useState(initialBranding);
+  const darkTheme = useMemo(() => createAppTheme('dark', branding.accent_color), [branding.accent_color]);
+  const lightTheme = useMemo(() => createAppTheme('light', branding.accent_color), [branding.accent_color]);
+
+  useEffect(() => {
+    document.title = `${branding.product_name} - ISP Management`;
+    let icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!icon) {
+      icon = document.createElement('link');
+      icon.rel = 'icon';
+      document.head.appendChild(icon);
+    }
+    icon.href = branding.logo_url || '/admin/mwx-isp.svg';
+    icon.type = branding.logo_url ? 'image/png' : 'image/svg+xml';
+  }, [branding.product_name, branding.logo_url]);
+
+  return (
+  <BrandingContext.Provider value={{ branding, updateBranding: setBranding }}>
   <Admin
     dataProvider={dataProvider}
     authProvider={authProvider}
     i18nProvider={i18nProvider}
     dashboard={Dashboard}
     loginPage={LoginPage}
-    title="MWX-ISP"
+    title={branding.product_name}
     lightTheme={lightTheme}
     darkTheme={darkTheme}
     defaultTheme="dark"
@@ -174,10 +199,13 @@ const App = () => (
     <CustomRoutes>
       <Route path="/account/settings" element={<AccountSettings />} />
       <Route path="/system/config" element={<SystemConfigPage />} />
+      <Route path="/system/branding" element={<BrandingPage />} />
       <Route path="/operations" element={<OperationsPage />} />
       <Route path="/guide" element={<UserGuidePage />} />
     </CustomRoutes>
     </Admin>
-);
+  </BrandingContext.Provider>
+  );
+};
 
 export default App;

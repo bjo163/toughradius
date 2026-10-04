@@ -4,6 +4,21 @@ import (
 	"time"
 )
 
+// ProductBranding stores one installation-wide product identity. It is
+// intentionally separate from ISP/company fields used on invoices.
+type ProductBranding struct {
+	ID          int64     `json:"id" gorm:"primaryKey"`
+	ProductName string    `json:"product_name" gorm:"size:60;not null"`
+	ShortName   string    `json:"short_name" gorm:"size:8;not null"`
+	Tagline     string    `json:"tagline" gorm:"size:120"`
+	AccentColor string    `json:"accent_color" gorm:"size:7;not null"`
+	LogoFile    string    `json:"-" gorm:"size:80"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// TableName returns the storage table for installation product branding.
+func (ProductBranding) TableName() string { return "sys_product_branding" }
+
 type SysConfig struct {
 	ID        int64     `json:"id,string"   form:"id"`
 	Sort      int       `json:"sort"  form:"sort"`

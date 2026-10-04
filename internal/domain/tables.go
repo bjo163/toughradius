@@ -8,6 +8,7 @@ var Tables = []interface{}{
 	&SysOpr{},
 	&SysOprLog{},
 	&SysCert{},
+	&ProductBranding{},
 	// Network
 	&NetNode{},
 	&NetNas{},

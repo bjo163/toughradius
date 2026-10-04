@@ -247,7 +247,7 @@ Tour singkat memperkenalkan Dashboard → Customers/Subscriptions → Online Ses
 
 ### Batas ruang lingkup
 
-Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigurasi otomatis, integrasi telemetry/help analytics, backend progress API, knowledge base eksternal, atau sistem ticketing. Bila kelak dibutuhkan progres lintas perangkat atau data demo, ajukan scope terpisah melalui feature checklist.
+Tidak membuat demo mode yang meniru traffic nyata, workflow wizard yang menulis konfigurasi otomatis, integrasi telemetry/help analytics, backend progress API, knowledge base eksternal, atau sistem ticketing. Pada database yang benar-benar kosong, sampel bisnis sintetis dibuat otomatis satu kali sesuai TR-F032; instalasi yang sudah berisi data operasional/bisnis tidak diubah (akun bootstrap dan node bawaan tidak dihitung). Target network dan akun RADIUS contoh tetap disabled, memakai data yang ditandai, dan tidak menyertakan hasil probe/live-session palsu.
 
 ## 13. Audit konsistensi visual dan rencana branding per instalasi
 
@@ -274,17 +274,17 @@ Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigu
 - **J.1 — Baseline visual:** audit semua route aktif dan bandingkan langsung dengan `moonwitness/apps/board`; petakan token paper/ink/lime/pink/dark, font display/body/mono, halftone, border 2px, offset shadow, active sticker, speedline, reduced motion. Buat matriks adaptasi (adopt / tone down / skip), lalu ambil screenshot dashboard/login/resource pada dark/light serta viewport lebar/sempit. Tetapkan kontras, fokus keyboard, dan aturan kepadatan data.
 - **J.2 — Sumber token tunggal:** perluas `theme.ts` dengan token semantik (ink/surface, brand lime, decorative pink, border, hard shadow, focus, data-series, state, type scale) dan theme factory. Tetapkan palet gelap sebagai default; light mode membalik paper/ink dengan aksen identitas yang konsisten. Branding accent yang dapat diedit tetap dibatasi agar tidak menimpa status success/warning/error atau teks kontras.
 - **J.3 — Komponen/pola bersama:** rapikan page header display + underline/highlighter terbatas, section rail, metric card border tegas + hard offset shadow ringan, micro-label mono, toolbar/filter, status chip, form section, data table, empty/loading/error state. Gunakan scale border/radius/elevation konsisten dan perilaku hover/pressed tactile yang halus. Migrasi bertahap—shell/login/dashboard; ISP/billing; RADIUS/network; system/operations—tanpa efek berulang yang mengganggu pemindaian.
-- **J.4 — Scope branding dan penyimpanan:** sebelum coding, revisi acceptance TR-F029 (CN dan EN) agar mencakup identitas configurable per deployment sambil mempertahankan batas satu instance; selaraskan roadmap/todo. Tambah struktur settings terpisah dari `isp.company_*` untuk product name, short name/mark, tagline, logo reference, dan accent color. Simpan di mekanisme config yang sudah tersedia bila batas nilai/penyimpanan sesuai; perubahan logo yang memerlukan unggah aset memakai endpoint Admin terpisah dengan validasi format, ukuran, nama, lokasi penyimpanan, dan akses. Jangan menerima SVG arbitrer atau CSS bebas tanpa strategi sanitasi.
-- **J.5 — Editor branding Admin:** letakkan di System Configuration atau halaman Branding di bawah area system existing. Tampilkan preview live header/login/sidebar, picker aksen dengan preview contrast di dark/light, field nama/tagline, upload/ganti/hapus logo, tombol Save/Reset to MWX defaults, dan konfirmasi singkat untuk reset. Jangan menampilkan nilai rahasia atau menggunakan upload sebagai endpoint publik.
-- **J.6 — Runtime propagation:** muat branding sebelum shell tampil agar tidak berkedip dari nama default ke custom; terapkan data yang sama pada AppBar, login, menu footer, document title, favicon, loading, dan theme provider. Tangani config belum tersedia, logo gagal dimuat, warna tidak valid, perubahan external/admin lain, serta reset; fallback selalu MWX green.
+- **J.4 — Scope branding dan penyimpanan:** TR-F029 bilingual kini mencakup identitas configurable per deployment dengan batas satu instalasi. Tabel product-brand terpisah dari `isp.company_*` menyimpan product name, short name, tagline, logo reference, dan accent; logo diunggah lewat endpoint Admin sebagai PNG maksimum 1 MiB dan 2048×2048, nama file acak di data directory, tanpa SVG arbitrer atau CSS bebas.
+- **J.5 — Editor branding Admin:** di halaman Product Branding untuk Admin, field nama/mark/tagline, picker aksen, upload/hapus PNG, preview live shell/login, Save/Reset to MWX defaults dengan konfirmasi. Mutasi dilindungi Admin; endpoint baca brand/logo memang publik untuk shell/login.
+- **J.6 — Runtime propagation:** branding publik dimuat sebelum shell render; AppBar, login, menu, judul, favicon, loading dan theme provider menggunakannya. API dan frontend fallback pada konfigurasi hilang/warna invalid; Save/Reset memperbarui state aplikasi langsung.
 - **J.7 — Audit/migrasi visual:** ganti literal dekoratif yang bertentangan dengan token, bukan warna status semantik. Terapkan halftone/grain rendah kontras pada background/hero saja; speedlines, doodles, scribble dan marker hanya sebagai aksen kontekstual non-data; jangan memutar badge/status operasional. Hard shadow pendek dan border ink harus menguatkan hierarchy, bukan mengelilingi setiap cell. Angka/status tetap lebih menonjol daripada hiasan; tabel responsif tidak kehilangan kolom kunci. Patuhi `prefers-reduced-motion` dan hindari gerakan dekoratif berulang.
 - **J.8 — Verifikasi:** cek dark/light × default/custom brand × desktop/tablet/mobile, halaman Login, Dashboard, semua resource, Operations, dan System Config; uji role Admin/operator, preview/cancel/save/reset, logo invalid/oversized/offline, config lama/kosong, reload, aksesibilitas keyboard/contrast, console, build dan browser journey. Branding tidak boleh mengubah data billing, secret RADIUS/SNMP, atau hasil otorisasi.
 
 ### Batas dan keputusan yang perlu dipertahankan
 
-- Editor dan propagasi branding configurable tetap berupa rencana sampai checklist scope TR-F029 merged. Baseline visual manga-ink sudah diimplementasikan dan direview terpisah pada PR #2.
+- Baseline manga-ink dan branding configurable TR-F029 sudah diimplementasikan pada main; tetap gunakan adaptasi MUI dan jangan menyalin identitas/aset MoonWitness.
 - MoonWitness Board adalah referensi bahasa visual saja. Jangan menyalin identitas produk MoonWitness, logo, teks/asset, atau implementasi komponen dan dependensinya; adaptasikan motif dengan MUI dan struktur React Admin MWX yang telah ada.
-- Sebelum implementasi J.4, perubahan TR-F029 perlu dicatat pada `docs/feature-checklist.md` serta `docs/feature-checklist.en.md`. Existing acceptance saat ini menyebut merek terlihat tetap MWX-ISP; editor brand yang dapat mengganti nama/logo/warna memperluas scope yang disetujui. Rencana implementasi harus menunggu penyelarasan baseline tersebut.
+- Perubahan TR-F029 sudah dicatat pada kedua feature checklist sebelum implementasi.
 - Tidak mengubah company/billing identity, format invoice, warna status semantik, ACL, atau data bisnis hanya karena Admin mengubah product brand.
 - Upload logo sebaiknya menerima format raster yang disetujui (contoh PNG/WebP) dengan ukuran maksimum eksplisit dan hanya dapat diakses sebagai file statis pasif; bila SVG diminta kelak, perlu sanitasi/allowlist tersendiri.
 
@@ -294,7 +294,7 @@ Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigu
 - Wiring tema Admin kini memakai `darkTheme` eksplisit dan `defaultTheme="dark"`; penggunaan prop `theme` lama sebelumnya membuat tombol light/dark mengganti pilihan tanpa mengganti palet. Light mode memakai aksen dan warna seri grafik dengan kontras lebih tinggi.
 - Pemeriksaan browser dengan Admin bootstrap pada database SQLite sementara (folder temp, RADIUS listener off) mencakup Dashboard, Guide, Operations, System Config, Account Settings, RADIUS Users, Customer, dan Invoice. Tidak ada data bisnis yang dibuat. Account Settings overflow 27 px pada viewport 529 px juga sudah diperbaiki.
 - Build/type-check lulus dan screenshot runtime mengonfirmasi dark/light serta layout sempit untuk halaman yang diuji. Audit desktop lebar, operator role, semua routes, dan data parsial/lengkap tetap terbuka.
-- Editor branding serta propagasi konfigurasi belum diimplementasikan; perubahan TR-F029 bilingual berada di PR scope #1 dan harus merged sebelum implementasi itu dimulai. Visual baseline berada di PR #2.
+- Editor branding, penyimpanan konfigurasi satu instalasi, validasi/upload PNG, reset dan propagasi runtime telah diimplementasikan; API test berjalan. Browser runtime end-to-end halaman branding masih perlu diverifikasi dengan backend terisolasi.
 
 ### Kriteria penerimaan rencana implementasi
 
@@ -304,3 +304,13 @@ Tidak membuat demo mode/seed data produksi, workflow wizard yang menulis konfigu
 - Logo invalid/terlalu besar ditolak dan logo yang gagal dimuat menggunakan fallback tanpa merusak layout.
 - Audit tiap grup halaman menunjukkan konsistensi komponen, kepadatan data, akses keyboard, dan kontras tanpa merombak proses kerja RADIUS/ISP.
 - Checklist, README/blueprint, label dan bantuan selaras; identitas invoice tetap terpisah dari identitas produk.
+
+## 14. Sample data otomatis untuk instalasi baru dan aman untuk uji (TR-F032)
+
+- Startup pertama mendeteksi database yang sepenuhnya kosong lalu membuat sample data otomatis dalam satu transaksi. Instalasi yang mempunyai operator atau record operasional/bisnis dilewati; startup berikutnya tidak mengulang seed.
+- Daftar konfigurasi/bisnis utama diisi 3–6 baris berlabel Sample/demo. Identitas Customer dan Subscription mengikuti format ID-based aplikasi; invoice/payment menggunakan layanan sequence resmi.
+- Seeder memakai marker `demo-seed`; executable CLI tetap tersedia untuk refresh eksplisit pada database uji dan mode `-clean` hanya menghapus record terkait serta mempertahankan counters sequence.
+- Network target contoh memakai alamat dokumentasi dan `enabled=false`; tidak ada sample probe/history yang dibuat.
+- Online sessions, test certificates, operator account, WhatsApp session/outbox, dan secret/operator credentials tidak disimulasikan. Accounting history sintetis yang ber-marker hanya untuk visualisasi chart.
+- NAS dan RadiusUser sample dibuat disabled; password RADIUS contoh `123456` tidak bisa dipakai sampai operator mengaktifkannya. Tetap tandai data sebagai sintetis dan jangan gunakan pada layanan/customer nyata.
+- Verifikasi wajib mencakup run dua kali, cleanup, relasi Customer→Subscription→RADIUS User dan Package→Profile, sequence invoice/payment, serta data tanpa marker yang dipertahankan.

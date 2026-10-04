@@ -5,6 +5,8 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Box, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
 import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, useTranslate, useSidebarState } from 'react-admin';
+import { useBranding } from '../branding/BrandingContext';
+import { BrandMark } from './BrandMark';
 
 export const CustomAppBar = (props: AppBarProps) => {
   const redirect = useRedirect();
@@ -12,6 +14,7 @@ export const CustomAppBar = (props: AppBarProps) => {
   const { data: identity } = useGetIdentity();
   const translate = useTranslate();
   const [sidebarOpen, setSidebarOpen] = useSidebarState();
+  const { branding } = useBranding();
 
   const handleToggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -68,25 +71,15 @@ export const CustomAppBar = (props: AppBarProps) => {
               {sidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
             </IconButton>
           </Tooltip>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.1 }}>
-          <Box sx={{
-            width: 30,
-            height: 30,
-            display: 'grid',
-            placeItems: 'center',
-            borderRadius: 0.5,
-            border: '1px solid ' + theme.palette.text.primary,
-            color: theme.palette.primary.contrastText,
-            backgroundColor: theme.palette.primary.main,
-            fontSize: 15,
-            fontWeight: 900,
-            letterSpacing: '-0.08em',
-            boxShadow: '2px 2px 0 ' + theme.palette.text.primary,
-          }}>M</Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.1, minWidth: 0 }}>
+          <BrandMark size={30} />
           <Typography
             variant="h6" 
             sx={{ 
               fontSize: { xs: 15, sm: 18 },
+              maxWidth: { xs: 115, sm: 300 },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
               fontWeight: 900,
               fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif',
               whiteSpace: 'nowrap',
@@ -95,7 +88,7 @@ export const CustomAppBar = (props: AppBarProps) => {
               textTransform: 'uppercase',
             }}
           >
-              MWX-ISP
+              {branding.product_name}
           </Typography>
           </Box>
         </Stack>

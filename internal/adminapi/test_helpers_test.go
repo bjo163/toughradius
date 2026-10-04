@@ -38,7 +38,7 @@ func setupTestEcho() *echo.Echo {
 
 // setupTestDB creates an in-memory test database
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
 
 	// Automatically migrate common tables
@@ -106,21 +106,9 @@ func CreateTestAppContext(t *testing.T) (*gorm.DB, *echo.Echo, app.AppContext) {
 	testApp := app.NewApplication(cfg)
 	testApp.Init(cfg)
 
-	// Migrate test tables
-	db := testApp.DB()
-	err := db.AutoMigrate(
-		&domain.RadiusProfile{},
-		&domain.RadiusUser{},
-		&domain.NetNode{},
-		&domain.NetNas{},
-		&domain.RadiusAccounting{},
-		&domain.RadiusOnline{},
-		&domain.RadiusSessionActionAudit{},
-		&domain.SysOpr{},
-		&domain.SysConfig{},
-		&domain.SysCert{},
-	)
-	require.NoError(t, err)
+	// Keep endpoint fixtures isolated from first-install application defaults.
+	db := setupTestDB(t)
+	testApp.OverrideDB(db)
 
 	e := setupTestEcho()
 

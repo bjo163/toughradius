@@ -27,9 +27,12 @@ func TestJwtSkipFuncDoesNotBypassWithDevmode(t *testing.T) {
 	// Public routes are skipped.
 	assert.True(t, skip(newCtx("/ready")))
 	assert.True(t, skip(newCtx(apiBasePath+"/auth/login")))
+	assert.True(t, skip(newCtx(apiBasePath+"/public/branding")))
+	assert.True(t, skip(newCtx(apiBasePath+"/public/branding/logo")))
 
 	// Protected routes are never skipped.
 	assert.False(t, skip(newCtx(apiBasePath+"/users")))
+	assert.False(t, skip(newCtx(apiBasePath+"/system/branding")))
 
 	// Setting the former bypass env var must not disable auth.
 	t.Setenv("TOUGHRADIUS_DEVMODE", "true")

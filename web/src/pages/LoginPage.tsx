@@ -14,6 +14,8 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
+import { useBranding } from '../branding/BrandingContext';
+import { BrandMark } from '../components/BrandMark';
 
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -25,6 +27,7 @@ export const LoginPage = () => {
   const translate = useTranslate();
   const queryClient = useQueryClient();
   const theme = useTheme();
+  const { branding } = useBranding();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,13 +67,13 @@ export const LoginPage = () => {
         <CardContent sx={{ p: 4 }}>
           <Box sx={{ mb: 4, textAlign: 'center' }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <Box sx={{ width: 54, height: 54, display: 'grid', placeItems: 'center', border: '2px solid', borderColor: 'text.primary', borderRadius: 0.5, color: 'primary.contrastText', bgcolor: 'primary.main', fontSize: 25, fontWeight: 900, letterSpacing: '-0.08em', boxShadow: '3px 3px 0 ' + theme.palette.text.primary, transform: 'rotate(-2deg)' }}>M</Box>
+              <Box sx={{ transform: 'rotate(-2deg)', '& > div': { width: 54, height: 54, fontSize: 21, boxShadow: '3px 3px 0 ' + theme.palette.text.primary } }}><BrandMark size={54} /></Box>
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif', textTransform: 'uppercase', color: 'text.primary', mb: 1, letterSpacing: '0.06em' }}>
-              {translate('app.title')}
+              {branding.product_name}
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {translate('app.subtitle')}
+              {branding.tagline}
             </Typography>
           </Box>
 
@@ -145,7 +148,7 @@ export const LoginPage = () => {
 
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              MWX-ISP © {new Date().getFullYear()}
+              {branding.product_name} © {new Date().getFullYear()}
             </Typography>
           </Box>
         </CardContent>

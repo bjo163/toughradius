@@ -32,7 +32,8 @@ const buildHeaders = (rawHeaders?: HeadersInit) => {
 
 const withAuth = <T extends RequestInit>(options: T = {} as T): T => {
   const headers = buildHeaders(options.headers);
-  if (options.body && !headers.has('Content-Type')) {
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  if (options.body && !isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
   return {

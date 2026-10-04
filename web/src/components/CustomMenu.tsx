@@ -12,6 +12,9 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import { Box, Typography, useTheme } from '@mui/material';
 import { MenuItemLink, MenuProps, useGetIdentity, useTranslate } from 'react-admin';
+import BrushOutlinedIcon from '@mui/icons-material/BrushOutlined';
+import { useBranding } from '../branding/BrandingContext';
+import { BrandMark } from './BrandMark';
 
 const menuItems = [
   { to: '/', labelKey: 'menu.dashboard', icon: <DashboardOutlinedIcon /> },
@@ -28,6 +31,7 @@ const menuItems = [
   { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
   { to: '/operations', labelKey: 'menu.operations', sectionKey: 'menu.network', icon: <SensorsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/system/branding', labelKey: 'menu.branding', icon: <BrushOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['super', 'admin'] },
 ];
@@ -37,6 +41,7 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
   const theme = useTheme();
   const { data: identity } = useGetIdentity();
   const translate = useTranslate();
+  const { branding } = useBranding();
 
   // Filter menu items by user permissions
   const filteredMenuItems = menuItems.filter(item => {
@@ -88,7 +93,8 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
           transition: 'all 0.3s ease',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>MWX-ISP</div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}><BrandMark size={26} /></Box>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>{branding.product_name}</div>
         <div>© {currentYear} ALL RIGHTS RESERVED</div>
         {logout && <Box sx={{ mt: 2 }}>{logout}</Box>}
       </Box>
