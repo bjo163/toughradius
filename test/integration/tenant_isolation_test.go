@@ -142,6 +142,19 @@ func TestPostgresTenantBillingAndSequencesAreIsolated(t *testing.T) {
 		tenantIDs = append(tenantIDs, tenant.ID)
 	}
 
+	// GORM Save falls back to an ON CONFLICT upsert after a tenant-scoped
+	// update cannot see a row owned by another organization. PostgreSQL must
+	// preserve that ownership on the conflict branch too.
+	sharedProfile := domain.RadiusProfile{ID: common.UUIDint64(), Name: "tenant A protected profile", Status: common.ENABLED}
+	tenantA := db.WithContext(tenancy.WithTenantID(context.Background(), tenantIDs[0]))
+	tenantB := db.WithContext(tenancy.WithTenantID(context.Background(), tenantIDs[1]))
+	require.NoError(t, tenantA.Create(&sharedProfile).Error)
+	require.NoError(t, tenantB.Save(&domain.RadiusProfile{ID: sharedProfile.ID, Name: "tenant B overwrite attempt", Status: common.ENABLED}).Error)
+	var persistedProfile domain.RadiusProfile
+	require.NoError(t, db.First(&persistedProfile, sharedProfile.ID).Error)
+	require.Equal(t, tenantIDs[0], persistedProfile.TenantID)
+	require.Equal(t, sharedProfile.Name, persistedProfile.Name, "a foreign primary-key collision must not overwrite tenant A")
+
 	for index, tenantID := range tenantIDs {
 		tenantDB := db.WithContext(tenancy.WithTenantID(context.Background(), tenantID))
 		operator := domain.SysOpr{ID: common.UUIDint64(), TenantID: tenantID, Username: "tenant-admin", Level: "super", Status: "enabled"}
