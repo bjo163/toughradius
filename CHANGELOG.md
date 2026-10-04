@@ -1,5 +1,14 @@
 # MWX-ISP Changelog
 
+## v0.7.5 — 2026-10-05
+
+Changes since v0.7.4:
+
+### Fixes and Improvements
+
+- make batch generation atomic and expire credentials
+- resume clean install from empty orphaned volumes
+
 ## v0.7.4 — 2026-10-05
 
 Changes since v0.7.3:
