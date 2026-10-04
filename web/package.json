@@ -1,6 +1,6 @@
 {
-  "name": "toughradius-web",
-  "version": "9.0.0",
+  "name": "mwx-isp-web",
+  "version": "0.1.0",
   "license": "MIT",
   "type": "module",
   "scripts": {

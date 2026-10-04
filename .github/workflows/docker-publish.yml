@@ -1,4 +1,4 @@
-name: toughradius docker build and publish
+name: MWX-ISP container publish
 
 on:
   push:
@@ -10,12 +10,12 @@ permissions:
   packages: write
 
 concurrency:
-  group: docker-publish-${{ github.ref }}
+  group: container-publish-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build-and-push-docker-image:
-    name: Build Docker image and push to repositories
+  publish:
+    name: Publish GHCR image
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -23,133 +23,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Extract version from tag
+      - name: Extract version
         id: version
+        shell: bash
         run: |
-          # Extract version from tag (e.g., v1.2.3 -> 1.2.3)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Building version: ${VERSION}"
+          version="${GITHUB_REF_NAME#v}"
+          if [ -z "$version" ] || [ "$version" = "$GITHUB_REF_NAME" ]; then
+            echo "Expected a v-prefixed release tag, got: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - name: Set up Docker Buildx
-        id: buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
-      - name: Login to DockerHub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build image and push to Docker Hub
-        id: dockerhub_build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: ./
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          tags: |
-            talkincode/toughradius:latest
-            talkincode/toughradius:${{ steps.version.outputs.version }}
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Login to GitHub Container Registry
-        id: ghcr_login
-        continue-on-error: true
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
-          username: ${{ secrets.PKG_GITHUB_USERNAME || secrets.GHCR_USERNAME || github.actor }}
-          password: ${{ secrets.PKG_GITHUB_TOKEN || secrets.GHCR_TOKEN || github.token }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check GHCR write access
-        id: ghcr_write_check
-        if: steps.ghcr_login.outcome == 'success'
-        continue-on-error: true
-        shell: bash
-        env:
-          GHCR_PROBE_USERNAME: ${{ secrets.PKG_GITHUB_USERNAME || secrets.GHCR_USERNAME || github.actor }}
-          GHCR_PROBE_PASSWORD: ${{ secrets.PKG_GITHUB_TOKEN || secrets.GHCR_TOKEN || github.token }}
-          GHCR_IMAGE: ${{ github.repository_owner }}/toughradius
-        run: |
-          # Non-destructive push-access probe (issue #503): initiating a blob
-          # upload returns HTTP 202 only when the credentials can write the
-          # package; a write-denied GITHUB_TOKEN still logs in successfully,
-          # so login success alone does not prove push access.
-          image="${GHCR_IMAGE,,}"
-          writable=false
-          token=$(curl -fsSL -u "${GHCR_PROBE_USERNAME}:${GHCR_PROBE_PASSWORD}" \
-            "https://ghcr.io/token?service=ghcr.io&scope=repository:${image}:pull,push" \
-            | jq -r '.token // empty' || true)
-          if [ -n "$token" ]; then
-            response_headers=$(mktemp)
-            status=$(curl -sS -o /dev/null -D "$response_headers" -w '%{http_code}' \
-              -X POST -H "Authorization: Bearer ${token}" \
-              "https://ghcr.io/v2/${image}/blobs/uploads/" || echo "000")
-            if [ "$status" = "202" ]; then
-              writable=true
-              # Cancel the probe upload session; best effort only.
-              upload_url=$(awk 'tolower($1) == "location:" {print $2}' "$response_headers" | tr -d '\r')
-              case "$upload_url" in
-                /*) upload_url="https://ghcr.io${upload_url}" ;;
-              esac
-              if [ -n "$upload_url" ]; then
-                curl -sS -o /dev/null -X DELETE \
-                  -H "Authorization: Bearer ${token}" "$upload_url" || true
-              fi
-            else
-              echo "GHCR write probe for ghcr.io/${image} returned HTTP ${status}"
-            fi
-            rm -f "$response_headers"
-          else
-            echo "Failed to obtain a GHCR registry token for ghcr.io/${image}"
-          fi
-          echo "writable=${writable}" >> "$GITHUB_OUTPUT"
-          echo "GHCR writable: ${writable}"
-
-      - name: Build image and push to GitHub Container Registry
-        id: ghcr_build
-        if: steps.ghcr_login.outcome == 'success' && steps.ghcr_write_check.outputs.writable == 'true'
-        continue-on-error: true
+      - name: Build and push image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
-          context: ./
+          context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/toughradius:latest
-            ghcr.io/${{ github.repository_owner }}/toughradius:${{ steps.version.outputs.version }}
           push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mwx-isp:latest
+            ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Summarize image publish result
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## Docker image publish"
-            echo ""
-            echo "- Version: \`${{ steps.version.outputs.version }}\`"
-            echo "- Docker Hub: \`${{ steps.dockerhub_build.outcome }}\`"
-            echo "- Docker Hub digest: \`${{ steps.dockerhub_build.outputs.digest }}\`"
-            echo "- GHCR login: \`${{ steps.ghcr_login.outcome }}\`"
-            echo "- GHCR write check: \`${{ steps.ghcr_write_check.outputs.writable || 'skipped' }}\`"
-            echo "- GHCR: \`${{ steps.ghcr_build.outcome }}\`"
-            if [ -n "${{ steps.ghcr_build.outputs.digest }}" ]; then
-              echo "- GHCR digest: \`${{ steps.ghcr_build.outputs.digest }}\`"
-            fi
-            echo ""
-            echo "Docker Hub publishing is required. GHCR publishing depends on the"
-            echo "package repository access / inherited access settings, or on optional"
-            echo "\`PKG_GITHUB_TOKEN\` and optional \`PKG_GITHUB_USERNAME\` secrets with package write access."
-            echo "The GHCR push only runs when the write-access preflight probe succeeds,"
-            echo "so a write-denied token skips the GHCR build instead of failing mid-push."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "${{ steps.ghcr_login.outcome }}" != "success" ] || [ "${{ steps.ghcr_write_check.outputs.writable }}" != "true" ] || [ "${{ steps.ghcr_build.outcome }}" != "success" ]; then
-            echo "::warning title=GHCR publish did not complete::Docker Hub publish completed, but the GHCR push was skipped or failed because the credentials lack package write access. Fix package repository access or provide a PKG_GITHUB_TOKEN with write:packages, then rerun the tag workflow. See issue #503 runbook notes."
-          fi

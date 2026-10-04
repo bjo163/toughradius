@@ -20,6 +20,8 @@ Customer → Internet Package → Subscription → RADIUS access
 
 Payment gateways, customer portal, WhatsApp, ticketing, fiber inventory, multi-tenancy, and accounting ERP are outside the initial release.
 
+> **Release target:** v0.1.0 is the first MWX-ISP MVP release. The repository is code-ready for an initial release, but production cutover still requires the real-NAS authentication/accounting/reactivation pilot listed in `docs/MWX-ISP-todo.md`.
+
 ## Requirements
 
 - Go version specified in `go.mod`
