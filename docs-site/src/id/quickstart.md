@@ -38,6 +38,9 @@ ada, installer membuat backup sebelum melanjutkan. Konfigurasi `.env` dan volume
 data yang ada dipertahankan. Firewall host tidak diubah otomatis. Pada host
 systemd, installer mengaktifkan update dan backup harian.
 
+Untuk repair atau uninstall online yang aman, ikuti perintah dalam
+[Panduan Operasional VPS](./ops-guide.md#perbaikan-dan-uninstall-deployment-vps).
+
 Atur `MWX_ISP_DOMAIN` dalam `/opt/mwx-isp/.env` ke domain publik untuk HTTPS.
 Jika memakai `localhost`, layanan admin tetap privat. Buka TCP 80/443 untuk Caddy dan hanya
 port NAS yang dipakai: UDP 1812/1813 serta TCP 2083 jika memakai RadSec. Jangan

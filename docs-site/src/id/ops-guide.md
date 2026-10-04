@@ -45,6 +45,45 @@ kredensialnya sendiri sebelum onboarding pelanggan.
 Jangan membuka database PostgreSQL ke publik. Terapkan allowlist firewall untuk
 NAS dan port yang benar-benar digunakan.
 
+## Perbaikan dan uninstall deployment VPS
+
+Perintah repair online mengunduh installer resmi terbaru dari branch `main`
+dan menjalankan alur upgrade aman. Script memeriksa host, memvalidasi
+konfigurasi Compose, membuat backup dari instalasi yang berjalan, lalu
+memulihkan layanan tanpa mengganti `.env` atau volume data:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
+```
+
+Tambahkan `--check` untuk preflight tanpa perubahan. Repair membutuhkan
+direktori instalasi dan `.env` yang cocok jika volume data sudah ada. Jika
+PostgreSQL dan aplikasi berhenti, nyalakan keduanya dan buat backup terlebih
+dahulu agar installer dapat memeriksa dan melindungi data.
+
+Uninstall layanan dan checkout sambil mempertahankan data PostgreSQL/aplikasi:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-uninstall.sh | sudo bash
+```
+
+Script menonaktifkan timer update dan backup MWX-ISP. File `.env` disimpan
+sebagai `/opt/mwx-isp.env.uninstalled` untuk pemulihan; lindungi file tersebut
+karena berisi kredensial database. Backup di `/var/backups/mwx-isp` tetap ada.
+Untuk menghapus permanen volume database dan aplikasi, tambahkan `-s -- --purge`
+pada perintah remote. Tambahkan `--remove-backups` bersama `--purge` untuk
+menghapus backup lokal juga. Kedua mode meminta konfirmasi dengan mengetik
+`uninstall`; gunakan `--yes` hanya untuk otomasi.
+
+Setelah uninstall yang mempertahankan data, pulihkan konfigurasi sebelum
+install ulang agar Compose tersambung ke database yang sama:
+
+```bash
+sudo git clone --depth 1 --single-branch --branch main https://github.com/bjo163/mwx-isp.git /opt/mwx-isp
+sudo install -m 0600 -o root -g root /opt/mwx-isp.env.uninstalled /opt/mwx-isp/.env
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash
+```
+
 ## Backup dan pemulihan
 
 **System Config → Backup** hanya tersedia bagi administrator platform dan

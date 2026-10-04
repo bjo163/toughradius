@@ -1,5 +1,7 @@
 # MWX-ISP
 
+![MWX-ISP — ISP operations, billing, and RADIUS](docs-site/src/assets/mwx-isp-cover.svg)
+
 **ISP operations, subscriber billing, and RADIUS in one platform.**
 
 [Documentation](https://bjo163.github.io/mwx-isp/) · [Quick start](https://bjo163.github.io/mwx-isp/en/quickstart.html) · [Latest release](https://github.com/bjo163/mwx-isp/releases/latest) · [Issues](https://github.com/bjo163/mwx-isp/issues)
@@ -45,6 +47,21 @@ overwritten. Sample NAS and RADIUS users are disabled by default. Read the
 [Quick Start](https://bjo163.github.io/mwx-isp/en/quickstart.html) and
 [VPS operations guide](https://bjo163.github.io/mwx-isp/en/ops-guide.html)
 before connecting production NAS devices.
+
+To uninstall remotely while preserving the database and app data volumes:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-uninstall.sh | sudo bash
+```
+
+Add `-s -- --purge` to the command only when you intend to permanently delete
+the database and app data. Add `--remove-backups` after `--purge` to also delete
+`/var/backups/mwx-isp`. A repair command can refresh the checkout, validate the
+Compose configuration, and restart the stack without deleting data:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
+```
 
 ## Build from source
 
