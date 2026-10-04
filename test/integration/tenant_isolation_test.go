@@ -4,7 +4,9 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -16,6 +18,42 @@ import (
 	"github.com/stretchr/testify/require"
 	"layeh.com/radius"
 )
+
+func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
+	db := h.appCtx.DB()
+	suffix := uniqueSuffix()
+	tenant := domain.Tenant{Name: "Private API tenant", Slug: "it-api-" + suffix, Kind: "rtrw", Status: "active"}
+	require.NoError(t, db.Create(&tenant).Error)
+	tenantDB := db.WithContext(tenancy.WithTenantID(context.Background(), tenant.ID))
+	profile := domain.RadiusProfile{ID: common.UUIDint64(), Name: "Private profile " + suffix, Status: common.ENABLED}
+	require.NoError(t, tenantDB.Create(&profile).Error)
+	username := "private-user-" + suffix
+	user := domain.RadiusUser{ID: common.UUIDint64(), ProfileId: profile.ID, Username: username, Password: "private-secret", Status: common.ENABLED, ExpireTime: time.Now().AddDate(1, 0, 0)}
+	require.NoError(t, tenantDB.Create(&user).Error)
+	customer := domain.Customer{ID: common.UUIDint64(), CustomerNo: "PRIVATE-" + suffix, Name: "Private Customer", Status: domain.CustomerActive}
+	require.NoError(t, tenantDB.Create(&customer).Error)
+	pkg := domain.InternetPackage{ID: common.UUIDint64(), Code: "PRIVATE-" + suffix, Name: "Private Package", Price: 100000, RadiusProfileID: profile.ID, BillingCycle: "monthly", Status: "active"}
+	require.NoError(t, tenantDB.Create(&pkg).Error)
+
+	client := newAPIClient(t) // authenticates into the default tenant
+	status, body := client.get(t, fmt.Sprintf("/api/v1/users/%d", user.ID))
+	require.Equalf(t, http.StatusNotFound, status, "cross-tenant user detail leaked: %s", body)
+	status, body = client.get(t, "/api/v1/users")
+	require.Equalf(t, http.StatusOK, status, "list users response: %s", body)
+	require.NotContains(t, string(body), username, "cross-tenant user must not appear in tenant listing")
+
+	request, err := json.Marshal(map[string]string{
+		"customer_id": fmt.Sprint(customer.ID), "package_id": fmt.Sprint(pkg.ID),
+		"username": "cross-tenant-attempt-" + suffix, "password": "not-a-real-secret",
+	})
+	require.NoError(t, err)
+	status, body = client.post(t, "/api/v1/isp/subscriptions", request)
+	require.Equalf(t, http.StatusBadRequest, status, "cross-tenant customer/package reference must fail: %s", body)
+
+	var created []domain.RadiusUser
+	require.NoError(t, db.Where("username = ?", "cross-tenant-attempt-"+suffix).Find(&created).Error)
+	require.Empty(t, created, "cross-tenant references must not create a subscriber in the caller tenant")
+}
 
 func TestPostgresTenantBillingAndSequencesAreIsolated(t *testing.T) {
 	db := h.appCtx.DB()
