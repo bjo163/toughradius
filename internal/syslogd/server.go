@@ -1,3 +1,4 @@
+// Package syslogd receives, parses, and tenant-attributes network-device syslog events.
 package syslogd
 
 import (

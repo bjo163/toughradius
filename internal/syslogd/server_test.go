@@ -88,7 +88,7 @@ func TestServer_StartAndReceiveUDP(t *testing.T) {
 
 	conn, err := net.Dial("udp", localAddr)
 	require.NoError(t, err)
-	defer conn.Close()
+	t.Cleanup(func() { require.NoError(t, conn.Close()) })
 
 	msg := "<134>Oct 04 11:20:00 router pppoe: test message 123"
 	_, err = conn.Write([]byte(msg))

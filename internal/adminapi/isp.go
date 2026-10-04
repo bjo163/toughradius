@@ -1266,11 +1266,11 @@ func formatIDR(n int64) string {
 	in := strconv.FormatInt(n, 10)
 	var out []byte
 	l := len(in)
-	for i, c := range in {
+	for i := range in {
 		if i > 0 && (l-i)%3 == 0 {
 			out = append(out, '.')
 		}
-		out = append(out, byte(c))
+		out = append(out, in[i])
 	}
 	return string(out)
 }

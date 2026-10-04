@@ -58,7 +58,7 @@ func getSqliteDatabase(config config.DBConfig, workdir string) *gorm.DB {
 				dbPath = filepath.Join(workdir, "data", cleaned)
 			}
 		}
-		if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(dbPath), 0700); err != nil {
 			zap.S().Warnf("failed to create directory for SQLite DB: %v", err)
 		}
 	}
