@@ -70,6 +70,10 @@ func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	username := "private-user-" + suffix
 	user := domain.RadiusUser{ID: common.UUIDint64(), ProfileId: profile.ID, Username: username, Password: "private-secret", Status: common.ENABLED, ExpireTime: time.Now().AddDate(1, 0, 0)}
 	require.NoError(t, tenantDB.Create(&user).Error)
+	defaultProfile := domain.RadiusProfile{ID: common.UUIDint64(), Name: "Default profile " + suffix, Status: common.ENABLED}
+	require.NoError(t, db.Create(&defaultProfile).Error)
+	defaultUser := domain.RadiusUser{ID: common.UUIDint64(), ProfileId: defaultProfile.ID, Username: "default-user-" + suffix, Password: "default-secret", Status: common.ENABLED, ExpireTime: time.Now().AddDate(1, 0, 0)}
+	require.NoError(t, db.Create(&defaultUser).Error)
 	node := domain.NetNode{ID: common.UUIDint64(), Name: "Private node " + suffix}
 	require.NoError(t, tenantDB.Create(&node).Error)
 	nas := domain.NetNas{ID: common.UUIDint64(), NodeId: node.ID, Name: "Private NAS " + suffix, Identifier: "private-nas-" + suffix, Ipaddr: uniqueNASIP(), Secret: "private-nas-secret", VendorCode: "0", Status: common.ENABLED}
@@ -112,6 +116,13 @@ func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	require.NoError(t, err)
 	status, body = client.post(t, "/api/v1/isp/subscriptions", request)
 	require.Equalf(t, http.StatusBadRequest, status, "cross-tenant customer/package reference must fail: %s", body)
+	request, err = json.Marshal(map[string]string{"profile_id": fmt.Sprint(profile.ID)})
+	require.NoError(t, err)
+	status, body = client.put(t, fmt.Sprintf("/api/v1/users/%d", defaultUser.ID), request)
+	require.Equalf(t, http.StatusBadRequest, status, "cross-tenant profile reassignment must fail: %s", body)
+	var unchangedUser domain.RadiusUser
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), domain.DefaultTenantID)).First(&unchangedUser, defaultUser.ID).Error)
+	require.Equal(t, defaultProfile.ID, unchangedUser.ProfileId, "a failed cross-tenant reassignment must leave the subscriber unchanged")
 
 	var created []domain.RadiusUser
 	require.NoError(t, db.Where("username = ?", "cross-tenant-attempt-"+suffix).Find(&created).Error)
