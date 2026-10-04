@@ -126,14 +126,22 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	assert.Equal(t, domain.SubscriptionSuspended, sub.Status)
 	assert.Equal(t, domain.SuspensionBillingOverdue, sub.SuspensionReason)
 	assert.Equal(t, "disabled", linkedUser.Status)
-	assert.Equal(t, radius.CodeAccessReject, exchangeISP(t, serverAddr, secret, username, password, nasID, nasIP).Code)
+	// Successful RADIUS lookups are cached for 10 seconds. Wait for that
+	// authorization entry to expire before asserting the suspended account is
+	// rejected, so the check covers the persisted status transition.
+	require.Eventually(t, func() bool {
+		h.radiusSvc.ReleaseAuthRateLimit(username)
+		return exchangeISP(t, serverAddr, secret, username, password, nasID, nasIP).Code == radius.CodeAccessReject
+	}, 12*time.Second, 100*time.Millisecond, "suspended subscriber should be rejected after the user cache expires")
 	h.radiusSvc.ReleaseAuthRateLimit(username)
 
 	// Enable the existing setting through the admin API. Pay through the same
 	// endpoint operators use, then verify both persisted state and RADIUS access.
 	settingValue := "true"
-	settingStatus, settingBody := c.post(t, "/api/v1/system/settings", mustJSON(t, map[string]string{
-		"type": "isp", "name": "AutoReactivate", "value": settingValue,
+	var setting domain.SysConfig
+	require.NoError(t, h.appCtx.DB().Where("type = ? AND name = ?", "isp", "AutoReactivate").First(&setting).Error)
+	settingStatus, settingBody := c.put(t, "/api/v1/system/settings/"+fmt.Sprint(setting.ID), mustJSON(t, map[string]string{
+		"value": settingValue,
 	}))
 	require.Equalf(t, http.StatusOK, settingStatus, "%s", settingBody)
 

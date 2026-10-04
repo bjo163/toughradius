@@ -116,6 +116,22 @@ func (c *apiClient) post(t *testing.T, path string, body []byte) (int, []byte) {
 	return resp.StatusCode, data
 }
 
+// put performs an authenticated PUT with a JSON body and returns the status
+// and raw response body.
+func (c *apiClient) put(t *testing.T, path string, body []byte) (int, []byte) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPut, c.base+path, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return resp.StatusCode, data
+}
+
 // postMultipart uploads a single file field ("upload") and returns the response.
 func (c *apiClient) postMultipart(t *testing.T, path, filename string, content []byte) (int, []byte) {
 	t.Helper()
