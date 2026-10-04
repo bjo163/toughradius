@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.4.1 — 2026-10-05
+
+Changes since v0.4.0:
+
+### Fixes and Improvements
+
+- pull all service images before startup
+
 ## v0.4.0 — 2026-10-05
 
 Changes since v0.3.2:
