@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/talkincode/toughradius/v9/internal/webserver"
-	webresp "github.com/talkincode/toughradius/v9/pkg/web"
+	"github.com/bjo163/mwx-isp/internal/webserver"
+	webresp "github.com/bjo163/mwx-isp/pkg/web"
 )
 
 type systemLogEntry struct {

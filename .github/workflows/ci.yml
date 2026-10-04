@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 permissions:
   contents: read
@@ -191,13 +191,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: toughradius
-          POSTGRES_PASSWORD: toughradius
+          POSTGRES_USER: mwxisp_test
+          POSTGRES_PASSWORD: test-only-password
           POSTGRES_DB: postgres
         ports:
           - 15432:5432
         options: >-
-          --health-cmd "pg_isready -U toughradius -d postgres"
+          --health-cmd "pg_isready -U mwxisp_test -d postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -240,8 +240,8 @@ jobs:
         env:
           TEST_DATABASE_HOST: 127.0.0.1
           TEST_DATABASE_PORT: '15432'
-          TEST_DATABASE_USER: toughradius
-          TEST_DATABASE_PASSWORD: toughradius
+          TEST_DATABASE_USER: mwxisp_test
+          TEST_DATABASE_PASSWORD: test-only-password
           TEST_DATABASE_NAME: postgres
           TEST_LDAP_URL: ldap://127.0.0.1:1389
           TEST_LDAP_BASE_DN: dc=example,dc=org

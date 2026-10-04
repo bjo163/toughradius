@@ -184,4 +184,4 @@ The workflow is complete when:
 - Always verify production build succeeds for frontend changes
 - Keep commits atomic and focused
 - Write commit messages for future maintainers, not just yourself
-- Follow ToughRADIUS coding standards from `.github/copilot-instructions.md`
+- Follow MWX-ISP coding standards from `.github/copilot-instructions.md`

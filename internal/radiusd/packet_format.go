@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2866"

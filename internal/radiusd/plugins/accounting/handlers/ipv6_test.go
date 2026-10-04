@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"layeh.com/radius/rfc2866"
 	"layeh.com/radius/rfc3162"
 	"layeh.com/radius/rfc4818"

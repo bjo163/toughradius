@@ -3,12 +3,12 @@ package radiusd
 import (
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	vendorparsers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	vendorparsers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"

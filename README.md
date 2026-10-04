@@ -71,6 +71,15 @@ Customer IDs (`MWX-000001`) and package codes (`PKG-000001`) are generated autom
 ./mwx-isp -c mwx-isp.yml
 ```
 
+## GitHub development and downloads
+
+- `main` is the stable line and `dev` is the integration line. Repository rules reject creation, updates, or deletion of any other branch; no other branches are permitted.
+- Every push to `main` or `dev` runs CI. A push to `dev` opens or updates one promotion pull request to `main` when there are changes to review.
+- Pushes and pull requests targeting either branch produce a Windows AMD64 preview artifact with SHA-256 checksums. Download it from the run’s **Artifacts** section; it expires after 14 days.
+- Version tags (`v*`) publish MWX-ISP release binaries and a multi-architecture container at `ghcr.io/bjo163/mwx-isp`.
+
+The source module and product-facing release assets use MWX-ISP. Existing `TOUGHRADIUS_*` environment variables and configured data paths remain accepted for upgrade compatibility.
+
 ### Sample data on first install
 
 A completely empty installation automatically receives clearly marked sample records for the main lists during its first startup. No separate seed executable is needed. Existing installations with an operator or any operational/business records are left unchanged; startup never refreshes or overwrites samples.

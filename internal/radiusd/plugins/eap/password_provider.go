@@ -1,7 +1,7 @@
 package eap
 
 import (
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/domain"
 )
 
 // DefaultPasswordProvider is the default password provider implementation

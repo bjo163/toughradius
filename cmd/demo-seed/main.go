@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/demoseed"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/demoseed"
 	"go.uber.org/zap"
 )
 

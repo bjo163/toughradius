@@ -17,8 +17,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 )

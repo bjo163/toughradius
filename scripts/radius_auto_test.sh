@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ToughRADIUS 自动化测试脚本
+# MWX-ISP 自动化测试脚本
 # 根据 radtest.prompt.md 规范执行完整的 RADIUS 协议测试
 
 set -e
@@ -53,7 +53,7 @@ run_test() {
 
 # 开始测试
 log "╔════════════════════════════════════════════════════════════════╗"
-log "║        ToughRADIUS 自动化协议测试 - 测试报告                    ║"
+log "║        MWX-ISP 自动化协议测试 - 测试报告                    ║"
 log "║        测试时间: $(date '+%Y-%m-%d %H:%M:%S')                  ║"
 log "╚════════════════════════════════════════════════════════════════╝"
 log ""
@@ -177,7 +177,7 @@ cat > "${REPORT_DIR}/test_report_${TIMESTAMP}.html" << HTMLEOF
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>ToughRADIUS 测试报告 - ${TIMESTAMP}</title>
+    <title>MWX-ISP 测试报告 - ${TIMESTAMP}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -201,7 +201,7 @@ cat > "${REPORT_DIR}/test_report_${TIMESTAMP}.html" << HTMLEOF
 </head>
 <body>
     <div class="container">
-        <h1>🔍 ToughRADIUS 自动化协议测试报告</h1>
+        <h1>🔍 MWX-ISP 自动化协议测试报告</h1>
         
         <div class="summary">
             <div class="summary-item">
@@ -271,7 +271,7 @@ cat > "${REPORT_DIR}/test_report_${TIMESTAMP}.html" << HTMLEOF
         
         <div class="footer">
             <p>报告生成时间: $(date '+%Y-%m-%d %H:%M:%S')</p>
-            <p>测试工具版本: ToughRADIUS v9 (radtest, benchmark, testdata)</p>
+            <p>测试工具版本: MWX-ISP v9 (radtest, benchmark, testdata)</p>
             <p>详细日志: test_${TIMESTAMP}.log</p>
         </div>
     </div>

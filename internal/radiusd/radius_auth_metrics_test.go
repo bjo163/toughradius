@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/pkg/metrics"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"layeh.com/radius"
 )
 

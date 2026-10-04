@@ -195,7 +195,7 @@ func writeCoverageNote(b *strings.Builder, scenarios []scenario) {
 	if !hasPEAPExternalCoverageGap(scenarios) {
 		return
 	}
-	fmt.Fprintln(b, "Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped and tracked by [#495](https://github.com/talkincode/toughradius/issues/495), so this report is partial external coverage rather than complete PEAP acceptance.")
+	fmt.Fprintln(b, "Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped and tracked by [#495](https://github.com/bjo163/mwx-isp/issues/495), so this report is partial external coverage rather than complete PEAP acceptance.")
 	fmt.Fprintln(b)
 }
 
@@ -203,7 +203,7 @@ func writeCoverageNoteCN(b *strings.Builder, scenarios []scenario) {
 	if !hasPEAPExternalCoverageGap(scenarios) {
 		return
 	}
-	fmt.Fprintln(b, "覆盖说明：PEAP/MSCHAPv2 外部 `eapol_test` 场景仍为 skipped，并由 [#495](https://github.com/talkincode/toughradius/issues/495) 跟踪，因此本报告代表部分外部覆盖，不宣称完整 PEAP 外部验收。")
+	fmt.Fprintln(b, "覆盖说明：PEAP/MSCHAPv2 外部 `eapol_test` 场景仍为 skipped，并由 [#495](https://github.com/bjo163/mwx-isp/issues/495) 跟踪，因此本报告代表部分外部覆盖，不宣称完整 PEAP 外部验收。")
 	fmt.Fprintln(b)
 }
 
@@ -254,7 +254,7 @@ func renderDocsEN(reports []string, run acceptanceRun) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "# EAP Acceptance Reports")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "Weekly EAP acceptance runs validate ToughRADIUS with an external `eapol_test` supplicant and publish the latest retained reports here.")
+	fmt.Fprintln(&b, "Weekly EAP acceptance runs validate MWX-ISP with an external `eapol_test` supplicant and publish the latest retained reports here.")
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "**Latest verdict:** %s\n\n", strings.ToUpper(run.Verdict))
 	writeCoverageNote(&b, run.Scenarios)
@@ -272,7 +272,7 @@ func renderDocsZH(reports []string, run acceptanceRun) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "# EAP 验收测试报告")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "每周 EAP 验收任务使用外部 `eapol_test` supplicant 验证 ToughRADIUS，并在这里展示最近保留的报告。")
+	fmt.Fprintln(&b, "每周 EAP 验收任务使用外部 `eapol_test` supplicant 验证 MWX-ISP，并在这里展示最近保留的报告。")
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "**最近结论：** %s\n\n", chineseVerdict(run.Verdict))
 	writeCoverageNoteCN(&b, run.Scenarios)
@@ -293,7 +293,7 @@ func writeReportLinks(b *strings.Builder, reports []string) {
 	}
 	for _, report := range reports {
 		date := strings.TrimSuffix(report, ".md")
-		fmt.Fprintf(b, "- [%s](https://github.com/talkincode/toughradius/blob/main/docs/reports/eap/%s)\n", date, report)
+		fmt.Fprintf(b, "- [%s](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/eap/%s)\n", date, report)
 	}
 }
 

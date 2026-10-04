@@ -5,9 +5,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/microsoft"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/microsoft"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2759"
 	"layeh.com/radius/rfc2865"

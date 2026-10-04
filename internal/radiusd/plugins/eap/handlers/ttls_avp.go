@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
 )
 
 // EAP-TTLS AVP codes and flags (RFC 5281 §10.1). Inner authentication is carried

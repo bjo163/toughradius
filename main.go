@@ -11,18 +11,18 @@ import (
 	"time"
 	_ "time/tzdata"
 
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/adminapi"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
-	"github.com/talkincode/toughradius/v9/internal/webserver"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/adminapi"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"golang.org/x/sync/errgroup"
 
 	// Import vendor parsers for auto-registration via init()
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins"
-	_ "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers/parsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins"
+	_ "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers/parsers"
 )
 
 var g errgroup.Group

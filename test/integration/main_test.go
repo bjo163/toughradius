@@ -24,17 +24,17 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // database/sql driver "pgx" for CREATE/DROP DATABASE
 
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/adminapi"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins"
-	parsers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers/parsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/webserver"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/adminapi"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins"
+	parsers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers/parsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // harness holds the shared state for the whole integration run: one freshly

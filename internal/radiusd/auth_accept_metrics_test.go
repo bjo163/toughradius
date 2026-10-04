@@ -9,11 +9,11 @@ import (
 	"gorm.io/gorm"
 	"layeh.com/radius"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
-	repogorm "github.com/talkincode/toughradius/v9/internal/radiusd/repository/gorm"
-	"github.com/talkincode/toughradius/v9/pkg/metrics"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
+	repogorm "github.com/bjo163/mwx-isp/internal/radiusd/repository/gorm"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 )
 
 // newAcceptMetricsTestService builds an AuthService backed by an in-memory

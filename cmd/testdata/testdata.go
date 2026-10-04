@@ -32,9 +32,9 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

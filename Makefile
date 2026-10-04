@@ -58,8 +58,8 @@ dev:
 	@echo "   终端2: make runf"
 	@echo ""
 	@echo "或使用以下命令在后台运行："
-	@echo "   make runs > /tmp/toughradius-backend.log 2>&1 &"
-	@echo "   make runf > /tmp/toughradius-frontend.log 2>&1 &"
+	@echo "   make runs > /tmp/mwx-isp-backend.log 2>&1 &"
+	@echo "   make runf > /tmp/mwx-isp-frontend.log 2>&1 &"
 
 # 构建生产版本（静态编译，支持 PostgreSQL 和 SQLite）
 build: buildf
@@ -146,7 +146,7 @@ test-integration:
 test-integration-pg:
 	@echo "🐘 启动 PostgreSQL / OpenLDAP 测试容器并运行集成测试..."
 	@set -e; \
-	COMPOSE="docker compose -p toughradius-it -f docker-compose.test.yml"; \
+	COMPOSE="docker compose -p mwx-isp-it -f docker-compose.test.yml"; \
 	cleanup() { echo "🧹 清理测试容器..."; $$COMPOSE down -v >/dev/null 2>&1 || true; }; \
 	trap cleanup EXIT; \
 	$$COMPOSE up -d; \
@@ -163,8 +163,8 @@ test-integration-pg:
 	fi; \
 	TEST_DATABASE_HOST=127.0.0.1 \
 	TEST_DATABASE_PORT=15432 \
-	TEST_DATABASE_USER=toughradius \
-	TEST_DATABASE_PASSWORD=toughradius \
+	TEST_DATABASE_USER=mwx-isp \
+	TEST_DATABASE_PASSWORD=mwx-isp \
 	TEST_DATABASE_NAME=postgres \
 	TEST_LDAP_URL=ldap://127.0.0.1:1389 \
 	TEST_LDAP_BASE_DN=dc=example,dc=org \
@@ -182,8 +182,8 @@ test-integration-pg:
 test-eap-acceptance-docker:
 	@echo "🔐 在 Linux 容器中运行 EAP 外部验收测试..."
 	@set -e; \
-	COMPOSE="docker compose -p toughradius-it -f docker-compose.test.yml"; \
-	NETWORK="toughradius-it_default"; \
+	COMPOSE="docker compose -p mwx-isp-it -f docker-compose.test.yml"; \
+	NETWORK="mwx-isp-it_default"; \
 	cleanup() { echo "🧹 清理测试容器..."; $$COMPOSE down -v >/dev/null 2>&1 || true; }; \
 	trap cleanup EXIT; \
 	$$COMPOSE up -d; \
@@ -201,8 +201,8 @@ test-eap-acceptance-docker:
 		-w /workspace \
 		-e TEST_DATABASE_HOST=postgres \
 		-e TEST_DATABASE_PORT=5432 \
-		-e TEST_DATABASE_USER=toughradius \
-		-e TEST_DATABASE_PASSWORD=toughradius \
+		-e TEST_DATABASE_USER=mwx-isp \
+		-e TEST_DATABASE_PASSWORD=mwx-isp \
 		-e TEST_DATABASE_NAME=postgres \
 		-e INTEGRATION_REQUIRED=1 \
 		-e EAP_ACCEPTANCE_REQUIRED=1 \
@@ -277,7 +277,7 @@ clean:
 	@echo "🧹 清理构建文件..."
 	rm -rf release/
 	rm -rf web/dist/
-	rm -f /tmp/toughradius-test
+	rm -f /tmp/mwx-isp-test
 	@echo "✅ 清理完成"
 
 # 安装前端依赖
@@ -294,7 +294,7 @@ fmt:
 
 # 查看后端日志
 logs:
-	@tail -f /tmp/toughradius.log
+	@tail -f /tmp/mwx-isp.log
 
 # 查看前端日志
 logsf:
@@ -304,7 +304,7 @@ logsf:
 killfs:
 	@echo "🛑 停止前后端所有服务..."
 	@pkill -f "go run main.go" 2>/dev/null || true
-	@pkill -f "toughradius" 2>/dev/null || true
+	@pkill -f "mwx-isp" 2>/dev/null || true
 	@pkill -f "vite" 2>/dev/null || true
 	@pkill -f "npm run dev" 2>/dev/null || true
 	@echo "✅ 所有服务已停止"
@@ -317,15 +317,15 @@ restart-backend: killfs
 # 快速启动（后台运行前后端）
 quick-start: killfs
 	@echo "🚀 快速启动前后端服务（后台运行）..."
-	@make runs > /tmp/toughradius-backend.log 2>&1 &
+	@make runs > /tmp/mwx-isp-backend.log 2>&1 &
 	@sleep 3
-	@make runf > /tmp/toughradius-frontend.log 2>&1 &
+	@make runf > /tmp/mwx-isp-frontend.log 2>&1 &
 	@sleep 2
 	@echo ""
 	@echo "✅ 服务已启动！"
 	@echo "📊 后端: http://localhost:1816"
 	@echo "🎨 前端: http://localhost:3000/admin"
-	@echo "📝 后端日志: tail -f /tmp/toughradius-backend.log"
-	@echo "📝 前端日志: tail -f /tmp/toughradius-frontend.log"
+	@echo "📝 后端日志: tail -f /tmp/mwx-isp-backend.log"
+	@echo "📝 前端日志: tail -f /tmp/mwx-isp-frontend.log"
 	@echo ""
 	@echo "🛑 停止服务: make killfs"

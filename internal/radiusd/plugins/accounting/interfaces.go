@@ -4,8 +4,8 @@ package accounting
 import (
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	vendorparserspkg "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	vendorparserspkg "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
 	"layeh.com/radius"
 )
 

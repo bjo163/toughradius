@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/panjf2000/ants/v2"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"layeh.com/radius/rfc2866"
 )
 

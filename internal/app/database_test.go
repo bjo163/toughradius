@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/config"
+	"github.com/bjo163/mwx-isp/config"
 )
 
 func TestSQLiteDatabaseRespectsPlatformAbsolutePath(t *testing.T) {

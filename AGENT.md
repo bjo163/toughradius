@@ -1,4 +1,4 @@
-# ToughRADIUS AI Agent Development Guide
+# MWX-ISP AI Agent Development Guide
 
 > **Canonical.** This file holds the authoritative agent development rules and is
 > referenced directly by the agent tooling. A bilingual handbook digest is
@@ -15,7 +15,7 @@
 - The canonical feature baseline is [`docs/feature-checklist.md`](docs/feature-checklist.md).
 - Before implementing a requirement, identify the matching feature ID such as `TR-F001` and keep the task, issue, PR, tests, and review notes aligned with that scope.
 - If a request does not map to an existing feature ID, update the feature checklist first with the new scope, status, acceptance boundary, and rationale before changing code.
-- Do not casually expand ToughRADIUS into unrelated product directions. Items listed as non-goals in the checklist are out of scope unless the checklist is explicitly revised first.
+- Do not casually expand MWX-ISP into unrelated product directions. Items listed as non-goals in the checklist are out of scope unless the checklist is explicitly revised first.
 - Bug fixes, refactors, UI changes, and protocol extensions must preserve the acceptance boundaries in the checklist or update the checklist in the same change.
 
 ### Roadmap and Skill Library
@@ -125,7 +125,7 @@ Every exported symbol (function, struct, interface, constant) must have a compre
 //
 // This package provides concurrent request handling using goroutine pools,
 // vendor-specific attribute parsing (Huawei, Cisco, Mikrotik), and integration
-// with the ToughRADIUS database backend.
+// with the MWX-ISP database backend.
 //
 // Key components:
 //   - AuthServer: Handles RADIUS authentication on UDP port 1812
@@ -450,7 +450,7 @@ go doc internal/radiusd.AuthenticateUser
 
 # Generate HTML documentation for entire project
 godoc -http=:6060
-# Visit http://localhost:6060/pkg/github.com/talkincode/toughradius/
+# Visit http://localhost:6060/pkg/github.com/bjo163/mwx-isp/
 ```
 
 #### Auto-Generated Documentation Rule (Strictly Prohibited)
@@ -508,7 +508,7 @@ The Cisco vendor module is located in...
 ```bash
 # 1. Clear code comments (primary documentation)
 $ go doc internal/radiusd/vendors/cisco
-package cisco // import "github.com/talkincode/toughradius/v9/internal/radiusd/vendors/cisco"
+package cisco // import "github.com/bjo163/mwx-isp/internal/radiusd/vendors/cisco"
 
 Package cisco implements Cisco RADIUS Vendor-Specific Attribute (VSA) parsing...
 

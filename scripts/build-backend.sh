@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 OUTPUT_DIR=${OUTPUT_DIR:-"$ROOT_DIR/release"}
-BINARY_NAME=${BINARY_NAME:-toughradius}
+BINARY_NAME=${BINARY_NAME:-mwx-isp}
 
 if [ ! -d "$ROOT_DIR/web/dist" ]; then
     echo "[backend] React Admin bundle missing (web/dist). Run scripts/build-frontend.sh first." >&2

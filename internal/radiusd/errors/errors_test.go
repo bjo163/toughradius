@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 )
 
 func TestAuthError_Error(t *testing.T) {

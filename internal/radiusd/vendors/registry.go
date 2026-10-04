@@ -14,7 +14,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
 )
 
 // VendorInfo holds metadata and handlers for a RADIUS vendor

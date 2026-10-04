@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsengine"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsengine"
 )
 
 // fakeSettingsReader is an in-memory TLSSettingsReader for testing the

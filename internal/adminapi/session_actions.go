@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

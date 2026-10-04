@@ -3,7 +3,7 @@ package securestore_test
 import (
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/securestore"
+	"github.com/bjo163/mwx-isp/internal/securestore"
 )
 
 func ExampleSeal() {

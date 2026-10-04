@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/domain"
 )
 
 func newSettingsTestCtx(t *testing.T, method, target, body string) (echo.Context, *httptest.ResponseRecorder) {

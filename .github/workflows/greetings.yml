@@ -29,12 +29,12 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           issue_message: >
-            👋 Thanks for opening your first issue in ToughRADIUS! To help us
+            👋 Thanks for opening your first issue in MWX-ISP! To help us
             investigate, please include the version, deployment mode (PostgreSQL
             or SQLite), relevant logs, and clear reproduction steps. See AGENT.md
             and the docs/ handbook for project context.
           pr_message: >
-            🎉 Thanks for your first pull request to ToughRADIUS! Please make
+            🎉 Thanks for your first pull request to MWX-ISP! Please make
             sure CI is green — `go build ./...`, `go test ./...`,
             `golangci-lint run`, plus `cd web && npm run build` for frontend
             changes — and that any protocol change cites the relevant spec under

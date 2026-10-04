@@ -3,7 +3,7 @@ package parsers
 import (
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 )

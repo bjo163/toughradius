@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2869"
 	"layeh.com/radius/rfc3162"

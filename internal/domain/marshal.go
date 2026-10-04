@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
-	"github.com/talkincode/toughradius/v9/pkg/timeutil"
+	"github.com/bjo163/mwx-isp/pkg/timeutil"
 )
 
 func (d SysOprLog) MarshalJSON() ([]byte, error) {

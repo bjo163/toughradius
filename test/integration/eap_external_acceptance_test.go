@@ -19,9 +19,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	eaphandlers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/handlers"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	eaphandlers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/handlers"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 const eapAcceptanceSecret = "it-eap-acceptance-secret"

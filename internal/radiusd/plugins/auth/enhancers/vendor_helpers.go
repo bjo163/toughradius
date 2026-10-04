@@ -1,7 +1,7 @@
 package enhancers
 
 import (
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
 )
 
 func matchVendor(ctx *auth.AuthContext, vendorCode string) bool {

@@ -1,4 +1,4 @@
-name: MWX-ISP container publish
+name: MWX-ISP Container Release
 
 on:
   push:
@@ -10,17 +10,16 @@ permissions:
   packages: write
 
 concurrency:
-  group: container-publish-${{ github.ref }}
+  group: container-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   publish:
-    name: Publish GHCR image
+    name: Build and publish GHCR image
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Extract version
@@ -47,14 +46,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and publish MWX-ISP image
+        id: image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/mwx-isp:latest
             ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=MWX-ISP
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Summarize published image
+        run: |
+          {
+            echo '## MWX-ISP container published'
+            echo ''
+            echo '- Image: `ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.version }}`'
+            echo '- Digest: `${{ steps.image.outputs.digest }}`'
+          } >> "$GITHUB_STEP_SUMMARY"

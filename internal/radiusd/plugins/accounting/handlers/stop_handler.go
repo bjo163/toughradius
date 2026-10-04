@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/accounting"
-	vendorparserspkg "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/accounting"
+	vendorparserspkg "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
 	"go.uber.org/zap"
 	"layeh.com/radius/rfc2866"
 )

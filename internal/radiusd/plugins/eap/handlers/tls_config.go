@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsengine"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsengine"
 )
 
 // EAP-TLS dynamic configuration keys (RADIUS settings category). They are

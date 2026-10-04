@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/config"
+	"github.com/bjo163/mwx-isp/config"
 )
 
 // Test basic functionality

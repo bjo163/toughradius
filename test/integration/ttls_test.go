@@ -16,12 +16,12 @@ import (
 	"layeh.com/radius/rfc2759"
 	"layeh.com/radius/rfc2865"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	eap "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	eaphandlers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/handlers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsfragment"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/microsoft"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	eap "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	eaphandlers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/handlers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsfragment"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/microsoft"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // EAP-TTLS inner AVP codes and field sizes (RFC 5281 §10/§11, RFC 2548). The

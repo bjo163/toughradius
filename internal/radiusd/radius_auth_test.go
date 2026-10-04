@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	vendorparsers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	vendorparsers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
 	"gorm.io/gorm"
 	"layeh.com/radius"
 )

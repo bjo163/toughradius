@@ -3,8 +3,8 @@ package parsers
 import (
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"

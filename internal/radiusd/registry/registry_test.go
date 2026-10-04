@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/accounting"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/accounting"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
 )
 
 // Mock implementations for auth interfaces

@@ -3,7 +3,7 @@ package radiusd
 import (
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 )

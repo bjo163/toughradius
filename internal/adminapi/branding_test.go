@@ -15,7 +15,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/domain"
 )
 
 func TestPublicBrandingDefaultsAndValidatedSave(t *testing.T) {

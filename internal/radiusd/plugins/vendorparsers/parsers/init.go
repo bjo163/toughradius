@@ -1,7 +1,7 @@
 package parsers
 
 import (
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
 )
 
 // init automatically registers all vendor parsers.

@@ -28,8 +28,8 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
-	bm "github.com/talkincode/toughradius/v9/internal/benchmark"
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
+	bm "github.com/bjo163/mwx-isp/internal/benchmark"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2866"
 )

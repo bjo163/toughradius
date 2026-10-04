@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
 )
 
 func TestInitPlugins_WithNilDependencies(t *testing.T) {

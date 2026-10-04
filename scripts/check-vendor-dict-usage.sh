@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 VENDORS_DIR="$ROOT_DIR/internal/radiusd/vendors"
-MODULE_PREFIX="github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
+MODULE_PREFIX="github.com/bjo163/mwx-isp/internal/radiusd/vendors"
 
 fail=0
 for dir in "$VENDORS_DIR"/*/; do

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ToughRADIUS admin password reset script
+# MWX-ISP admin password reset script
 # Usage: ./reset-admin-password.sh [new password]
 
 set -e
@@ -9,14 +9,14 @@ CONFIG_FILE="toughradius.yml"
 NEW_PASSWORD="${1:-toughradius}"
 
 echo "========================================"
-echo "ToughRADIUS Admin Password Reset Tool"
+echo "MWX-ISP Admin Password Reset Tool"
 echo "========================================"
 echo ""
 
 # Check the configuration file
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Error: Configuration file $CONFIG_FILE not found"
-    echo "Please run this script in the ToughRADIUS root directory"
+    echo "Please run this script in the MWX-ISP root directory"
     exit 1
 fi
 

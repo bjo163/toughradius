@@ -10,9 +10,9 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
-	"github.com/talkincode/toughradius/v9/internal/billing"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/pkg/metrics"
+	"github.com/bjo163/mwx-isp/internal/billing"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"go.uber.org/zap"
 )
 

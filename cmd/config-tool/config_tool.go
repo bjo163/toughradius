@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 )
 
 // validateConfigSchemas validates the formatting and content of the configuration JSON file.

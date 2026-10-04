@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	vendorparserspkg "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/app"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	vendorparserspkg "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"

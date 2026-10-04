@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/domain"
 )
 
 // newUploadRequest builds a multipart request carrying a single "upload" file.

@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/talkincode/toughradius/v9/pkg/metrics"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 )
 
 const (

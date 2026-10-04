@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/mikrotik"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/mikrotik"
 )
 
 type MikrotikAcceptEnhancer struct{}

@@ -5,12 +5,12 @@ import (
 	stderrs "errors"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/ldapauth"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/ldapauth"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
 	"layeh.com/radius/rfc2865"
 )
 

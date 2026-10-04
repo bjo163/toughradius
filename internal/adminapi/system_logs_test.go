@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	webresp "github.com/talkincode/toughradius/v9/pkg/web"
+	webresp "github.com/bjo163/mwx-isp/pkg/web"
 )
 
 func TestQuerySystemLogsAcceptsIssueFilters(t *testing.T) {

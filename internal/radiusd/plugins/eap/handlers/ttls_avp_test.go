@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
 )
 
 // buildTTLSAVP encodes a single EAP-TTLS AVP in the RFC 5281 §10.1 wire format:

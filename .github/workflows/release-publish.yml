@@ -1,4 +1,4 @@
-name: MWX-ISP release
+name: MWX-ISP Release
 
 on:
   push:

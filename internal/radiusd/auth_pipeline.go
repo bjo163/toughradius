@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	vendorparsers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	vendorparsers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
 	"layeh.com/radius"
 )
 

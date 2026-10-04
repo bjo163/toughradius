@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
 )
 
 func TestExpireChecker_Name(t *testing.T) {

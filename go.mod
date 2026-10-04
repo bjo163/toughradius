@@ -1,4 +1,4 @@
-module github.com/talkincode/toughradius/v9
+module github.com/bjo163/mwx-isp
 
 go 1.26.0
 

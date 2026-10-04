@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
 	"layeh.com/radius"
 )
 

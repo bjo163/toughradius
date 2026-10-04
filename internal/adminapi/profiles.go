@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/webserver"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/webserver"
 )
 
 // allowedProfileSortFields defines the whitelist of sortable columns for the

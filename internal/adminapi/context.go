@@ -2,7 +2,7 @@ package adminapi
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 	"gorm.io/gorm"
 )
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
 	"layeh.com/radius/rfc2865"
 )
 

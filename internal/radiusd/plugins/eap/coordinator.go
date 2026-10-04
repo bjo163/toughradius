@@ -3,8 +3,8 @@ package eap
 import (
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"

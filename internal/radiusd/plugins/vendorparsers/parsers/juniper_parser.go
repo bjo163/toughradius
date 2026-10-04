@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/juniper"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/juniper"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2869"

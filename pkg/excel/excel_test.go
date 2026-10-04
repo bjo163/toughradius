@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/pkg/timeutil"
+	"github.com/bjo163/mwx-isp/pkg/timeutil"
 )
 
 // TestUser is a test struct for Excel export

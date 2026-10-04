@@ -3,9 +3,9 @@ package parsers
 import (
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/radback"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/radback"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2869"

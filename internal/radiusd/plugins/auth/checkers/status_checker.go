@@ -3,9 +3,9 @@ package checkers
 import (
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // StatusChecker verifies user status

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
 )
 
 // defaultAuthRateShards is the number of shards used by the authentication

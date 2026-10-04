@@ -1,4 +1,4 @@
-# ToughRADIUS AI Coding Agent Instructions
+# MWX-ISP AI Coding Agent Instructions
 
 ## 📌 Project Guardrails (read first)
 
@@ -44,7 +44,7 @@ grep_search "app.GDB" --include internal/app/**
 
 ## Project Overview
 
-ToughRADIUS is an enterprise-grade RADIUS server developed in Go, supporting standard RADIUS protocols (RFC 2865/2866) and RadSec (RADIUS over TLS). The frontend uses React Admin framework for the management interface.
+MWX-ISP is an ISP management, RADIUS, and billing application developed in Go. It supports standard RADIUS protocols (RFC 2865/2866), RadSec (RADIUS over TLS), and a React Admin management interface.
 
 ## Architecture Highlights
 
@@ -101,13 +101,13 @@ When adding new vendor support, define constants in `radius.go`, then add switch
 **Local Development** (SQLite supported, CGO disabled):
 
 ```bash
-CGO_ENABLED=0 go run main.go -c toughradius.yml
+CGO_ENABLED=0 go run main.go -c mwx-isp.yml
 ```
 
 **Production Build** (Supports PostgreSQL & SQLite, static compilation):
 
 ```bash
-make build  # Output to ./release/toughradius
+make build  # Output to ./release/mwx-isp
 ```
 
 **Frontend Development**:
@@ -122,7 +122,7 @@ npm run build    # Production build, output to dist/
 ### Database Initialization
 
 ```bash
-./toughradius -initdb -c toughradius.yml  # Drop and recreate all tables
+./mwx-isp -initdb -c mwx-isp.yml  # Drop and recreate all tables
 ```
 
 Production environment uses `MigrateDB(false)` for automatic migration (configured in main.go).

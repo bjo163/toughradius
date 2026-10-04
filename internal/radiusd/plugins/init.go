@@ -1,17 +1,17 @@
 package plugins
 
 import (
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/accounting/handlers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth/checkers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth/enhancers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth/guards"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/accounting/handlers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth/checkers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth/enhancers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth/guards"
 
-	// "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth/guards"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth/validators"
-	eaphandlers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/handlers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
+	// "github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth/guards"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth/validators"
+	eaphandlers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/handlers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
 )
 
 // InitPlugins initializes all plugins

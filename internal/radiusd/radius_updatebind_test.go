@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	repogorm "github.com/talkincode/toughradius/v9/internal/radiusd/repository/gorm"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	repogorm "github.com/bjo163/mwx-isp/internal/radiusd/repository/gorm"
 )
 
 func newUpdateBindTestService(t *testing.T) (*AuthService, *gorm.DB) {

@@ -18,8 +18,8 @@ import (
 	"layeh.com/radius/rfc4818"
 	"layeh.com/radius/rfc6911"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // TestRadiusIPv6ProvisioningEndToEnd drives the full IPv6 provisioning chain

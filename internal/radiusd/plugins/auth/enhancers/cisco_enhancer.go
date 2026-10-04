@@ -3,10 +3,10 @@ package enhancers
 import (
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/cisco"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/cisco"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // ciscoAddrPoolAVPair is the Cisco-AVPair directive prefix that assigns a

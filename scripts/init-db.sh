@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ###############################################################################
-# ToughRADIUS database initialization script
+# MWX-ISP database initialization script
 #
-# Purpose: quickly initialize the ToughRADIUS database (PostgreSQL or SQLite supported)
+# Purpose: quickly initialize the MWX-ISP database (PostgreSQL or SQLite supported)
 #
 # Usage:
 #   1. PostgreSQL: ./scripts/init-db.sh postgres
@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo -e "${GREEN}================================${NC}"
-echo -e "${GREEN}ToughRADIUS Database Initialization${NC}"
+echo -e "${GREEN}MWX-ISP Database Initialization${NC}"
 echo -e "${GREEN}================================${NC}"
 echo ""
 
@@ -41,14 +41,14 @@ if [ -z "$DB_TYPE" ]; then
     cd "$PROJECT_ROOT"
     
     # Check if the tool has been compiled
-    if [ ! -f "./toughradius" ]; then
+    if [ ! -f "./mwx-isp" ]; then
         echo -e "${YELLOW}Binary not found, starting compilation...${NC}"
-        CGO_ENABLED=0 go build -o toughradius
+        CGO_ENABLED=0 go build -o mwx-isp
         echo -e "${GREEN}✓ Compilation completed${NC}"
     fi
     
     echo -e "${YELLOW}Initializing database...${NC}"
-    ./toughradius -initdb
+    ./mwx-isp -initdb
     
     echo ""
     echo -e "${GREEN}================================${NC}"
@@ -124,9 +124,9 @@ EOF
         cd "$PROJECT_ROOT"
         
         # Check if the tool has been compiled
-        if [ ! -f "./toughradius" ]; then
+        if [ ! -f "./mwx-isp" ]; then
             echo -e "${YELLOW}Binary not found, starting compilation...${NC}"
-            CGO_ENABLED=0 go build -o toughradius
+            CGO_ENABLED=0 go build -o mwx-isp
             echo -e "${GREEN}✓ Compilation completed${NC}"
         fi
         
@@ -135,7 +135,7 @@ EOF
         sudo chown -R $(whoami) /var/toughradius
         
         echo -e "${YELLOW}Initializing SQLite database...${NC}"
-        ./toughradius -c "$TEMP_CONFIG" -initdb
+        ./mwx-isp -c "$TEMP_CONFIG" -initdb
         
         # Clean up temporary configuration
         rm -f "$TEMP_CONFIG"
@@ -149,7 +149,7 @@ EOF
         echo -e "  ${YELLOW}/var/toughradius/data/toughradius.db${NC}"
         echo ""
         echo -e "${GREEN}Start command (using SQLite):${NC}"
-        echo -e "  ${YELLOW}./toughradius -c $TEMP_CONFIG${NC}"
+        echo -e "  ${YELLOW}./mwx-isp -c $TEMP_CONFIG${NC}"
         echo ""
         echo -e "${GREEN}Or modify toughradius.yml configuration file:${NC}"
         cat <<EOF
@@ -238,14 +238,14 @@ EOF
         cd "$PROJECT_ROOT"
         
         # Check if the tool has been compiled
-        if [ ! -f "./toughradius" ]; then
+        if [ ! -f "./mwx-isp" ]; then
             echo -e "${YELLOW}Binary not found, starting compilation...${NC}"
-            CGO_ENABLED=0 go build -o toughradius
+            CGO_ENABLED=0 go build -o mwx-isp
             echo -e "${GREEN}✓ Compilation completed${NC}"
         fi
         
         echo -e "${YELLOW}Initializing PostgreSQL database...${NC}"
-        ./toughradius -c "$TEMP_CONFIG" -initdb
+        ./mwx-isp -c "$TEMP_CONFIG" -initdb
         
         # Clean up temporary configuration
         rm -f "$TEMP_CONFIG"

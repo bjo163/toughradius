@@ -17,11 +17,11 @@ import (
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/ldapauth"
-	eap "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/ldapauth"
+	eap "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 type ldapTestEnv struct {

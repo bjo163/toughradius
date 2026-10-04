@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #########################################################
-# ToughRADIUS RadSec client certificate generation script
+# MWX-ISP RadSec client certificate generation script
 #
 # This script generates RadSec client certificates
 # Prerequisite: run gen-radsec-certs.sh to generate the CA certificate
@@ -15,7 +15,7 @@
 #   -h HOST    Client hostname (default: use the client name)
 #   -i IPS     Client IP addresses, comma-separated (optional)
 #   -y DAYS    Certificate validity in days (default: 3650)
-#   -g ORG     Organization name (default: ToughRADIUS)
+#   -g ORG     Organization name (default: MWX-ISP)
 #   -h         Display help information
 #
 # Examples:
@@ -36,7 +36,7 @@ set -e
 CA_DIR="./rundata/private"
 OUTPUT_DIR="./rundata/private/clients"
 VALID_DAYS=3650
-ORGANIZATION="ToughRADIUS"
+ORGANIZATION="MWX-ISP"
 COUNTRY="CN"
 PROVINCE="Shanghai"
 LOCALITY="Shanghai"
@@ -52,7 +52,7 @@ NC='\033[0m' # No Color
 # Display help information
 show_help() {
     cat << EOF
-ToughRADIUS RadSec 客户端证书生成脚本
+MWX-ISP RadSec 客户端证书生成脚本
 
 用法:
     $0 <客户端名称> [选项]
@@ -66,7 +66,7 @@ ToughRADIUS RadSec 客户端证书生成脚本
     -n HOST         客户端主机名 (默认: 使用客户端名称)
     -i IPS          客户端 IP 地址，逗号分隔 (可选)
     -y DAYS         证书有效期天数 (默认: 3650)
-    -g ORG          组织名称 (默认: ToughRADIUS)
+    -g ORG          组织名称 (默认: MWX-ISP)
     -c COUNTRY      国家代码 (默认: CN)
     -p PROVINCE     省份 (默认: Shanghai)
     -l LOCALITY     城市 (默认: Shanghai)
@@ -192,7 +192,7 @@ fi
 
 # Print configuration information
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  ToughRADIUS RadSec 客户端证书生成${NC}"
+echo -e "${BLUE}  MWX-ISP RadSec 客户端证书生成${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 echo -e "${GREEN}配置信息:${NC}"

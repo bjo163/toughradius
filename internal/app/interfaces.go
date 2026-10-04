@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/networkmonitor"
-	"github.com/talkincode/toughradius/v9/internal/notify"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/networkmonitor"
+	"github.com/bjo163/mwx-isp/internal/notify"
 	"gorm.io/gorm"
 )
 

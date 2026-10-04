@@ -16,13 +16,13 @@ import (
 	"layeh.com/radius/rfc2759"
 	"layeh.com/radius/rfc2865"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	eap "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	eaphandlers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/handlers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsengine"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsfragment"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/microsoft"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	eap "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	eaphandlers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/handlers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsengine"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsfragment"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/microsoft"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // Inner EAP-MSCHAPv2 opcodes and field sizes (RFC 2759). The handler keeps these

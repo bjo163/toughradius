@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsengine"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsfragment"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsengine"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsfragment"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 )

@@ -3,7 +3,7 @@ package handlers
 import (
 	"net"
 
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // ipv6PrefixOrNA renders an IPv6 prefix attribute (RFC 3162 Framed-IPv6-Prefix,

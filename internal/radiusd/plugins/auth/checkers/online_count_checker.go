@@ -3,9 +3,9 @@ package checkers
 import (
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
+	"github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
 )
 
 // OnlineCountChecker enforces online count limits

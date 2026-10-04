@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 )
 
 // RadiusError is the base interface for all RADIUS-related errors.

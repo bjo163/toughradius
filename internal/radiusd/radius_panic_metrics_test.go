@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"layeh.com/radius"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/pkg/metrics"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 )
 
 // TestServeRADIUS_PanicCountsAuthDrop locks in the panic-path observability fix:

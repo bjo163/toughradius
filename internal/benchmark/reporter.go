@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/pkg/timeutil"
+	"github.com/bjo163/mwx-isp/pkg/timeutil"
 )
 
 // Reporter handles formatting and outputting benchmark results.

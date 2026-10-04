@@ -3,8 +3,8 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/accounting"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/accounting"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
 	"go.uber.org/zap"
 	"layeh.com/radius/rfc2866"
 )

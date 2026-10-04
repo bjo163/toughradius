@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/domain"
 )
 
 func TestGenerateMonthlyInvoicesForSubscriptionsIsScoped(t *testing.T) {

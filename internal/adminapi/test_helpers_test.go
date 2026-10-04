@@ -8,10 +8,10 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	customValidator "github.com/talkincode/toughradius/v9/pkg/validator"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	customValidator "github.com/bjo163/mwx-isp/pkg/validator"
 	"gorm.io/gorm"
 )
 

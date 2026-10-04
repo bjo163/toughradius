@@ -3,10 +3,10 @@ package enhancers
 import (
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/aruba"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/aruba"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // arubaMaxVLANID is the largest assignable IEEE 802.1Q VLAN ID. VLAN 0 and 4095

@@ -2,13 +2,13 @@ name: Workflow Lint
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - '.github/workflows/**'
       - '.github/actionlint.yaml'
       - '.github/actionlint.yml'
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - '.github/workflows/**'
       - '.github/actionlint.yaml'

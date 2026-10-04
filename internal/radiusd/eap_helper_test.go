@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	eap "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	vendorparsers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	eap "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	vendorparsers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 )

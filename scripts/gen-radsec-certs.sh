@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #########################################################
-# ToughRADIUS RadSec server certificate generation script
+# MWX-ISP RadSec server certificate generation script
 #
 # This script generates certificates required for the RadSec (RADIUS over TLS) server
 # Includes the CA certificate, server certificate, and key
@@ -14,7 +14,7 @@
 #   -h HOST    Server hostname (default: radius.example.com)
 #   -i IPS     Server IP addresses, comma-separated (default: 127.0.0.1)
 #   -y DAYS    Certificate validity in days (default: 3650)
-#   -o ORG     Organization name (default: ToughRADIUS)
+#   -o ORG     Organization name (default: MWX-ISP)
 #   -h         Display help information
 #
 # Examples:
@@ -36,7 +36,7 @@ OUTPUT_DIR="./rundata/private"
 SERVER_HOST="radius.example.com"
 SERVER_IPS="127.0.0.1"
 VALID_DAYS=3650
-ORGANIZATION="ToughRADIUS"
+ORGANIZATION="MWX-ISP"
 COUNTRY="CN"
 PROVINCE="Shanghai"
 LOCALITY="Shanghai"
@@ -52,7 +52,7 @@ NC='\033[0m' # No Color
 # Display help information
 show_help() {
     cat << EOF
-ToughRADIUS RadSec 服务器证书生成脚本
+MWX-ISP RadSec 服务器证书生成脚本
 
 用法:
     $0 [选项]
@@ -62,7 +62,7 @@ ToughRADIUS RadSec 服务器证书生成脚本
     -n HOST     服务器主机名 (默认: radius.example.com)
     -i IPS      服务器 IP 地址，逗号分隔 (默认: 127.0.0.1)
     -y DAYS     证书有效期天数 (默认: 3650)
-    -o ORG      组织名称 (默认: ToughRADIUS)
+    -o ORG      组织名称 (默认: MWX-ISP)
     -c COUNTRY  国家代码 (默认: CN)
     -p PROVINCE 省份 (默认: Shanghai)
     -l LOCALITY 城市 (默认: Shanghai)
@@ -114,7 +114,7 @@ done
 
 # Print configuration information
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  ToughRADIUS RadSec 证书生成${NC}"
+echo -e "${BLUE}  MWX-ISP RadSec 证书生成${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 echo -e "${GREEN}配置信息:${NC}"

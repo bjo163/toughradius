@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	eap "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	"github.com/talkincode/toughradius/v9/pkg/metrics"
+	"github.com/bjo163/mwx-isp/internal/app"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	eap "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 )
 
 func TestMapEAPDispatchError(t *testing.T) {

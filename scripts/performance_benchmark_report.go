@@ -505,7 +505,7 @@ func renderDocsEN(reports []string, run benchmarkRun) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "# Performance Benchmark Reports")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "Weekly benchmark runs record ToughRADIUS performance signals from existing Go `Benchmark*` functions. Reports are informational and do not fail on timing drift from GitHub hosted runners.")
+	fmt.Fprintln(&b, "Weekly benchmark runs record MWX-ISP performance signals from existing Go `Benchmark*` functions. Reports are informational and do not fail on timing drift from GitHub hosted runners.")
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "**Latest verdict:** %s\n\n", strings.ToUpper(run.Verdict))
 	fmt.Fprintln(&b, "## Latest Summary")
@@ -522,7 +522,7 @@ func renderDocsZH(reports []string, run benchmarkRun) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "# 性能基准测试报告")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "每周 benchmark 任务基于现有 Go `Benchmark*` 函数记录 ToughRADIUS 性能信号。报告仅用于观察趋势，不会因为 GitHub 托管 runner 的耗时波动直接失败。")
+	fmt.Fprintln(&b, "每周 benchmark 任务基于现有 Go `Benchmark*` 函数记录 MWX-ISP 性能信号。报告仅用于观察趋势，不会因为 GitHub 托管 runner 的耗时波动直接失败。")
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "**最近结论：** %s\n\n", chineseVerdict(run.Verdict))
 	fmt.Fprintln(&b, "## 最近摘要")
@@ -542,7 +542,7 @@ func writeReportLinks(b *strings.Builder, reports []string) {
 	}
 	for _, report := range reports {
 		date := strings.TrimSuffix(report, ".md")
-		fmt.Fprintf(b, "- [%s](https://github.com/talkincode/toughradius/blob/main/docs/reports/performance/%s)\n", date, report)
+		fmt.Fprintf(b, "- [%s](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/performance/%s)\n", date, report)
 	}
 }
 

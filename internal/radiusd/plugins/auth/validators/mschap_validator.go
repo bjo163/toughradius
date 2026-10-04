@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/microsoft"
+	"github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/microsoft"
 	"layeh.com/radius/rfc2759"
 	"layeh.com/radius/rfc3079"
 )

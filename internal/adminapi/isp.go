@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/talkincode/toughradius/v9/internal/billing"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
-	"github.com/talkincode/toughradius/v9/internal/webserver"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/billing"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"gorm.io/gorm"
 )
 

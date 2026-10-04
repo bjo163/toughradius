@@ -19,7 +19,7 @@
 package adminapi
 
 import (
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 )
 
 // Init registers every admin API route group on the shared web server. It wires

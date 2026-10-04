@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/internal/app"
+	"github.com/bjo163/mwx-isp/internal/app"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2869"

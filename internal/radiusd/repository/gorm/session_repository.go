@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	cachepkg "github.com/talkincode/toughradius/v9/internal/radiusd/cache"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	cachepkg "github.com/bjo163/mwx-isp/internal/radiusd/cache"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

@@ -7,7 +7,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"github.com/talkincode/toughradius/v9/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 

@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/talkincode/toughradius/v9/config"
+	"github.com/bjo163/mwx-isp/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"

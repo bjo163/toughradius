@@ -17,8 +17,8 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	probing "github.com/prometheus-community/pro-bing"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/internal/securestore"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/securestore"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

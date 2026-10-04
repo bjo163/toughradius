@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/talkincode/toughradius/v9/internal/radiusd"
+	"github.com/bjo163/mwx-isp/internal/radiusd"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2866"

@@ -12,8 +12,8 @@ import (
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // TestRadiusClassInAccessAccept checks that a configured RFC 2865 Class

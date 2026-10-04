@@ -12,17 +12,17 @@ import (
 	"time"
 
 	"github.com/panjf2000/ants/v2"
-	"github.com/talkincode/toughradius/v9/config"
-	"github.com/talkincode/toughradius/v9/internal/app"
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	cachepkg "github.com/talkincode/toughradius/v9/internal/radiusd/cache"
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/registry"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/repository"
-	repogorm "github.com/talkincode/toughradius/v9/internal/radiusd/repository/gorm"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/huawei"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	cachepkg "github.com/bjo163/mwx-isp/internal/radiusd/cache"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/registry"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
+	repogorm "github.com/bjo163/mwx-isp/internal/radiusd/repository/gorm"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/huawei"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"layeh.com/radius"
@@ -33,9 +33,9 @@ import (
 	"layeh.com/radius/rfc4818"
 
 	// Import vendor parsers for auto-registration
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/auth"
-	vendorparsers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers"
-	_ "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/vendorparsers/parsers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/auth"
+	vendorparsers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	_ "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers/parsers"
 )
 
 const (

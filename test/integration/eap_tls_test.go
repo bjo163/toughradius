@@ -27,12 +27,12 @@ import (
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2869"
 
-	"github.com/talkincode/toughradius/v9/internal/domain"
-	eap "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
-	eaphandlers "github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/handlers"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap/tlsfragment"
-	"github.com/talkincode/toughradius/v9/internal/radiusd/vendors/microsoft"
-	"github.com/talkincode/toughradius/v9/pkg/common"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	eap "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
+	eaphandlers "github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/handlers"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap/tlsfragment"
+	"github.com/bjo163/mwx-isp/internal/radiusd/vendors/microsoft"
+	"github.com/bjo163/mwx-isp/pkg/common"
 )
 
 // TestEAPTLSEndToEnd drives a full EAP-TLS handshake over real RADIUS UDP packets

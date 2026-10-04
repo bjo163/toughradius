@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/talkincode/toughradius/v9/internal/radiusd/plugins/eap"
+	"github.com/bjo163/mwx-isp/internal/radiusd/plugins/eap"
 )
 
 const (

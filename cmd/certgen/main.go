@@ -37,7 +37,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/talkincode/toughradius/v9/pkg/certgen"
+	"github.com/bjo163/mwx-isp/pkg/certgen"
 )
 
 // version is the current version of the certificate generator tool.

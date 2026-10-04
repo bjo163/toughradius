@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	radiuserrors "github.com/talkincode/toughradius/v9/internal/radiusd/errors"
+	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
 )
 
 // Testpure logic functions without database dependency
