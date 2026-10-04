@@ -313,7 +313,10 @@ func (s *CoAService) resolveSession(ctx context.Context, acctSessionID string) (
 		}
 		return CoATarget{}, SessionIdentity{}, fmt.Errorf("coa: load session %s: %w", acctSessionID, err)
 	}
-	nas, err := s.GetNas(online.NasAddr, online.NasId)
+	if online.TenantID <= 0 {
+		return CoATarget{}, SessionIdentity{}, fmt.Errorf("coa: session %s has no tenant scope", acctSessionID)
+	}
+	nas, err := s.GetNasForTenant(online.TenantID, online.NasAddr, online.NasId)
 	if err != nil {
 		return CoATarget{}, SessionIdentity{}, fmt.Errorf("coa: resolve nas for session %s: %w", acctSessionID, err)
 	}

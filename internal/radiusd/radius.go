@@ -129,14 +129,33 @@ func (s *RadiusService) RADIUSSecret(ctx context.Context, remoteAddr net.Addr) (
 // GetNas looks up a NAS device by source IP (preferred) or identifier. Results
 // are cached, and a missing record is mapped to an unauthorized-NAS error.
 func (s *RadiusService) GetNas(ip, identifier string) (nas *domain.NetNas, err error) {
+	return s.getNas(context.Background(), ip, identifier)
+}
+
+// GetNasForTenant resolves the NAS at ip within tenantID and keeps its cache
+// entry isolated from other tenants. It returns an error when tenantID is not
+// positive, the NAS is missing, or its address is ambiguous within the tenant.
+// Session control operations use this method because different tenants may
+// configure the same private NAS address.
+func (s *RadiusService) GetNasForTenant(tenantID int64, ip, identifier string) (nas *domain.NetNas, err error) {
+	if tenantID <= 0 {
+		return nil, fmt.Errorf("radius: tenant id is required to resolve a tenant NAS")
+	}
+	return s.getNas(tenancy.WithTenantID(context.Background(), tenantID), ip, identifier)
+}
+
+func (s *RadiusService) getNas(ctx context.Context, ip, identifier string) (nas *domain.NetNas, err error) {
 	// RFC 2865 sections 2.4 and 5.32 require source-IP selection for the
 	// shared secret; NAS-Identifier must never act as a fallback authority.
 	cacheKey := ip
+	if tenantID, ok := tenancy.TenantID(ctx); ok {
+		cacheKey = fmt.Sprintf("tenant:%d:%s", tenantID, ip)
+	}
 	if cached, ok := s.nasCache.Get(cacheKey); ok {
 		return cached, nil
 	}
 	// Adapter: delegate to repository layer
-	nas, err = s.NasRepo.GetByIP(context.Background(), ip)
+	nas, err = s.NasRepo.GetByIP(ctx, ip)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, radiuserrors.NewUnauthorizedNasError(ip, identifier, err)

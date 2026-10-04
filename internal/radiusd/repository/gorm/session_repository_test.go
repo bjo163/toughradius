@@ -253,6 +253,27 @@ func TestSessionRepository_BatchDeleteByNas(t *testing.T) {
 	require.Equal(t, int64(0), total)
 }
 
+func TestSessionRepository_BatchDeleteByNasIsTenantScoped(t *testing.T) {
+	db := newSessionTestDB(t)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	repo := NewGormSessionRepository(db)
+	ctxA := tenancy.WithTenantID(context.Background(), 1)
+	ctxB := tenancy.WithTenantID(context.Background(), 2)
+
+	_, err := repo.Create(ctxA, &domain.RadiusOnline{ID: 101, TenantID: 1, Username: "a", AcctSessionId: "session-a", NasAddr: "10.0.0.1", NasId: "shared-nas"})
+	require.NoError(t, err)
+	_, err = repo.Create(ctxB, &domain.RadiusOnline{ID: 202, TenantID: 2, Username: "b", AcctSessionId: "session-b", NasAddr: "10.0.0.1", NasId: "shared-nas"})
+	require.NoError(t, err)
+
+	require.NoError(t, repo.BatchDeleteByNas(ctxA, "10.0.0.1", "shared-nas"))
+	remainingA, err := repo.GetBySessionId(ctxA, "session-a")
+	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	require.Nil(t, remainingA)
+	remainingB, err := repo.GetBySessionId(ctxB, "session-b")
+	require.NoError(t, err)
+	require.Equal(t, int64(2), remainingB.TenantID)
+}
+
 // TestSessionRepository_BatchDeleteByNas_NoArgs verifies that passing neither a
 // NAS address nor a NAS id is a safe no-op (does not delete everything).
 func TestSessionRepository_BatchDeleteByNas_NoArgs(t *testing.T) {
