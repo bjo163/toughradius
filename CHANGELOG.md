@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.3.1 — 2026-10-04
+
+Changes since v0.3.0:
+
+### Fixes and Improvements
+
+- ignore placeholder comments in env checks
+
 ## v0.3.0 — 2026-10-04
 
 Changes since v0.2.4:
