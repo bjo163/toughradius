@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.3.2 — 2026-10-04
+
+Changes since v0.3.1:
+
+### Fixes and Improvements
+
+- harden VPS installer and onboarding
+
 ## v0.3.1 — 2026-10-04
 
 Changes since v0.3.0:
