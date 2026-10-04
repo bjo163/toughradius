@@ -11,18 +11,19 @@ import (
 	"time"
 	_ "time/tzdata"
 
-	"github.com/robfig/cron/v3"
-	"github.com/spf13/cast"
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/demoseed"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/networkmonitor"
 	"github.com/bjo163/mwx-isp/internal/notify"
 	"github.com/bjo163/mwx-isp/pkg/metrics"
+	"github.com/robfig/cron/v3"
+	"github.com/spf13/cast"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -347,31 +348,115 @@ func (a *Application) MigrateDB(track bool) (err error) {
 			}
 		}
 	}()
+	// Provision a stable default organization before adding tenant ownership to
+	// legacy rows. Existing records receive tenant_id=1 from the additive schema
+	// default and are explicitly backfilled again after migration.
+	if err := a.ensureDefaultTenant(); err != nil {
+		return err
+	}
 	// Remove duplicate online rows and drop the legacy non-unique index before
 	// AutoMigrate creates the unique index on radius_online.acct_session_id
 	// (idempotency backstop, including the upgrade path).
 	a.dedupOnlineSessions()
 	a.dropLegacyOnlineSessionIndex()
+	var migrateErr error
 	if track {
-		if mErr := a.gormDB.Debug().Migrator().AutoMigrate(domain.Tables...); mErr != nil {
-			zap.S().Error(mErr)
-			return mErr
-		}
+		migrateErr = a.gormDB.Debug().Migrator().AutoMigrate(domain.Tables...)
 	} else {
-		if mErr := a.gormDB.Migrator().AutoMigrate(domain.Tables...); mErr != nil {
-			zap.S().Error(mErr)
-			return mErr
+		migrateErr = a.gormDB.Migrator().AutoMigrate(domain.Tables...)
+	}
+	if migrateErr != nil {
+		zap.S().Error(migrateErr)
+		return migrateErr
+	}
+	if err := a.backfillDefaultTenantRows(); err != nil {
+		return err
+	}
+	if err := a.dropLegacyTenantUniqueIndices(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Application) ensureDefaultTenant() error {
+	if a == nil || a.gormDB == nil {
+		return fmt.Errorf("database is required to initialize default tenant")
+	}
+	if err := a.gormDB.AutoMigrate(&domain.Tenant{}); err != nil {
+		return fmt.Errorf("create tenant catalog: %w", err)
+	}
+	tenant := domain.Tenant{
+		ID: domain.DefaultTenantID, Name: "Default ISP", Slug: "default", Kind: "isp", Status: "active",
+	}
+	if err := a.gormDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&tenant).Error; err != nil {
+		return fmt.Errorf("initialize default tenant: %w", err)
+	}
+	// PostgreSQL sequences are not advanced by explicit-ID inserts. Keep the
+	// next generated tenant ID above the default row and any pre-existing rows.
+	if a.gormDB.Name() == "postgres" {
+		var sequenceValue int64
+		if err := a.gormDB.Raw(`SELECT setval(pg_get_serial_sequence('tenant', 'id'), GREATEST(COALESCE((SELECT MAX(id) FROM tenant), 1), 1), true)`).Scan(&sequenceValue).Error; err != nil {
+			return fmt.Errorf("advance tenant ID sequence: %w", err)
+		}
+	}
+	return nil
+}
+
+func (a *Application) backfillDefaultTenantRows() error {
+	for _, model := range tenantOwnedModels {
+		if !a.gormDB.Migrator().HasTable(model) || !a.gormDB.Migrator().HasColumn(model, "TenantID") {
+			continue
+		}
+		if err := a.gormDB.Model(model).
+			Where("tenant_id IS NULL OR tenant_id = 0").
+			Update("tenant_id", domain.DefaultTenantID).Error; err != nil {
+			return fmt.Errorf("backfill default tenant for %T: %w", model, err)
+		}
+	}
+	return nil
+}
+
+var tenantOwnedModels = []interface{}{
+	&domain.SysOpr{}, &domain.SysOprLog{}, &domain.NetNode{}, &domain.NetNas{},
+	&domain.NetMonitorTarget{}, &domain.NetMonitorSample{}, &domain.NetMonitorIncident{},
+	&domain.NotificationSettings{}, &domain.NotificationOutbox{}, &domain.RadiusAccounting{},
+	&domain.RadiusOnline{}, &domain.RadiusSessionActionAudit{}, &domain.RadiusProfile{}, &domain.RadiusUser{},
+	&domain.Customer{}, &domain.InternetPackage{}, &domain.Subscription{}, &domain.Invoice{},
+	&domain.InvoiceItem{}, &domain.Payment{}, &domain.BillingEvent{}, &domain.DocumentSequence{},
+}
+
+func (a *Application) dropLegacyTenantUniqueIndices() error {
+	legacy := []struct {
+		model interface{}
+		name  string
+	}{
+		{&domain.RadiusUser{}, "idx_radius_user_username"},
+		{&domain.RadiusOnline{}, "udx_radius_online_acct_session_id"},
+		{&domain.Customer{}, "idx_isp_customer_customer_no"},
+		{&domain.InternetPackage{}, "idx_isp_package_code"},
+		{&domain.Subscription{}, "idx_isp_subscription_subscription_no"},
+		{&domain.Invoice{}, "idx_isp_invoice_invoice_no"},
+		{&domain.Invoice{}, "udx_isp_invoice_period"},
+		{&domain.Payment{}, "idx_isp_payment_payment_no"},
+		{&domain.DocumentSequence{}, "udx_isp_document_sequence"},
+		{&domain.NetMonitorTarget{}, "idx_net_monitor_target_name"},
+		{&domain.NotificationOutbox{}, "idx_notification_outbox_dedupe_key"},
+	}
+	for _, index := range legacy {
+		if !a.gormDB.Migrator().HasIndex(index.model, index.name) {
+			continue
+		}
+		if err := a.gormDB.Migrator().DropIndex(index.model, index.name); err != nil {
+			return fmt.Errorf("drop legacy global unique index %s: %w", index.name, err)
 		}
 	}
 	return nil
 }
 
 // dropLegacyOnlineSessionIndex removes the pre-existing non-unique index on
-// radius_online.acct_session_id created by older schema versions (the column
-// used gorm:"index", named idx_radius_online_acct_session_id). AutoMigrate will
-// not convert that index to unique, so it must be dropped first; AutoMigrate
-// then creates the new unique index (udx_radius_online_acct_session_id) that the
-// ON CONFLICT idempotency clause depends on. Best-effort: failures are logged.
+// radius_online.acct_session_id created by older schema versions. The new
+// tenant-aware unique index has a different name and is added by AutoMigrate.
+// Best-effort: failures are logged.
 func (a *Application) dropLegacyOnlineSessionIndex() {
 	if a.gormDB == nil {
 		return
@@ -405,10 +490,11 @@ func (a *Application) dedupOnlineSessions() {
 		return
 	}
 	table := domain.RadiusOnline{}.TableName()
-	sql := fmt.Sprintf(
-		"DELETE FROM %s WHERE id NOT IN (SELECT min_id FROM (SELECT MIN(id) AS min_id FROM %s GROUP BY acct_session_id) AS keep_ids)",
-		table, table,
-	)
+	groupBy := "acct_session_id"
+	if a.gormDB.Migrator().HasColumn(&domain.RadiusOnline{}, "TenantID") {
+		groupBy = "tenant_id, acct_session_id"
+	}
+	sql := fmt.Sprintf("DELETE FROM %s WHERE id NOT IN (SELECT min_id FROM (SELECT MIN(id) AS min_id FROM %s GROUP BY %s) AS keep_ids)", table, table, groupBy)
 	if err := a.gormDB.Exec(sql).Error; err != nil {
 		zap.L().Warn("dedup radius_online before unique index failed",
 			zap.String("namespace", "radius"), zap.Error(err))
@@ -421,7 +507,7 @@ func (a *Application) DropAll() {
 
 func (a *Application) InitDb() {
 	_ = a.gormDB.Migrator().DropTable(domain.Tables...)
-	err := a.gormDB.Migrator().AutoMigrate(domain.Tables...)
+	err := a.MigrateDB(false)
 	if err != nil {
 		zap.S().Error(err)
 	}

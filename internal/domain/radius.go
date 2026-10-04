@@ -8,7 +8,8 @@ import (
 
 // RadiusProfile RADIUS billing profile
 type RadiusProfile struct {
-	ID             int64  `json:"id,string" form:"id"`                      // Primary key ID
+	ID             int64  `json:"id,string" form:"id"` // Primary key ID
+	TenantID       int64  `json:"-" form:"-" gorm:"not null;default:1;index"`
 	NodeId         int64  `json:"node_id,string" form:"node_id"`            // Node ID
 	Name           string `json:"name" form:"name"`                         // Profile name
 	Status         string `gorm:"index" json:"status" form:"status"`        // Profile status: 0=disabled 1=enabled
@@ -41,26 +42,27 @@ func (RadiusProfile) TableName() string {
 
 // RadiusUser RADIUS Authentication account
 type RadiusUser struct {
-	ID             int64  `json:"id,string" form:"id"`                              // Primary key ID
-	NodeId         int64  `json:"node_id,string" form:"node_id"`                    // Node ID
-	ProfileId      int64  `gorm:"index" json:"profile_id,string" form:"profile_id"` // RADIUS profile ID
-	Realname       string `json:"realname" form:"realname"`                         // Contact name
-	Email          string `json:"email" form:"email"`                               // Email address
-	Mobile         string `json:"mobile" form:"mobile"`                             // Contact phone
-	Address        string `json:"address" form:"address"`                           // Contact address
-	Username       string `json:"username" gorm:"uniqueIndex" form:"username"`      // Account name
-	Password       string `json:"password" form:"password"`                         // Password
-	AddrPool       string `json:"addr_pool" form:"addr_pool"`                       // Address pool
-	ActiveNum      int    `gorm:"index" json:"active_num" form:"active_num"`        // Concurrent sessions
-	UpRate         int    `json:"up_rate" form:"up_rate"`                           // Upload rate
-	DownRate       int    `json:"down_rate" form:"down_rate"`                       // Download rate
-	Vlanid1        int    `json:"vlanid1" form:"vlanid1"`                           // VLAN ID 1
-	Vlanid2        int    `json:"vlanid2" form:"vlanid2"`                           // VLAN ID 2
-	IpAddr         string `json:"ip_addr" form:"ip_addr"`                           // Static IP
-	IpV6Addr       string `json:"ipv6_addr" form:"ipv6_addr"`                       // Static IPv6 address
-	MacAddr        string `json:"mac_addr" form:"mac_addr"`                         // MAC address
-	Domain         string `json:"domain" form:"domain"`                             // Domain name for vendor-specific features (e.g., Huawei domain)
-	IPv6PrefixPool string `json:"ipv6_prefix_pool" form:"ipv6_prefix_pool"`         // IPv6 prefix pool name (inherited from profile or user-specific)
+	ID             int64  `json:"id,string" form:"id"`                                                                    // Primary key ID
+	NodeId         int64  `json:"node_id,string" form:"node_id"`                                                          // Node ID
+	ProfileId      int64  `gorm:"index" json:"profile_id,string" form:"profile_id"`                                       // RADIUS profile ID
+	Realname       string `json:"realname" form:"realname"`                                                               // Contact name
+	Email          string `json:"email" form:"email"`                                                                     // Email address
+	Mobile         string `json:"mobile" form:"mobile"`                                                                   // Contact phone
+	Address        string `json:"address" form:"address"`                                                                 // Contact address
+	Username       string `json:"username" gorm:"uniqueIndex:udx_radius_user_tenant_username,priority:2" form:"username"` // Account name
+	TenantID       int64  `json:"-" form:"-" gorm:"not null;default:1;uniqueIndex:udx_radius_user_tenant_username,priority:1;index"`
+	Password       string `json:"password" form:"password"`                  // Password
+	AddrPool       string `json:"addr_pool" form:"addr_pool"`                // Address pool
+	ActiveNum      int    `gorm:"index" json:"active_num" form:"active_num"` // Concurrent sessions
+	UpRate         int    `json:"up_rate" form:"up_rate"`                    // Upload rate
+	DownRate       int    `json:"down_rate" form:"down_rate"`                // Download rate
+	Vlanid1        int    `json:"vlanid1" form:"vlanid1"`                    // VLAN ID 1
+	Vlanid2        int    `json:"vlanid2" form:"vlanid2"`                    // VLAN ID 2
+	IpAddr         string `json:"ip_addr" form:"ip_addr"`                    // Static IP
+	IpV6Addr       string `json:"ipv6_addr" form:"ipv6_addr"`                // Static IPv6 address
+	MacAddr        string `json:"mac_addr" form:"mac_addr"`                  // MAC address
+	Domain         string `json:"domain" form:"domain"`                      // Domain name for vendor-specific features (e.g., Huawei domain)
+	IPv6PrefixPool string `json:"ipv6_prefix_pool" form:"ipv6_prefix_pool"`  // IPv6 prefix pool name (inherited from profile or user-specific)
 	// DelegatedIpv6Prefix is a static IPv6 prefix delegated to the subscriber via
 	// DHCPv6-PD and issued as the RADIUS Delegated-IPv6-Prefix attribute (RFC 4818,
 	// attribute 123), e.g. "2001:db8:1234::/48". It is per-user because a delegated
@@ -95,6 +97,7 @@ func (RadiusUser) TableName() string {
 // RadiusOnline stores active online session state tracked from accounting packets.
 type RadiusOnline struct {
 	ID                  int64     `json:"id,string"` // Primary key ID
+	TenantID            int64     `json:"-" gorm:"not null;default:1;uniqueIndex:udx_radius_online_tenant_session,priority:1;index"`
 	Username            string    `gorm:"index" json:"username"`
 	NasId               string    `json:"nas_id"`
 	NasAddr             string    `json:"nas_addr"`
@@ -111,7 +114,7 @@ type RadiusOnline struct {
 	NasPortId           string    `json:"nas_port_id"`
 	NasPortType         int       `json:"nas_port_type"`
 	ServiceType         int       `json:"service_type"`
-	AcctSessionId       string    `gorm:"uniqueIndex:udx_radius_online_acct_session_id" json:"acct_session_id"`
+	AcctSessionId       string    `gorm:"uniqueIndex:udx_radius_online_tenant_session,priority:2" json:"acct_session_id"`
 	AcctSessionTime     int       `json:"acct_session_time"`
 	AcctInputTotal      int64     `json:"acct_input_total,string"`
 	AcctOutputTotal     int64     `json:"acct_output_total,string"`
@@ -130,6 +133,7 @@ func (RadiusOnline) TableName() string {
 // dynamic-authorization actions (Disconnect / CoA) on online sessions.
 type RadiusSessionActionAudit struct {
 	ID             int64     `json:"id,string"`
+	TenantID       int64     `json:"-" gorm:"not null;default:1;index"`
 	SessionID      int64     `gorm:"index" json:"session_id,string"`
 	AcctSessionID  string    `gorm:"index" json:"acct_session_id"`
 	Action         string    `gorm:"index" json:"action"`
@@ -159,6 +163,7 @@ func (RadiusSessionActionAudit) TableName() string {
 // RadiusAccounting stores finalized accounting records for session history.
 type RadiusAccounting struct {
 	ID                  int64     `json:"id,string"` // Primary key ID
+	TenantID            int64     `json:"-" gorm:"not null;default:1;index"`
 	Username            string    `gorm:"index" json:"username"`
 	AcctSessionId       string    `gorm:"index" json:"acct_session_id"`
 	NasId               string    `json:"nas_id"`

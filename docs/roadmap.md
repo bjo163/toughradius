@@ -42,7 +42,7 @@ This is the canonical planning surface and task source: milestone status, guardr
 | M12 | EAP-PWD password authentication | TR-F004 | P3 | Planned |
 | M13 | Bilingual documentation site with mdbook | TR-F023 | P2 | Delivered |
 | M14 | LDAP / AD bind authentication backend for PAP-family methods | TR-F025 | P2 | In progress |
-| M15 | Multi-tenant ISP and RT/RW Net isolation | TR-F033 | P1 | Planned |
+| M15 | Multi-tenant ISP and RT/RW Net isolation | TR-F033 | P1 | In progress |
 | M16 | Automated dev-to-main versioning, changelog, and releases | TR-F022 | P2 | Planned |
 
 ## Cross-Cutting Baseline
@@ -61,7 +61,7 @@ The scheduled **M5 vendor VSA expansion** batch (M5.1 inventory + M5.2/M5.3/M5.4
 | 2 | M7 upstream and RFC compliance tracking | Delivered | M7.1 evaluation closed with a no-sync decision; recurring upstream checks continue via `.agents/skills/sync-upstream-radius/SKILL.md` and the cross-cutting baseline |
 | 3 | M10 EAP-TLS 1.3 / RFC 9190 | In progress | M10.1 (#562) TLS 1.3 negotiation + §2.1.1 protected success; M10.2 (#564) version-branched MSK → MS-MPPE derivation; M10.3 (#607) tolerate `close_notify` after the success point (RFC 9190 §2.1.4/§2.5); next M10.5 identity protection / anonymous NAI |
 | 4 | M14.5 LDAP connection robustness | Blocked: waiting for load evidence | Revisit pooling/reconnect design only when connection cost or cancellation evidence justifies the complexity |
-| 5 | M15 multi-tenant ISP operations | Planned | Tenant data model and safe migration first; then operator/API isolation, RADIUS, operational jobs, UI, and PostgreSQL acceptance |
+| 5 | M15 multi-tenant ISP operations | In progress | Tenant catalog, default-tenant backfill, and tenant-scoped unique keys are being implemented first; operator/API isolation, RADIUS, operational jobs, UI, and PostgreSQL acceptance remain |
 | 6 | M16 release automation | Planned | Keep only `dev` and `main`; promote through the existing review PR; create an idempotent SemVer tag, changelog, GitHub Release, binaries, and GHCR image after approved main promotion |
 
 Agent-facing unchecked tasks:

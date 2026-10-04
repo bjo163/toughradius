@@ -36,7 +36,7 @@ func (r *GormSessionRepository) Create(ctx context.Context, session *domain.Radi
 	}
 	result := r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "acct_session_id"}},
+			Columns:   []clause.Column{{Name: "tenant_id"}, {Name: "acct_session_id"}},
 			DoNothing: true,
 		}).
 		Create(session)

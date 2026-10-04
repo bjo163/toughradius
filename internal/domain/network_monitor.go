@@ -7,7 +7,8 @@ import "time"
 // ciphertext and are never included in JSON responses.
 type NetMonitorTarget struct {
 	ID                      int64      `json:"id,string"`
-	Name                    string     `json:"name" gorm:"size:120;not null;uniqueIndex"`
+	TenantID                int64      `json:"-" gorm:"not null;default:1;uniqueIndex:udx_net_monitor_target_tenant_name,priority:1;index"`
+	Name                    string     `json:"name" gorm:"size:120;not null;uniqueIndex:udx_net_monitor_target_tenant_name,priority:2"`
 	Kind                    string     `json:"kind" gorm:"size:24;not null"`
 	Address                 string     `json:"address" gorm:"size:45;not null;index"`
 	ProbeType               string     `json:"probe_type" gorm:"size:12;not null"`
@@ -40,6 +41,7 @@ func (NetMonitorTarget) TableName() string { return "net_monitor_target" }
 // read-only SNMP interface counters for display and rate calculations.
 type NetMonitorSample struct {
 	ID                   int64     `json:"id,string"`
+	TenantID             int64     `json:"-" gorm:"not null;default:1;index"`
 	TargetID             int64     `json:"target_id,string" gorm:"not null;index:idx_net_monitor_sample_target_time,priority:1"`
 	CheckedAt            time.Time `json:"checked_at" gorm:"not null;index:idx_net_monitor_sample_target_time,priority:2"`
 	Reachable            bool      `json:"reachable" gorm:"not null"`
@@ -55,6 +57,7 @@ func (NetMonitorSample) TableName() string { return "net_monitor_sample" }
 // NetMonitorIncident records a transition to down and its eventual recovery.
 type NetMonitorIncident struct {
 	ID         int64      `json:"id,string"`
+	TenantID   int64      `json:"-" gorm:"not null;default:1;index"`
 	TargetID   int64      `json:"target_id,string" gorm:"not null;index:idx_net_monitor_incident_target_open,priority:1"`
 	State      string     `json:"state" gorm:"size:12;not null;index:idx_net_monitor_incident_target_open,priority:2"`
 	Summary    string     `json:"summary" gorm:"size:240;not null"`
@@ -69,6 +72,7 @@ func (NetMonitorIncident) TableName() string { return "net_monitor_incident" }
 // operational WhatsApp notifications. It contains no WhatsApp device keys.
 type NotificationSettings struct {
 	ID                 int64      `json:"id,string" gorm:"primaryKey"`
+	TenantID           int64      `json:"-" gorm:"not null;default:1;index"`
 	WhatsAppEnabled    bool       `json:"whatsapp_enabled"`
 	RiskAcknowledgedAt *time.Time `json:"risk_acknowledged_at,omitempty"`
 	RecipientsJSON     string     `json:"recipients_json" gorm:"type:text"`
@@ -84,7 +88,8 @@ func (NotificationSettings) TableName() string { return "notification_settings" 
 // subscriber passwords or other authentication secrets.
 type NotificationOutbox struct {
 	ID            int64      `json:"id,string"`
-	DedupeKey     string     `json:"dedupe_key" gorm:"size:180;not null;uniqueIndex"`
+	TenantID      int64      `json:"-" gorm:"not null;default:1;uniqueIndex:udx_notification_outbox_tenant_dedupe,priority:1;index"`
+	DedupeKey     string     `json:"dedupe_key" gorm:"size:180;not null;uniqueIndex:udx_notification_outbox_tenant_dedupe,priority:2"`
 	EventType     string     `json:"event_type" gorm:"size:48;not null;index"`
 	Recipient     string     `json:"recipient" gorm:"size:32;not null"`
 	Body          string     `json:"body" gorm:"size:1000;not null"`

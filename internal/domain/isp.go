@@ -48,7 +48,8 @@ const (
 // lifecycles.
 type Customer struct {
 	ID         int64     `json:"id,string" gorm:"primaryKey"`
-	CustomerNo string    `json:"customer_no" gorm:"uniqueIndex;size:32"`
+	TenantID   int64     `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_customer_tenant_no,priority:1;index"`
+	CustomerNo string    `json:"customer_no" gorm:"uniqueIndex:udx_isp_customer_tenant_no,priority:2;size:32"`
 	Name       string    `json:"name" gorm:"index;size:150;not null"`
 	Phone      string    `json:"phone" gorm:"size:32"`
 	Email      string    `json:"email" gorm:"size:150"`
@@ -69,7 +70,8 @@ func (Customer) TableName() string { return "isp_customer" }
 // network policy. Price is an integer amount in IDR.
 type InternetPackage struct {
 	ID              int64     `json:"id,string" gorm:"primaryKey"`
-	Code            string    `json:"code" gorm:"uniqueIndex;size:40;not null"`
+	TenantID        int64     `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_package_tenant_code,priority:1;index"`
+	Code            string    `json:"code" gorm:"uniqueIndex:udx_isp_package_tenant_code,priority:2;size:40;not null"`
 	Name            string    `json:"name" gorm:"index;size:150;not null"`
 	Price           int64     `json:"price" gorm:"not null"`
 	RadiusProfileID int64     `json:"radius_profile_id,string" gorm:"index;not null"`
@@ -87,7 +89,8 @@ func (InternetPackage) TableName() string { return "isp_package" }
 // RADIUS account.
 type Subscription struct {
 	ID               int64     `json:"id,string" gorm:"primaryKey"`
-	SubscriptionNo   string    `json:"subscription_no" gorm:"uniqueIndex;size:32"`
+	TenantID         int64     `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_subscription_tenant_no,priority:1;index"`
+	SubscriptionNo   string    `json:"subscription_no" gorm:"uniqueIndex:udx_isp_subscription_tenant_no,priority:2;size:32"`
 	CustomerID       int64     `json:"customer_id,string" gorm:"index;not null"`
 	PackageID        int64     `json:"package_id,string" gorm:"index;not null"`
 	RadiusUserID     int64     `json:"radius_user_id,string" gorm:"index"`
@@ -107,12 +110,13 @@ func (Subscription) TableName() string { return "isp_subscription" }
 // use integer IDR to avoid floating point rounding.
 type Invoice struct {
 	ID             int64     `json:"id,string" gorm:"primaryKey"`
-	InvoiceNo      string    `json:"invoice_no" gorm:"uniqueIndex;size:40"`
+	TenantID       int64     `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_invoice_tenant_period,priority:1;uniqueIndex:udx_isp_invoice_tenant_no,priority:1;index"`
+	InvoiceNo      string    `json:"invoice_no" gorm:"uniqueIndex:udx_isp_invoice_tenant_no,priority:2;size:40"`
 	CustomerID     int64     `json:"customer_id,string" gorm:"index;not null"`
-	SubscriptionID int64     `json:"subscription_id,string" gorm:"index;not null;uniqueIndex:udx_isp_invoice_period"`
+	SubscriptionID int64     `json:"subscription_id,string" gorm:"index;not null;uniqueIndex:udx_isp_invoice_tenant_period,priority:2"`
 	InvoiceDate    time.Time `json:"invoice_date" gorm:"not null"`
 	DueDate        time.Time `json:"due_date" gorm:"index;not null"`
-	PeriodStart    time.Time `json:"period_start" gorm:"not null;uniqueIndex:udx_isp_invoice_period"`
+	PeriodStart    time.Time `json:"period_start" gorm:"not null;uniqueIndex:udx_isp_invoice_tenant_period,priority:3"`
 	PeriodEnd      time.Time `json:"period_end" gorm:"not null"`
 	Subtotal       int64     `json:"subtotal" gorm:"not null"`
 	Total          int64     `json:"total" gorm:"not null"`
@@ -130,6 +134,7 @@ func (Invoice) TableName() string { return "isp_invoice" }
 // InvoiceItem preserves the package price at invoice creation time.
 type InvoiceItem struct {
 	ID          int64  `json:"id,string" gorm:"primaryKey"`
+	TenantID    int64  `json:"-" gorm:"not null;default:1;index"`
 	InvoiceID   int64  `json:"invoice_id,string" gorm:"index;not null"`
 	Description string `json:"description" gorm:"size:255;not null"`
 	Quantity    int64  `json:"quantity" gorm:"not null;default:1"`
@@ -143,7 +148,8 @@ func (InvoiceItem) TableName() string { return "isp_invoice_item" }
 // Payment records a manually received payment applied to exactly one invoice.
 type Payment struct {
 	ID         int64     `json:"id,string" gorm:"primaryKey"`
-	PaymentNo  string    `json:"payment_no" gorm:"uniqueIndex;size:40"`
+	TenantID   int64     `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_payment_tenant_no,priority:1;index"`
+	PaymentNo  string    `json:"payment_no" gorm:"uniqueIndex:udx_isp_payment_tenant_no,priority:2;size:40"`
 	CustomerID int64     `json:"customer_id,string" gorm:"index;not null"`
 	InvoiceID  int64     `json:"invoice_id,string" gorm:"index;not null"`
 	Amount     int64     `json:"amount" gorm:"not null"`
@@ -163,6 +169,7 @@ func (Payment) TableName() string { return "isp_payment" }
 // transitions.
 type BillingEvent struct {
 	ID             int64     `json:"id,string" gorm:"primaryKey"`
+	TenantID       int64     `json:"-" gorm:"not null;default:1;index"`
 	CustomerID     int64     `json:"customer_id,string" gorm:"index"`
 	SubscriptionID int64     `json:"subscription_id,string" gorm:"index"`
 	InvoiceID      int64     `json:"invoice_id,string" gorm:"index"`
@@ -177,10 +184,11 @@ func (BillingEvent) TableName() string { return "isp_billing_event" }
 // DocumentSequence stores the next monthly invoice/payment serial. The kind
 // and period pair is unique so allocation can be atomic across app instances.
 type DocumentSequence struct {
-	ID     int64  `json:"id,string" gorm:"primaryKey"`
-	Kind   string `json:"kind" gorm:"size:24;not null;uniqueIndex:udx_isp_document_sequence"`
-	Period string `json:"period" gorm:"size:6;not null;uniqueIndex:udx_isp_document_sequence"`
-	Value  int64  `json:"value" gorm:"not null"`
+	ID       int64  `json:"id,string" gorm:"primaryKey"`
+	TenantID int64  `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_document_sequence_tenant,priority:1;index"`
+	Kind     string `json:"kind" gorm:"size:24;not null;uniqueIndex:udx_isp_document_sequence_tenant,priority:2"`
+	Period   string `json:"period" gorm:"size:6;not null;uniqueIndex:udx_isp_document_sequence_tenant,priority:3"`
+	Value    int64  `json:"value" gorm:"not null"`
 }
 
 // TableName returns the database table name for DocumentSequence.

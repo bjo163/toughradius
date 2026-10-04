@@ -3,6 +3,8 @@ package domain
 // Tables lists the complete set of domain models migrated by application startup.
 // New ISP models are appended so existing RADIUS tables and subscriber rows remain intact.
 var Tables = []interface{}{
+	// Platform tenancy
+	&Tenant{},
 	// System
 	&SysConfig{},
 	&SysOpr{},

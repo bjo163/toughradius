@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/glebarez/sqlite"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/pkg/common"
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -21,14 +21,14 @@ func newTestApplication(t *testing.T) *Application {
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
 
-	require.NoError(t, db.AutoMigrate(domain.Tables...))
-
-	return &Application{
+	app := &Application{
 		gormDB: db,
 		appConfig: &config.AppConfig{
 			System: config.SysConfig{Workdir: t.TempDir(), Debug: true},
 		},
 	}
+	require.NoError(t, app.MigrateDB(false))
+	return app
 }
 
 func TestIsWellKnownBootstrapPassword(t *testing.T) {
