@@ -1,77 +1,55 @@
-# ToughRADIUS Handbook
+# MWX-ISP Handbook
 
-Welcome to the **ToughRADIUS Handbook** — the canonical, in-repository, bilingual
-documentation site for the [ToughRADIUS](https://github.com/talkincode/toughradius)
-RADIUS server. It is built with [mdBook](https://rust-lang.github.io/mdBook/) and
-lives in the repository under `docs-site/`, so the documentation is versioned,
-reviewed, and validated by CI together with the code it describes.
+Welcome to the **MWX-ISP Handbook**, the bilingual, version-controlled guide to
+the MWX-ISP ISP management, billing, and RADIUS platform. The handbook lives in
+[`docs-site/`](https://github.com/bjo163/mwx-isp/tree/main/docs-site) and is
+built with [mdBook](https://rust-lang.github.io/mdBook/).
 
-![ToughRADIUS philosophy cover](./assets/toughradius-philosophy-cover.png)
+![MWX-ISP — ISP operations and RADIUS](./assets/mwx-isp-cover.svg)
 
-The handbook is organized into two mirrored language sections. Pick a language to
-begin:
+Choose a language to begin:
 
 - **English** — start with the [Overview](./en/overview.md).
 - **中文** — 从[概述](./zh/overview.md)开始。
 
-Each chapter exists in both languages with a matching structure, and the pages
-cross-link to their counterparts so you can switch language at any point.
+The paired chapters use matching names and link to their translations.
 
-> **Relationship to the existing GitBook site.** This handbook is published to
-> GitHub Pages at its custom domain <https://www.toughradius.net/>, while GitBook
-> renders the same sources at `docs.toughradius.net`. The mdBook handbook
-> **coexists** with GitBook from a single source of truth rather than replacing it;
-> see
-> [mdbook & GitBook Coexistence](./en/gitbook-coexistence.md) /
-> [mdbook 与 GitBook 并存](./zh/gitbook-coexistence.md) for the single-source-of-truth
-> policy and the boundary between the two pipelines.
+> **Published handbook.** GitHub Pages publishes this repository's handbook at
+> <https://bjo163.github.io/mwx-isp/>. Older ToughRADIUS-branded domains and
+> GitBook links may still exist outside this repository; they are legacy
+> destinations and are not configured by this Pages workflow.
 
-## Build it locally
+## Build locally
 
 ```bash
-# Install mdBook (https://rust-lang.github.io/mdBook/guide/installation.html)
-cargo install mdbook            # or: brew install mdbook
-
-# Build the static site into docs-site/book/
+cargo install mdbook
 mdbook build docs-site
-
-# Or serve with live reload at http://localhost:3000
 mdbook serve docs-site
 ```
 
 ---
 
-# ToughRADIUS 使用手册
+# MWX-ISP 使用手册
 
-欢迎来到 **ToughRADIUS 使用手册** —— 这是
-[ToughRADIUS](https://github.com/talkincode/toughradius) RADIUS 服务器
-随仓库维护的中英文双语文档站点。它基于
-[mdBook](https://rust-lang.github.io/mdBook/) 构建，位于仓库的 `docs-site/`
-目录下，因此文档与代码一起被版本化、评审，并由 CI 校验。
+欢迎阅读 **MWX-ISP 使用手册**，这是 MWX-ISP ISP 管理、计费与 RADIUS 平台的双语版本化指南。手册位于仓库
+[`docs-site/`](https://github.com/bjo163/mwx-isp/tree/main/docs-site)，并使用
+[mdBook](https://rust-lang.github.io/mdBook/) 构建。
 
-手册分为结构一一对应的两个语言区。请选择语言开始阅读：
+选择语言开始阅读：
 
-- **English** — 从 [Overview](./en/overview.md) 开始。
+- **English** — start with the [Overview](./en/overview.md).
 - **中文** — 从[概述](./zh/overview.md)开始。
 
-每个章节都提供中英文两个版本且结构对应，页面之间相互交叉链接，方便随时切换语言。
+中英文对应章节使用相同文件名，并提供互相跳转的链接。
 
-> **与现有 GitBook 站点的关系。** 本手册部署到 GitHub Pages，使用自定义域名
-> <https://www.toughradius.net/> 对外服务；GitBook 则在 `docs.toughradius.net`
-> 渲染同一份源文件。本 mdBook 手册基于单一事实来源与 GitBook **并存**而非替代；
-> 单一事实来源策略与两套管线的边界详见
-> [mdbook 与 GitBook 并存](./zh/gitbook-coexistence.md) /
-> [mdbook & GitBook Coexistence](./en/gitbook-coexistence.md)。
+> **手册发布地址。** GitHub Pages 在
+> <https://bjo163.github.io/mwx-isp/> 发布本仓库的手册。仓库之外仍可能存在旧
+> ToughRADIUS 品牌域名或 GitBook 链接；它们属于旧地址，不由本 Pages 工作流配置。
 
 ## 本地构建
 
 ```bash
-# 安装 mdBook（https://rust-lang.github.io/mdBook/guide/installation.html）
-cargo install mdbook            # 或：brew install mdbook
-
-# 将静态站点构建到 docs-site/book/
+cargo install mdbook
 mdbook build docs-site
-
-# 或开启热重载预览，访问 http://localhost:3000
 mdbook serve docs-site
 ```

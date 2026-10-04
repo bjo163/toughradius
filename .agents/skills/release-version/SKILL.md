@@ -1,6 +1,6 @@
 ---
 name: release-version
-description: Review merged PRs since the last Git tag and decide whether a ToughRADIUS release is warranted. Use when Codex is asked to prepare a version release, audit unreleased changes, decide whether to publish, create a new release tag, or tag origin/main after PR review.
+description: Review merged PRs since the last Git tag and decide whether a MWX-ISP release is warranted. Use when Codex is asked to prepare a version release, audit unreleased changes, decide whether to publish, create a new release tag, or tag origin/main after PR review.
 ---
 
 # Skill: Release Version
@@ -47,23 +47,18 @@ Use this skill to turn merged PR history into a release decision and, when warra
      ```
      gh run list --branch main --limit 10 --json databaseId,headSha,status,conclusion,workflowName,event
      ```
-   - `v*` tags also trigger `.github/workflows/docker-publish.yml`. Confirm
-     Docker Hub credentials (`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`) are
-     configured and writable. For GHCR, confirm the `talkincode/toughradius`
-     package inherits this repository's Actions access, or that
-     `PKG_GITHUB_TOKEN` has `write:packages` (`PKG_GITHUB_USERNAME` is optional
-     when the token owner differs from the tag actor). The Docker workflow treats
-     Docker Hub as required, probes GHCR write access before building, skips the
-     GHCR push when the probe is denied, and reports the result in the run
-     summary; fix package access and rerun the tag workflow rather than creating
-     a duplicate tag for the same source.
+   - `v*` tags also trigger `.github/workflows/docker-publish.yml`. It publishes
+     `ghcr.io/bjo163/mwx-isp` using this repository's `GITHUB_TOKEN` with
+     `packages: write`; no Docker Hub credentials are required. Confirm the
+     package is visible to intended users and inspect the workflow result after
+     tagging.
    - If the repository has release notes, changelog, packaging, or version-file conventions, update them in a PR first. This skill only creates a tag directly when no source-file change is required.
 
 6. **Create the tag only when release is warranted.**
    Use an annotated tag at the exact target SHA:
    ```
    target=$(git rev-parse origin/main)
-   git tag -a <new-tag> "$target" -m "$(cat /tmp/toughradius-release-notes.txt)"
+   git tag -a <new-tag> "$target" -m "$(cat /tmp/mwx-isp-release-notes.txt)"
    git push origin <new-tag>
    ```
    The tag message should include: previous tag, target SHA, release impact, reviewed PR numbers, and a concise release summary. Do not create a GitHub Release unless the user asks for one.
@@ -78,8 +73,7 @@ Use this skill to turn merged PR history into a release decision and, when warra
 - Never tag if the proposed version is ambiguous; stop and report the ambiguity.
 - Never skip release notes in the tag message.
 - Never push commits or modify roadmap/checklist files as part of this skill unless the release convention requires a preparatory PR and the user approves that work.
-- Never assume GHCR success from `packages: write` alone; package access can be
-  denied independently of workflow permissions (see issue #503).
+- Verify GHCR package visibility and access after each release publish.
 - If GitHub metadata is unavailable, do not create a tag. Report a blocked release review instead.
 
 ## Script
@@ -100,5 +94,5 @@ Use `--fetch` for live release work. Use `--format json` when another automation
 - [ ] Reviewed every PR/commit since the previous tag
 - [ ] Chose no-release/patch/minor/major with a written rationale
 - [ ] Verified tag uniqueness and target CI state before tagging
-- [ ] Checked Docker Hub and GHCR publish prerequisites for the tag workflow
+- [ ] Checked release workflow and GHCR package access for the tag workflow
 - [ ] Created and pushed an annotated tag only when release is warranted

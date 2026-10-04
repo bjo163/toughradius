@@ -1,5 +1,5 @@
 // Package eap provides the shared EAP authentication orchestration layer for
-// ToughRADIUS.
+// MWX-ISP.
 //
 // It defines message/state abstractions, method handler interfaces, and the
 // coordinator that dispatches EAP rounds to registered handlers while

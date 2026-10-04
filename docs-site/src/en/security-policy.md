@@ -2,16 +2,16 @@
 
 > 中文版本：[安全策略](../zh/security-policy.md)
 
-This chapter is the canonical home for ToughRADIUS security advisories and the
+This chapter is the canonical home for MWX-ISP security advisories and the
 guidance that goes with them. The repository's
-[`SECURITY.md`](https://github.com/talkincode/toughradius/blob/main/SECURITY.md)
+[`SECURITY.md`](https://github.com/bjo163/mwx-isp/blob/main/SECURITY.md)
 keeps a short pointer back to this chapter so there is a single source of truth.
 
 ## Security advisories
 
 ### Default super-admin credentials (GHSA-2gwm-6gf5-8699)
 
-ToughRADIUS no longer creates or accepts the historical first-start password.
+MWX-ISP no longer creates or accepts the historical first-start password.
 A fresh install generates a one-time bootstrap password (or uses
 `TOUGHRADIUS_ADMIN_PASSWORD`) and writes it to
 `{workdir}/private/admin-bootstrap-password`. Upgrades that still store the

@@ -82,7 +82,7 @@ func setupTestEnv(t *testing.T) (*app.Application, *config.AppConfig) {
 
 	cfg := &config.AppConfig{
 		System: config.SysConfig{
-			Appid:    "ToughRADIUS-Test",
+			Appid:    "MWX-ISP-Test",
 			Location: "Asia/Shanghai",
 			Workdir:  tmpDir,
 			Debug:    true,

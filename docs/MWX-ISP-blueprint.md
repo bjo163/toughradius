@@ -197,7 +197,7 @@ Urutan utama dibuat sebagai setup dari fondasi sampai pelanggan uji:
 
 1. **Amankan akun dan instalasi:** ubah kredensial bootstrap, setujui penggunaan pada jaringan yang tepat, konfigurasi database dan secret aplikasi, serta siapkan backup. Tautkan ke Account Settings/System Configuration; rahasia tidak pernah ditampilkan di guide.
 2. **Lengkapi identitas dan billing defaults:** nama perusahaan, IDR, zona waktu `Asia/Jakarta`, due/grace days, auto-suspend, dan auto-reactivate. Jelaskan bahwa auto-suspend dapat memutus akses setelah overdue dan grace habis.
-3. **Siapkan RADIUS:** periksa atau buat RadiusProfile; daftarkan NAS dengan alamat, shared secret, port auth/accounting dan CoA yang sesuai. UI hanya mengelola data ToughRADIUS; kebijakan/perintah sisi router tetap diterapkan oleh admin perangkat.
+3. **Siapkan RADIUS:** periksa atau buat RadiusProfile; daftarkan NAS dengan alamat, shared secret, port auth/accounting dan CoA yang sesuai. UI hanya mengelola data MWX-ISP; kebijakan/perintah sisi router tetap diterapkan oleh admin perangkat.
 4. **Buat Internet Package:** tetapkan harga komersial dan tautkan ke RadiusProfile yang benar. Terangkan bahwa harga package tidak membuat atau mengubah policy perangkat.
 5. **Daftarkan Customer dan Subscription:** pilih Customer, Package, billing day/grace, lalu buat RadiusUser baru atau tautkan user lama. Status `pending` perlu diaktifkan; username/password layanan tidak boleh sama dengan akun operator.
 6. **Verifikasi akses pada client uji:** lakukan autentikasi dan accounting menggunakan NAS yang memang dikendalikan/diizinkan, kemudian lihat Online Sessions dan Accounting. Tandai sebagai verifikasi manual hanya setelah operator melihat hasil di NAS dan aplikasi.
@@ -219,7 +219,7 @@ Tour singkat memperkenalkan Dashboard → Customers/Subscriptions → Online Ses
 ### Struktur halaman User Guide
 
 1. **Start here:** diagram Customer → Package/Profile → Subscription/RADIUS User → Invoice/Payment.
-2. **Configure RADIUS and NAS:** prasyarat, field yang diperlukan, port/secret, apa yang diatur dalam ToughRADIUS vs router, serta titik verifikasi.
+2. **Configure RADIUS and NAS:** prasyarat, field yang diperlukan, port/secret, apa yang diatur dalam MWX-ISP vs router, serta titik verifikasi.
 3. **Customer and service lifecycle:** Package/Profile, Customer, Subscription, status, user lama vs user baru, suspend/reactivate/terminate.
 4. **Billing operations:** invoice otomatis, format nomor otomatis, status invoice, pembayaran parsial/penuh, grace period dan dampak auto-suspend.
 5. **Daily operations:** online sessions, accounting, current IP, disconnect/CoA, log/status, Network & Alerts.

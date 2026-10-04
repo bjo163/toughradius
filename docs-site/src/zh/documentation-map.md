@@ -13,7 +13,7 @@
 | [核心术语与概念](./concepts.md) | AAA 术语、认证请求流转与密码协议 |
 | [快速开始](./quickstart.md) | 安装、初始化、首个用户与调试 |
 | [厂商对接指南](./vendor-guide.md) | MikroTik、华为、Cisco、H3C、中兴、爱快等对接案例 |
-| [Portal / Hotspot 对接边界](./portal-hotspot-boundary.md) | 铁律：ToughRADIUS 是 RADIUS AAA 后端，不托管 Captive Portal 登录页 |
+| [Portal / Hotspot 对接边界](./portal-hotspot-boundary.md) | 铁律：MWX-ISP 是 RADIUS AAA 后端，不托管 Captive Portal 登录页 |
 | [场景实战手册](./cookbook.md) | 端到端运维场景（五段式）：MikroTik PPPoE / Hotspot / CoA；华为 BRAS 分级套餐 / 线路绑定 / CoA；H3C / 中兴 / 爱快 / Cisco 差异速查 |
 | [管理系统用户手册](./admin-manual.md) | 管理控制台逐页说明 |
 | [运维指南](./ops-guide.md) | 配置参考、证书、监控、备份与命令行工具 |
@@ -27,16 +27,16 @@
 
 | 文档              | 说明                                       | 当前位置 |
 | ----------------- | ------------------------------------------ | -------- |
-| README            | 项目介绍、特性与快速上手                    | [README.md](https://github.com/talkincode/toughradius/blob/main/README.md) |
-| Agent 指南        | AI Agent 开发指南与协作规则                 | [Agent 开发指南](./agent-guide.md)（手册摘要） · [AGENT.md](https://github.com/talkincode/toughradius/blob/main/AGENT.md)（权威） |
-| 安全策略          | 安全公告与升级指引                          | [安全策略](./security-policy.md)（权威） · [SECURITY.md](https://github.com/talkincode/toughradius/blob/main/SECURITY.md)（指针） |
-| 功能清单          | 功能范围基线（`TR-F` 编号）                 | [docs/feature-checklist.md](https://github.com/talkincode/toughradius/blob/main/docs/feature-checklist.md) · [English](https://github.com/talkincode/toughradius/blob/main/docs/feature-checklist.en.md) |
-| 路线图            | 长期路线图与里程碑                          | [docs/roadmap.zh.md](https://github.com/talkincode/toughradius/blob/main/docs/roadmap.zh.md) |
-| RFC 索引          | 项目使用的协议标准索引                       | [协议与 RFC 索引](./rfc-index.md)（权威） · [docs/rfcs/README.md](https://github.com/talkincode/toughradius/blob/main/docs/rfcs/README.md)（原始目录） |
+| README            | 项目介绍、特性与快速上手                    | [README.md](https://github.com/bjo163/mwx-isp/blob/main/README.md) |
+| Agent 指南        | AI Agent 开发指南与协作规则                 | [Agent 开发指南](./agent-guide.md)（手册摘要） · [AGENT.md](https://github.com/bjo163/mwx-isp/blob/main/AGENT.md)（权威） |
+| 安全策略          | 安全公告与升级指引                          | [安全策略](./security-policy.md)（权威） · [SECURITY.md](https://github.com/bjo163/mwx-isp/blob/main/SECURITY.md)（指针） |
+| 功能清单          | 功能范围基线（`TR-F` 编号）                 | [docs/feature-checklist.md](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md) · [English](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.en.md) |
+| 路线图            | 长期路线图与里程碑                          | [docs/roadmap.zh.md](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.zh.md) |
+| RFC 索引          | 项目使用的协议标准索引                       | [协议与 RFC 索引](./rfc-index.md)（权威） · [docs/rfcs/README.md](https://github.com/bjo163/mwx-isp/blob/main/docs/rfcs/README.md)（原始目录） |
 
 > **迁移计划。** 手册现已覆盖 README 中面向用户的内容（概述、快速开始、厂商
 > 对接、管理手册、运维、FAQ）；README 继续作为 GitHub 首页并链接到这里。
 > Agent 指南现已新增手册[摘要章节](./agent-guide.md)，指向权威的
-> [`AGENT.md`](https://github.com/talkincode/toughradius/blob/main/AGENT.md)；
+> [`AGENT.md`](https://github.com/bjo163/mwx-isp/blob/main/AGENT.md)；
 > 由于 agent 工具链直接引用，`AGENT.md` 仍保留在仓库根目录。功能清单与路线图是
 > 由专门流程维护的**活文档**，保持在 `docs/` 中并以链接方式纳入。

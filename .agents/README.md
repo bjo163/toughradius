@@ -1,4 +1,4 @@
-# ToughRADIUS Agent 技能库 (.agents/skills)
+# MWX-ISP Agent 技能库 (.agents/skills)
 
 本目录是 **agent 驱动开发** 的可复用技能（SOP）库，遵循 Agent Skills 约定：
 每个技能是 `.agents/skills/<name>/SKILL.md`，含 `name` / `description` frontmatter，
@@ -55,13 +55,9 @@
 `release-version` 不自动创建 GitHub Release，不修改源码、路线图或版本文件；如仓库后续引入 changelog、release notes 或版本文件更新约定，需先通过单独 PR 补齐这些源文件变更，再执行打 tag。
 
 推送 `v*` tag 会同时触发 `.github/workflows/release-publish.yml` 和
-`.github/workflows/docker-publish.yml`。发版前确认 Docker Hub 的
-`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` 可写；GHCR 需要 package repository
-access / inherited access 允许本仓库 `GITHUB_TOKEN` 写入，或配置具备
-`write:packages` 的 `PKG_GITHUB_TOKEN`（若 token 所属账号不同于 tag 触发者，可选配
-`PKG_GITHUB_USERNAME`）。Docker Hub 发布是必选门禁；GHCR 发布在 workflow 中独立
-执行，且会先做写权限预检，凭据不可写时直接跳过 GHCR push；按 run summary 修复 package
-access 或 token 后重跑 tag workflow，避免重复创建同一源码的错误版本 tag。
+`.github/workflows/docker-publish.yml`。该工作流只发布 GHCR 镜像
+`ghcr.io/bjo163/mwx-isp`，使用本仓库的 `GITHUB_TOKEN` 和 `packages: write` 权限；
+无需 Docker Hub 凭据。发版后检查 GitHub Release、GHCR 标签和 workflow 结果。
 
 ## 工具链版本（与 CI 对齐）
 

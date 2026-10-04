@@ -14,7 +14,7 @@ import (
 // ttlsMPPEKeyLabel is the RFC 5705 exporter label EAP-TTLS uses to derive its
 // keying material from the TLS session (RFC 5281 §8: the keying material is
 // generated with the ASCII label "ttls keying material"). The first 64 octets
-// form the MSK, which ToughRADIUS splits into the MS-MPPE-Recv-Key (octets
+// form the MSK, which MWX-ISP splits into the MS-MPPE-Recv-Key (octets
 // 0..31) and MS-MPPE-Send-Key (octets 32..63) per RFC 2548. This differs from
 // PEAP's "client EAP encryption" label.
 const ttlsMPPEKeyLabel = "ttls keying material"

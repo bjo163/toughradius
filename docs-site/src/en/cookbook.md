@@ -3,7 +3,7 @@
 > 中文版本：[场景实战手册](../zh/cookbook.md)
 
 The [Vendor Integration Guide](./vendor-guide.md) is a **reference card** — it
-tells you which attributes ToughRADIUS sends to / parses for a given vendor.
+tells you which attributes MWX-ISP sends to / parses for a given vendor.
 This cookbook goes one step further: it is organized around **real operational
 scenarios** and translates a business need, end to end, into "server config +
 device config + verification + troubleshooting".
@@ -14,7 +14,7 @@ So you can follow along and debug effectively, every scenario uses the same
 structure:
 
 1. **Need / scenario** — the problem in business language, no protocol detail.
-2. **On the ToughRADIUS side** — exactly what to configure in the admin UI, and
+2. **On the MWX-ISP side** — exactly what to configure in the admin UI, and
    which attributes are **actually emitted** after a successful auth, produced
    by which piece of code.
 3. **On the device side** — reference configuration for the NAS/router.
@@ -25,7 +25,7 @@ structure:
 
 ## Reading conventions
 
-- **Every ToughRADIUS-side claim is anchored to code**: emitted attributes come
+- **Every MWX-ISP-side claim is anchored to code**: emitted attributes come
   from the enhancers in `internal/radiusd/plugins/auth/enhancers/`; the
   accept/reject decisions come from the checkers in
   `internal/radiusd/plugins/auth/checkers/`. This describes the system's **real

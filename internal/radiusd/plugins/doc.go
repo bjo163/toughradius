@@ -1,4 +1,4 @@
-// Package plugins wires ToughRADIUS plugin implementations into the runtime
+// Package plugins wires MWX-ISP plugin implementations into the runtime
 // registries used by the authentication, accounting, and EAP pipelines.
 //
 // The package composes concrete validators, policy checkers, response

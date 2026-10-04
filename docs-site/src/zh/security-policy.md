@@ -2,15 +2,15 @@
 
 > English version: [Security Policy](../en/security-policy.md)
 
-本章是 ToughRADIUS 安全公告及其配套指引的权威归处。仓库根目录的
-[`SECURITY.md`](https://github.com/talkincode/toughradius/blob/main/SECURITY.md)
+本章是 MWX-ISP 安全公告及其配套指引的权威归处。仓库根目录的
+[`SECURITY.md`](https://github.com/bjo163/mwx-isp/blob/main/SECURITY.md)
 保留一个指向本章的简短指针，以保证单一事实来源。
 
 ## 安全公告
 
 ### 默认超级管理员口令（GHSA-2gwm-6gf5-8699）
 
-ToughRADIUS 不再创建或接受历史首次启动口令。全新安装会生成一次性引导口令
+MWX-ISP 不再创建或接受历史首次启动口令。全新安装会生成一次性引导口令
 （或使用 `TOUGHRADIUS_ADMIN_PASSWORD`）并写入
 `{workdir}/private/admin-bootstrap-password`。仍保存历史默认口令的升级会在启动时
 轮换。登录与操作员改密接口会拒绝该口令。

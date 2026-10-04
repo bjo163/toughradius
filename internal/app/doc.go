@@ -1,4 +1,4 @@
-// Package app wires ToughRADIUS runtime dependencies and process lifecycle.
+// Package app wires MWX-ISP runtime dependencies and process lifecycle.
 //
 // It owns application bootstrap, database migration, dynamic configuration,
 // profile cache refresh, scheduled background jobs, and metrics/logging setup.

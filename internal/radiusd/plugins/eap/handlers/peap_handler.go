@@ -25,7 +25,7 @@ const (
 // PEAPHandler is the PEAPv0 (Protected EAP) authentication handler.
 //
 // PEAP establishes a TLS tunnel using only a server certificate (no client
-// certificate is required) and then runs an inner EAP method — for ToughRADIUS,
+// certificate is required) and then runs an inner EAP method — for MWX-ISP,
 // EAP-MSCHAPv2 — inside that tunnel, exporting MPPE keys from the TLS master
 // secret. The outer tunnel reuses the EAP-TLS Flags/fragmentation framing
 // (RFC 5216 §3.1) carried over RADIUS EAP-Message attributes (RFC 3579).

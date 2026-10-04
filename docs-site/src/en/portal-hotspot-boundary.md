@@ -7,13 +7,13 @@ deployments.
 
 ## Iron rule
 
-**ToughRADIUS does not provide, host, or operate a captive portal login page.**
+**MWX-ISP does not provide, host, or operate a captive portal login page.**
 
 Portal server, guest onboarding, voucher issuance, SMS/WeChat login, payment
 flows, advertising pages, and captive network enforcement belong to a separate
-portal / gateway product. They are not part of the ToughRADIUS product scope.
+portal / gateway product. They are not part of the MWX-ISP product scope.
 
-ToughRADIUS stays a RADIUS AAA system:
+MWX-ISP stays a RADIUS AAA system:
 
 - authentication on UDP `1812`;
 - accounting on UDP `1813`;
@@ -27,7 +27,7 @@ ToughRADIUS stays a RADIUS AAA system:
 The supported integration model is:
 
 ```text
-Client -> NAS / WLAN controller / gateway portal -> RADIUS -> ToughRADIUS
+Client -> NAS / WLAN controller / gateway portal -> RADIUS -> MWX-ISP
 ```
 
 The NAS, WLAN controller, hotspot gateway, or external portal product owns:
@@ -38,7 +38,7 @@ The NAS, WLAN controller, hotspot gateway, or external portal product owns:
 - vendor portal callbacks or proprietary portal protocols;
 - device-side session admission and release.
 
-ToughRADIUS owns:
+MWX-ISP owns:
 
 - user, profile, NAS, and policy data;
 - Access-Accept / Access-Reject decisions;
@@ -50,22 +50,22 @@ ToughRADIUS owns:
 ## What this means for Hotspot
 
 MikroTik Hotspot, Huawei/H3C/iKuai/Cisco WLAN controllers, Aruba captive portal
-flows, and similar devices can still integrate with ToughRADIUS when the device
+flows, and similar devices can still integrate with MWX-ISP when the device
 uses RADIUS as its backend. The device remains the portal implementation; this
 project remains the AAA backend.
 
 Common supported cases:
 
-- Hotspot / PPPoE / WLAN controller sends Access-Request to ToughRADIUS.
+- Hotspot / PPPoE / WLAN controller sends Access-Request to MWX-ISP.
 - MAC authentication admits known devices without showing a portal page.
 - Accounting updates keep online-session and traffic data current.
 - CoA / Disconnect removes or refreshes a session when supported by the NAS.
 - Vendor attributes may steer device-side behavior, but only as RADIUS
-  attributes. They do not make ToughRADIUS a portal server.
+  attributes. They do not make MWX-ISP a portal server.
 
 ## Explicit non-goals
 
-Do not add these to ToughRADIUS:
+Do not add these to MWX-ISP:
 
 - hosted login pages for guests or subscribers;
 - voucher, coupon, QR-code, SMS, WeChat, OAuth, or payment onboarding flows;
@@ -75,7 +75,7 @@ Do not add these to ToughRADIUS:
 - generic campaign, advertisement, CRM, or visitor-management features.
 
 If a deployment needs those functions, use a dedicated portal product in front
-of the NAS / controller and integrate it with ToughRADIUS through RADIUS.
+of the NAS / controller and integrate it with MWX-ISP through RADIUS.
 
 ## Allowed narrow extensions
 
@@ -85,7 +85,7 @@ boundary:
 1. Add or fix vendor dictionaries, parsers, or enhancers for RADIUS attributes
    such as captive-portal URL, user role, filter ID, VLAN, session timeout, or
    rate limit.
-2. Document a specific NAS / controller configuration that uses ToughRADIUS as
+2. Document a specific NAS / controller configuration that uses MWX-ISP as
    the RADIUS backend.
 3. Add tests for request parsing, response attributes, accounting, or CoA
    behavior.

@@ -7,7 +7,7 @@
 
 Huawei (vendor code **2011**) is the dominant broadband BRAS / enterprise
 gateway in Chinese carrier and enterprise networks (NetEngine / ME60 / older
-MA5200 lines). ToughRADIUS registers a dedicated vendor enhancer for it; on a
+MA5200 lines). MWX-ISP registers a dedicated vendor enhancer for it; on a
 successful auth it emits:
 
 - A **four-attribute rate quartet** (produced by `huawei_enhancer.go`):
@@ -25,7 +25,7 @@ IDs from `NAS-Port-Id`. That is what makes MAC binding *and* VLAN binding
 possible for Huawei devices.
 
 > **Prerequisite**: register this BRAS under **NAS devices** with *vendor =
-> Huawei*, the correct source IP and shared secret; ToughRADIUS must be
+> Huawei*, the correct source IP and shared secret; MWX-ISP must be
 > reachable (auth 1812, accounting 1813). If you register it as `Standard`, auth
 > still succeeds but **none** of the Huawei VSAs above are emitted, and the VLAN
 > IDs are not parsed.
@@ -41,7 +41,7 @@ tiers (e.g. Home = 30M down / 10M up, Business = 100M down). Huawei honours both
 an **average** and a **peak** (burst) rate, and groups subscribers into AAA
 **domains** so the BRAS applies the right domain policy.
 
-### On the ToughRADIUS side
+### On the MWX-ISP side
 
 1. **Create one rate profile per tier** (**Rate profiles → New**):
    - **Up / down rate**: the unit is **Kbps**. 30M down means `30720`, **not**
@@ -65,7 +65,7 @@ How the stored Kbps rates become the four Huawei VSAs (anchored to
 | `Session-Timeout`, `Acct-Interim-Interval`, `Framed-Pool`, `Framed-IP-Address` | standard | from `default_enhancer.go` |
 
 > **Two traps unique to Huawei.** ① **Unit**: the rate VSAs are in **bit/s**,
-> not Kbps — ToughRADIUS multiplies the stored Kbps by **1024** (binary), and
+> not Kbps — MWX-ISP multiplies the stored Kbps by **1024** (binary), and
 > the **peak** is the average **× 4**. So a "30M down" tier is sent as
 > `Output-Average-Rate = 30720 × 1024 = 31457280` and
 > `Output-Peak-Rate = 125829120`. ② **Direction naming**: Huawei "Input" is the
@@ -136,7 +136,7 @@ account to its access line** — the subscriber's MAC and / or the access VLAN
 (inner / outer, i.e. QinQ) — and to hand out a **static IPv6** for dual-stack
 service.
 
-### On the ToughRADIUS side
+### On the MWX-ISP side
 
 Huawei encodes the access line in attributes the parser already reads:
 
@@ -210,7 +210,7 @@ Control online users on a Huawei BRAS in real time: shorten a session, force
 re-authentication, rate-limit after a quota is exceeded (FUP), or kick a session
 offline.
 
-### On the ToughRADIUS side
+### On the MWX-ISP side
 
 Select a session on the **Online sessions** page and run one of two actions
 (anchored to `session_actions.go` and
@@ -226,7 +226,7 @@ Select a session on the **Online sessions** page and run one of two actions
 > the same vendor-agnostic path as everywhere else: change the rate on the
 > profile / user first, **then force a disconnect**; the client redials and is
 > re-authorized at the new rate quartet. (Some Huawei firmware also reacts to a
-> vendor-specific CoA rate attribute, but ToughRADIUS does **not** emit one — so
+> vendor-specific CoA rate attribute, but MWX-ISP does **not** emit one — so
 > do not rely on it.)
 
 Operator-initiated CoA / Disconnect uses a short timeout with one automatic
@@ -240,7 +240,7 @@ radius-server template tr-tmpl
  radius-server authorization <TOUGHRADIUS_IP> shared-key cipher <SECRET>
 ```
 
-- The firewall must allow **inbound UDP 3799** from ToughRADIUS to the BRAS.
+- The firewall must allow **inbound UDP 3799** from MWX-ISP to the BRAS.
 - For the `Filter-Id` approach, pre-define a matching ACL / user-group of the
   same name on the BRAS (verify on your firmware).
 

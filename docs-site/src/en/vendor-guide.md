@@ -2,10 +2,10 @@
 
 > 中文版本：[厂商对接指南](../zh/vendor-guide.md)
 
-ToughRADIUS speaks standard RADIUS to every device and adds **vendor-specific
+MWX-ISP speaks standard RADIUS to every device and adds **vendor-specific
 attributes (VSAs)** for the vendors it knows. This chapter walks through the
 integration steps shared by all devices, then gives a case study per vendor:
-what ToughRADIUS sends, what it parses, and a reference configuration for the
+what MWX-ISP sends, what it parses, and a reference configuration for the
 device side.
 
 > **The vendor code on the NAS record decides everything.** Attribute
@@ -18,7 +18,7 @@ device side.
 > CoA / forced disconnect)? See the [Scenario Cookbook](./cookbook.md). This
 > chapter is the attribute reference card; the cookbook is the playbook.
 
-> **Portal boundary:** ToughRADIUS is the RADIUS AAA backend. It does not host
+> **Portal boundary:** MWX-ISP is the RADIUS AAA backend. It does not host
 > captive portal login pages or guest onboarding flows. See
 > [Portal / Hotspot Integration Boundary](./portal-hotspot-boundary.md).
 
@@ -28,7 +28,7 @@ device side.
    identifier), shared secret, and the correct *Vendor*.
 2. **Point the device** at the server: authentication UDP `1812`, accounting
    UDP `1813`, the same shared secret.
-3. **Optional CoA**: ToughRADIUS sends CoA/Disconnect (RFC 5176) to the NAS on
+3. **Optional CoA**: MWX-ISP sends CoA/Disconnect (RFC 5176) to the NAS on
    UDP `3799` by default; set the *CoA port* field on the NAS record if your
    device listens elsewhere. Each exchange waits up to 5 s and retransmits
    twice.
@@ -89,7 +89,7 @@ request encoding from the NAS.
 
 Best-known integration: PPPoE / Hotspot with `Mikrotik-Rate-Limit`.
 
-ToughRADIUS sends `Mikrotik-Rate-Limit = "{up}k/{down}k"`; RouterOS applies it
+MWX-ISP sends `Mikrotik-Rate-Limit = "{up}k/{down}k"`; RouterOS applies it
 as a dynamic simple queue (rx-rate/tx-rate from the router's perspective, i.e.
 subscriber upload first).
 
@@ -106,7 +106,7 @@ subscriber upload first).
 
 ## Huawei — vendor code 2011
 
-Typical BRAS (ME60/NE) / aggregation deployments. ToughRADIUS sends the rate
+Typical BRAS (ME60/NE) / aggregation deployments. MWX-ISP sends the rate
 quartet (`Huawei-Input/Output-Average-Rate`, peaks ×4), `Huawei-Domain-Name`
 (when the user/profile has a domain), and `Huawei-Framed-IPv6-Address` for
 static IPv6. The Huawei parser extracts VLANs from `NAS-Port-Id`, so MAC *and*
@@ -135,7 +135,7 @@ For CoA/Disconnect, enable the RADIUS dynamic authorization extension
 
 ## Cisco — vendor code 9
 
-ToughRADIUS authenticates Cisco devices with standard attributes (PAP / CHAP /
+MWX-ISP authenticates Cisco devices with standard attributes (PAP / CHAP /
 MS-CHAPv2 / EAP all work; sessions, accounting, CoA likewise). When the user's
 plan has an address pool, the `accept-cisco` enhancer emits
 `Cisco-AVPair="ip:addr-pool=<pool>"` alongside the standard `Framed-Pool`; no
@@ -176,14 +176,14 @@ domain default enable system
 
 ## ZTE — vendor code 3902
 
-ToughRADIUS sends `ZTE-Rate-Ctrl-SCR-Up/Down` (rate ×1024) and parses VLANs
+MWX-ISP sends `ZTE-Rate-Ctrl-SCR-Up/Down` (rate ×1024) and parses VLANs
 from `NAS-Port-Id`. Configuration on ZTE BRAS follows the same
 radius-template + domain pattern as Huawei; bind the authentication/accounting
 template to the server address, secret, and ports 1812/1813.
 
 ## iKuai — vendor code 10055
 
-Popular SMB gateway in China. ToughRADIUS sends
+Popular SMB gateway in China. MWX-ISP sends
 `RP-Upstream-Speed-Limit` / `RP-Downstream-Speed-Limit` (= `rate_kbps × 8192`,
 clamped). On the iKuai web console: **认证计费 → RADIUS 计费** — set the server
 address, ports 1812/1813, and the shared secret; enable RADIUS in the PPPoE
@@ -196,7 +196,7 @@ The parser extracts VLAN information from `Aruba-User-Vlan` when the request
 carries it, with the same `NAS-Port-Id` fallback used by other VLAN-aware
 parsers.
 
-On `Access-Accept`, ToughRADIUS sends:
+On `Access-Accept`, MWX-ISP sends:
 
 | Attribute | Source | Boundary / no-op rule |
 | --------- | ------ | --------------------- |
@@ -209,7 +209,7 @@ instead of emitting placeholder values.
 ## Standard / other devices — vendor code 0
 
 Any RFC-compliant NAS (pfSense, strongSwan, FreeRADIUS clients, Wi-Fi
-controllers, …) can authenticate against ToughRADIUS with vendor code
+controllers, …) can authenticate against MWX-ISP with vendor code
 `Standard`: full credential validation, session control, accounting, IPv4/IPv6
 attributes — but no proprietary rate attributes. Attribute **dictionaries** for
 more vendors (Microsoft, F5, PfSense, Hillstone, …) ship in the codebase for

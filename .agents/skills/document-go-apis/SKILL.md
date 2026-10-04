@@ -37,7 +37,7 @@ Mirror the nearest well-documented neighbor; do not invent a new comment style.
 2. **Package comment**: each non-`main` package has exactly one package comment, in a dedicated
    `doc.go` when it is more than a line. Start with `// Package <name> ...`:
    ```go
-   // Package radiusd implements the ToughRADIUS authentication, accounting,
+   // Package radiusd implements the MWX-ISP authentication, accounting,
    // and dynamic-authorization (CoA) protocol services.
    package radiusd
    ```

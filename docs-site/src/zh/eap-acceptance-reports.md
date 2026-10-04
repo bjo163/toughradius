@@ -1,6 +1,6 @@
 # EAP 验收测试报告
 
-每周 EAP 验收任务使用外部 `eapol_test` supplicant 验证 ToughRADIUS，并在这里展示最近保留的报告。
+每周 EAP 验收任务使用外部 `eapol_test` supplicant 验证 MWX-ISP，并在这里展示最近保留的报告。
 
 **最近结论：** 部分通过
 
@@ -16,7 +16,7 @@
 | PEAP/MSCHAPv2 wrong password | PEAP/MSCHAPv2 | Access-Reject | 跳过 | 0 ms | Skipped intentionally: eapol_test currently exposes a PEAP inner-framing interop gap (server rejects the decrypted phase-2 payload as an invalid inner EAP message). The in-process PEAP/MSCHAPv2 integration test remains the current acceptance coverage. Tracking issue: https://github.com/talkincode/toughradius/issues/495. |
 | EAP-TTLS/PAP valid credentials | EAP-TTLS/PAP | Access-Accept | 通过 | 138 ms | external supplicant received the expected Access-Accept |
 | EAP-TTLS/MSCHAPv2 valid credentials | EAP-TTLS/MSCHAPv2 | Access-Accept | 通过 | 138 ms | external supplicant received the expected Access-Accept |
-| Malformed external EAP client config | tooling | documented skip | 跳过 | 0 ms | Skipped intentionally: eapol_test parser failures do not exercise ToughRADIUS over RADIUS/EAP. Negative server behavior is covered by untrusted certificate and wrong password scenarios. |
+| Malformed external EAP client config | tooling | documented skip | 跳过 | 0 ms | Skipped intentionally: eapol_test parser failures do not exercise MWX-ISP over RADIUS/EAP. Negative server behavior is covered by untrusted certificate and wrong password scenarios. |
 
 ## 保留报告
 

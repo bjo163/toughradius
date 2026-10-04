@@ -2,7 +2,7 @@
 
 > 中文版本：[运维指南](../zh/ops-guide.md)
 
-Everything you need to run ToughRADIUS in production: configuration reference,
+Everything you need to run MWX-ISP in production: configuration reference,
 environment variables, TLS/EAP certificates, storage, monitoring, backup, and
 the bundled command-line tools.
 
@@ -16,7 +16,7 @@ equivalent.
 ```ini
 # /etc/systemd/system/toughradius.service (reference)
 [Unit]
-Description=ToughRADIUS server
+Description=MWX-ISP server
 After=network-online.target
 
 [Service]
@@ -46,7 +46,7 @@ embedded defaults. Inspect the merged result with `toughradius -printcfg`.
 
 ```yaml
 system:
-  appid: ToughRADIUS
+  appid: MWX-ISP
   location: Asia/Shanghai        # cron/timestamp timezone
   workdir: /var/toughradius      # default in production builds
   debug: false
@@ -85,7 +85,7 @@ logger:
 
 ### Working directory layout
 
-On startup ToughRADIUS creates under `system.workdir`:
+On startup MWX-ISP creates under `system.workdir`:
 
 ```text
 /var/toughradius/

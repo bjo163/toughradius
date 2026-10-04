@@ -32,7 +32,7 @@ import (
 // overridden by a config file or TOUGHRADIUS_WEB_SECRET.
 const DefaultWebSecret = "9b6de5cc-0731-1203-xxtt-0f568ac9da37" //nolint:gosec // Development placeholder; production must override it.
 
-// DBConfig holds database connection settings for ToughRADIUS.
+// DBConfig holds database connection settings for MWX-ISP.
 //
 // Supports two database backends:
 //   - postgres: Full-featured PostgreSQL (production recommended)
@@ -64,7 +64,7 @@ type DBConfig struct {
 	Debug    bool   `yaml:"debug"`     // Debug mode
 }
 
-// SysConfig holds system-level settings for the ToughRADIUS application.
+// SysConfig holds system-level settings for the MWX-ISP application.
 //
 // These settings control global application behavior including:
 //   - Application identifier for logging and metrics
@@ -169,7 +169,7 @@ type LogConfig struct {
 	Filename   string `yaml:"filename"`
 }
 
-// AppConfig is the root configuration structure for ToughRADIUS.
+// AppConfig is the root configuration structure for MWX-ISP.
 //
 // It aggregates all subsystem configurations and provides helper methods
 // for accessing runtime directories and certificate paths.

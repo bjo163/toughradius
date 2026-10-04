@@ -3,7 +3,7 @@
 > 中文版本：[常见问题解答](../zh/faq.md)
 
 Frequently asked questions, grouped by theme. If your question is not covered,
-search the [GitHub issues](https://github.com/talkincode/toughradius/issues) or
+search the [GitHub issues](https://github.com/bjo163/mwx-isp/issues) or
 open a new one.
 
 ## Installation & access
@@ -96,7 +96,7 @@ user (emits `Framed-IP-Address`, overriding the pool). See the end-to-end
 ### I have multiple NAS devices — must each be configured separately?
 
 Yes. **Every NAS must be registered individually under NAS Devices**, each with
-its own source IP (or identifier) and **its own shared secret**. ToughRADIUS
+its own source IP (or identifier) and **its own shared secret**. MWX-ISP
 matches the packet's source address (or NAS identifier) to the NAS record and
 its secret; requests from an unregistered source are logged and rejected as an
 unauthorized NAS. Different NAS devices may use different secrets — they need
@@ -118,7 +118,7 @@ That is the reject-delay brute-force guard: after
 `RejectDelayWindowSeconds` (default 10 s), responses are delayed. Tune both in
 **System Config**.
 
-### Does ToughRADIUS support 802.1X / Wi-Fi Enterprise?
+### Does MWX-ISP support 802.1X / Wi-Fi Enterprise?
 
 Yes. Supported EAP methods: EAP-MD5, EAP-MSCHAPv2, EAP-TLS, PEAPv0/EAP-MSCHAPv2
 and EAP-TTLS (inner PAP / MS-CHAP-V2). Select the method in **System Config →
@@ -166,12 +166,12 @@ sync.
 Check, in order: the device has dynamic authorization enabled (e.g.
 `radius incoming` on RouterOS, `aaa server radius dynamic-author` on IOS); the
 **CoA port** on the NAS record matches the device (default 3799); and the
-device accepts requests from the server address. ToughRADIUS waits 5 s and
+device accepts requests from the server address. MWX-ISP waits 5 s and
 retries twice before reporting failure.
 
 ### How do I change a user's speed live (FUP / over-quota throttling)?
 
-ToughRADIUS's Change of Authorization (CoA) carries **only `Session-Timeout` and
+MWX-ISP's Change of Authorization (CoA) carries **only `Session-Timeout` and
 `Filter-Id`** — it does **not** rewrite rate attributes like `Mikrotik-Rate-Limit`
 live. The standard way to change speed in real time is to change the rate on the
 profile / user first, **then force a disconnect**; the client redials and is

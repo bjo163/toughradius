@@ -3,7 +3,7 @@
 > English version: [FAQ](../en/faq.md)
 
 按主题分组的常见问题。如果这里没有覆盖你的问题，请检索
-[GitHub issues](https://github.com/talkincode/toughradius/issues) 或新开一个。
+[GitHub issues](https://github.com/bjo163/mwx-isp/issues) 或新开一个。
 
 ## 安装与访问
 
@@ -86,7 +86,7 @@ IP 时，可在用户上设置静态 IPv4（下发 `Framed-IP-Address`，覆盖�
 ### 有多台 NAS，需要为每台单独配置吗？
 
 需要。**每台 NAS 都要在「NAS 设备」中单独登记**，各自填源 IP（或 identifier）
-与**各自的共享密钥**。ToughRADIUS 按报文源地址（或 NAS identifier）匹配对应的
+与**各自的共享密钥**。MWX-ISP 按报文源地址（或 NAS identifier）匹配对应的
 NAS 记录及其密钥；来自未登记源地址的请求会被记录并以「未授权 NAS」拒绝。不同
 NAS 可用不同密钥，无需统一。
 
@@ -103,7 +103,7 @@ NAS 可用不同密钥，无需统一。
 连续拒绝达到 `RejectDelayMaxRejects`（默认 7 次）后，响应会被延迟。两个参数
 都可在 **系统配置** 中调整。
 
-### ToughRADIUS 支持 802.1X / 企业级 Wi-Fi 吗？
+### MWX-ISP 支持 802.1X / 企业级 Wi-Fi 吗？
 
 支持。可用的 EAP 方法：EAP-MD5、EAP-MSCHAPv2、EAP-TLS、PEAPv0/EAP-MSCHAPv2
 与 EAP-TTLS（内层 PAP / MS-CHAP-V2）。在 **系统配置 → EapMethod** 中选择。
@@ -143,12 +143,12 @@ NAS 可用不同密钥，无需统一。
 
 依次检查：设备已开启动态授权（如 RouterOS 的 `radius incoming`、IOS 的
 `aaa server radius dynamic-author`）；NAS 记录上的 **CoA 端口** 与设备一致
-（默认 3799）；设备接受来自服务器地址的请求。ToughRADIUS 等待 5 秒并重试
+（默认 3799）；设备接受来自服务器地址的请求。MWX-ISP 等待 5 秒并重试
 2 次后才报告失败。
 
 ### 想在线给用户改速率（FUP 超额限速），怎么做？
 
-ToughRADIUS 的「修改授权（CoA）」**只携带 `Session-Timeout` 与 `Filter-Id`**，
+MWX-ISP 的「修改授权（CoA）」**只携带 `Session-Timeout` 与 `Filter-Id`**，
 **不会**在线改写 `Mikrotik-Rate-Limit` 等限速属性。实时变速的标准做法是：先在
 计费策略 / 用户上改速率，**再对其执行「强制下线」**，客户端自动重拨后即按新速率
 重新授权；也可用 `Filter-Id` 让设备套用预先定义好的限速规则。详见

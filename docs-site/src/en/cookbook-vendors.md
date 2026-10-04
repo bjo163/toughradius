@@ -14,7 +14,7 @@ checkers — not from the vendor.
 
 So instead of repeating the full five-part playbook four times, this chapter is
 the **per-vendor diff**: for each device it states exactly **(1)** which rate
-attributes ToughRADIUS emits and the unit multiplier, **(2)** how the request
+attributes MWX-ISP emits and the unit multiplier, **(2)** how the request
 MAC / VLAN is parsed (hence which bindings work), and **(3)** which flagship
 scenario to follow for the end-to-end steps.
 
@@ -94,13 +94,13 @@ A "30M down" tier is sent as `ZTE-Rate-Ctrl-SCR-Down = 31457280`. There is no
 peak / burst attribute — the average rate is the cap.
 
 **Request parsing** (`zte_parser.go`): MAC comes from `Calling-Station-Id`, but
-ZTE sends it as a **bare 12-hex-digit string**; ToughRADIUS reformats it to
+ZTE sends it as a **bare 12-hex-digit string**; MWX-ISP reformats it to
 `aa:bb:cc:dd:ee:ff`. VLAN is parsed from `NAS-Port-Id`. **Both MAC and VLAN
 binding are supported** — but for MAC binding, store the MAC in the
 `aa:bb:cc:dd:ee:ff` form (that is what the parser produces).
 
 **Device side**: ZTE BRAS uses the same radius-template + domain pattern as
-Huawei — bind the authentication / accounting template to the ToughRADIUS
+Huawei — bind the authentication / accounting template to the MWX-ISP
 address, shared secret and ports 1812 / 1813 (verify on your firmware).
 
 ---
@@ -195,7 +195,7 @@ Huawei emits the rate quartet `× 1024` with peak `× 4` plus domain / IPv6.)
   not extract VLANs (always `0`), so the VLAN check is always skipped. Use MAC
   binding instead, or a vendor that parses VLAN (Huawei / H3C / ZTE).
 - **ZTE MAC binding never matches** → store the MAC as `aa:bb:cc:dd:ee:ff`
-  (ZTE sends 12 bare hex digits; ToughRADIUS reformats to colon form before
+  (ZTE sends 12 bare hex digits; MWX-ISP reformats to colon form before
   comparing).
 
 ---

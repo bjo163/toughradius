@@ -15,7 +15,7 @@
 //	    CertConfig: certgen.DefaultCertConfig(),
 //	    OutputDir: "/etc/toughradius/certs",
 //	}
-//	caConfig.CommonName = "ToughRADIUS CA"
+//	caConfig.CommonName = "MWX-ISP CA"
 //	certgen.GenerateCA(caConfig)
 //
 //	// 2. Generate server certificate with SAN
@@ -133,7 +133,7 @@ type ClientConfig struct {
 // Use this as a starting point and override specific fields as needed.
 //
 // Default values:
-//   - Organization: "ToughRADIUS"
+//   - Organization: "MWX-ISP"
 //   - OrganizationalUnit: "IT"
 //   - Country: "CN"
 //   - Province: "Shanghai"
@@ -151,7 +151,7 @@ type ClientConfig struct {
 //	config.ValidDays = 365  // Override to 1 year
 func DefaultCertConfig() CertConfig {
 	return CertConfig{
-		Organization:       []string{"ToughRADIUS"},
+		Organization:       []string{"MWX-ISP"},
 		OrganizationalUnit: []string{"IT"},
 		Country:            []string{"CN"},
 		Province:           []string{"Shanghai"},
@@ -189,7 +189,7 @@ func DefaultCertConfig() CertConfig {
 //	    CertConfig: certgen.DefaultCertConfig(),
 //	    OutputDir: "/etc/toughradius/certs",
 //	}
-//	caConfig.CommonName = "ToughRADIUS Internal CA"
+//	caConfig.CommonName = "MWX-ISP Internal CA"
 //	if err := certgen.GenerateCA(caConfig); err != nil {
 //	    log.Fatalf("CA generation failed: %v", err)
 //	}

@@ -1,4 +1,4 @@
-// Package adminapi implements the ToughRADIUS management REST API served under
+// Package adminapi implements the MWX-ISP management REST API served under
 // /api/v1. Its handlers back the React Admin frontend and expose CRUD and
 // action endpoints for operators, NAS devices, network nodes, RADIUS profiles
 // and users, online sessions, accounting records, the dashboard, system

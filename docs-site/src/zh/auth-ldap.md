@@ -2,7 +2,7 @@
 
 > English version: [LDAP / AD Authentication Backend](../en/auth-ldap.md)
 
-ToughRADIUS 可以通过执行 LDAP **bind（绑定）** 操作，针对外部 LDAP 目录或
+MWX-ISP 可以通过执行 LDAP **bind（绑定）** 操作，针对外部 LDAP 目录或
 Microsoft Active Directory 校验用户口令，而不必（或不仅仅）使用自身数据库中
 存储的口令。这样即可复用既有的企业目录，无需复制或迁移口令。
 

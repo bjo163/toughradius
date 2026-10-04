@@ -1,5 +1,5 @@
 /*
- * ToughRADIUS Admin Password Reset Tool
+ * MWX-ISP Admin Password Reset Tool
  *
  * Usage:
  *   go run . -c toughradius.yml -u admin -p newpassword

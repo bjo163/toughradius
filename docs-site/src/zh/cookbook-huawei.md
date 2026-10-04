@@ -5,7 +5,7 @@
 > 本章是[场景实战手册](./cookbook.md)的一部分，沿用其[五段式与阅读约定](./cookbook.md#每个场景的五段式)。
 
 华为（厂商代码 **2011**）是国内运营商与企业网络中占主导地位的宽带 BRAS / 企业网关
-（NetEngine / ME60 / 较老的 MA5200 系列）。ToughRADIUS 为其注册了专门的厂商增强器，
+（NetEngine / ME60 / 较老的 MA5200 系列）。MWX-ISP 为其注册了专门的厂商增强器，
 认证通过后下发：
 
 - 一组**四属性限速四元组**（由 `huawei_enhancer.go` 产生）：
@@ -21,7 +21,7 @@
 具备了 MAC 绑定**与** VLAN 绑定能力。
 
 > **前置条件**：已在 **NAS 设备** 中把这台 BRAS 登记为 *厂商 = Huawei*、填写正确的
-> 源 IP 与共享密钥；ToughRADIUS 可被访问（认证 1812、计费 1813）。若登记成
+> 源 IP 与共享密钥；MWX-ISP 可被访问（认证 1812、计费 1813）。若登记成
 > `Standard`，认证仍可成功，但上述华为 VSA **全都不会**下发，VLAN 也不会被解析。
 
 ---
@@ -34,7 +34,7 @@
 企业版下行 100M）。华为同时支持**平均**速率与**峰值**（突发）速率，并把用户归入
 AAA **域（domain）**，以便 BRAS 套用对应的域策略。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
 1. **为每档套餐建一个计费策略**（**计费策略 → 新建**）：
    - **上行 / 下行速率**：单位为 **Kbps**。下行 30M 应填 `30720`，**不是** `30`；
@@ -55,7 +55,7 @@ AAA **域（domain）**，以便 BRAS 套用对应的域策略。
 | `Huawei-Domain-Name` | 用户 / 策略的域名 | **设置了才**下发 |
 | `Session-Timeout`、`Acct-Interim-Interval`、`Framed-Pool`、`Framed-IP-Address` | 标准 | 由 `default_enhancer.go` 产生 |
 
-> **华为独有的两个坑。** ① **单位**：限速 VSA 是 **bit/s** 而非 Kbps——ToughRADIUS
+> **华为独有的两个坑。** ① **单位**：限速 VSA 是 **bit/s** 而非 Kbps——MWX-ISP
 > 把存储的 Kbps 乘以 **1024**（二进制），且**峰值**是平均值的 **× 4**。所以「下行
 > 30M」会被下发为 `Output-Average-Rate = 30720 × 1024 = 31457280`、
 > `Output-Peak-Rate = 125829120`。② **方向命名**：华为「Input」是用户**上行**，
@@ -120,7 +120,7 @@ aaa
 宽带运营商希望通过**把账号绑定到接入线路**来防止共享 / 盗用——绑定用户 MAC 和 / 或
 接入 VLAN（内 / 外层，即 QinQ），并为双栈业务下发**静态 IPv6**。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
 华为把接入线路编码在解析器已读取的属性里：
 
@@ -181,7 +181,7 @@ ipv6
 对华为 BRAS 上的在线用户做实时管控：缩短会话、强制重新认证、超出配额后限速
 （FUP），或把某会话踢下线。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
 在 **在线会话** 页选中某会话，可执行两类动作（锚定 `session_actions.go` 与
 [管理系统用户手册 · 在线会话](./admin-manual.md#在线会话)）：
@@ -193,7 +193,7 @@ ipv6
 > **华为上实现 FUP「在线变速」的正确路径。** 由于 CoA 不改写
 > `Huawei-Output-Average-Rate`，在线变速沿用与其他厂商一致的与厂商无关路径：先在
 > 计费策略 / 用户上改速率，**再对其发强制下线**；客户端重拨后即按新的限速四元组重新
-> 授权。（部分华为固件也会响应某个厂商私有的 CoA 限速属性，但 ToughRADIUS **不**
+> 授权。（部分华为固件也会响应某个厂商私有的 CoA 限速属性，但 MWX-ISP **不**
 > 下发这种属性——不要依赖它。）
 
 操作员发起的 CoA / Disconnect 使用较短超时并自动重传一次，目标为 NAS 记录上的
@@ -207,7 +207,7 @@ radius-server template tr-tmpl
  radius-server authorization <TOUGHRADIUS_IP> shared-key cipher <SECRET>
 ```
 
-- 防火墙需放行从 ToughRADIUS 到 BRAS 的**入向 UDP 3799**。
+- 防火墙需放行从 MWX-ISP 到 BRAS 的**入向 UDP 3799**。
 - 若使用 `Filter-Id` 方案，需在 BRAS 预先定义同名的 ACL / 用户组（以实际固件为准）。
 
 ### 验证

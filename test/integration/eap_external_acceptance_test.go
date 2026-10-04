@@ -224,7 +224,7 @@ func TestEAPExternalAcceptance(t *testing.T) {
 		Method:   "tooling",
 		Expected: "documented skip",
 		Status:   "skipped",
-		Detail:   "Skipped intentionally: eapol_test parser failures do not exercise ToughRADIUS over RADIUS/EAP. Negative server behavior is covered by untrusted certificate and wrong password scenarios.",
+		Detail:   "Skipped intentionally: eapol_test parser failures do not exercise MWX-ISP over RADIUS/EAP. Negative server behavior is covered by untrusted certificate and wrong password scenarios.",
 	})
 	run.FinishedAt = time.Now().UTC().Format(time.RFC3339)
 	run.Verdict = verdictFromScenarios(run.Scenarios)

@@ -2,11 +2,11 @@
 
 > English version: [Agent Development Guide](../en/agent-guide.md)
 
-本章是一份**面向贡献者**的摘要，介绍 ToughRADIUS 如何借助 AI 编码 agent 进行
+本章是一份**面向贡献者**的摘要，介绍 MWX-ISP 如何借助 AI 编码 agent 进行
 开发，归纳工作规则、质量门禁与自动委托循环，使该工作流可从手册统一发现。
 
 **权威**规则位于仓库根目录的
-[`AGENT.md`](https://github.com/talkincode/toughradius/blob/main/AGENT.md)；该文件
+[`AGENT.md`](https://github.com/bjo163/mwx-isp/blob/main/AGENT.md)；该文件
 保持权威地位，并被 agent 工具链直接引用。本章不替代它——如有歧义，以
 `AGENT.md` 为准。
 
@@ -15,9 +15,9 @@
 开发始终锚定功能清单，绝不漂移到无关的产品方向。
 
 - 权威范围基线为
-  [`docs/feature-checklist.md`](https://github.com/talkincode/toughradius/blob/main/docs/feature-checklist.md)
+  [`docs/feature-checklist.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md)
   （英文版见
-  [`docs/feature-checklist.en.md`](https://github.com/talkincode/toughradius/blob/main/docs/feature-checklist.en.md)）。
+  [`docs/feature-checklist.en.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.en.md)）。
 - 每个任务、issue、PR、测试与评审记录都映射到形如 `TR-F004` 的功能编号。
 - 若某需求无法映射到现有编号，先更新功能清单（范围、状态、验收边界、理由），
   再改动代码。
@@ -28,11 +28,11 @@
 
 agent 驱动开发围绕三份产物组织：
 
-- [`docs/roadmap.zh.md`](https://github.com/talkincode/toughradius/blob/main/docs/roadmap.zh.md)
+- [`docs/roadmap.zh.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.zh.md)
   —— 长期路线图与里程碑，每项映射到 `TR-F` 编号，是 agent 工作的任务来源。
-- [`.agents/skills/`](https://github.com/talkincode/toughradius/tree/main/.agents/skills)
+- [`.agents/skills/`](https://github.com/bjo163/mwx-isp/tree/main/.agents/skills)
   —— 可复用的技能 SOP，每个技能一个目录（`.agents/skills/<name>/SKILL.md`）。
-- [`.agents/README.md`](https://github.com/talkincode/toughradius/blob/main/.agents/README.md)
+- [`.agents/README.md`](https://github.com/bjo163/mwx-isp/blob/main/.agents/README.md)
   —— 委托参考与共享护栏。
 
 一个**总调度层**驱动循环，执行 SOP 负责领域内的具体工作：
@@ -110,32 +110,9 @@ agent **在你自己的主机**上用你自己的 agent/CLI 运行，而非通�
 | Workflow | 触发与输出 | 发版前置条件 |
 | --- | --- | --- |
 | Release publish | `.github/workflows/release-publish.yml` 在 `v*` tag push 时运行，构建多平台二进制、生成 checksums，并创建 GitHub Release。 | tag 必须指向已验证的 `origin/main` 目标 SHA；release notes 由 workflow 基于 tag 和 closed issues 生成。 |
-| Docker publish | `.github/workflows/docker-publish.yml` 在 `v*` tag push 时运行，发布 `talkincode/toughradius:latest` 与版本 tag 到 Docker Hub，并独立尝试发布 `ghcr.io/<owner>/toughradius:latest` 与版本 tag。 | Docker Hub 需要 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`。GHCR 需要 package repository access / inherited access 允许本仓库 `GITHUB_TOKEN` 写入，或配置具备 `write:packages` 的 `PKG_GITHUB_TOKEN`；若 token 所属账号不同于 tag 触发者，可选配 `PKG_GITHUB_USERNAME`。 |
+| Container publish | `.github/workflows/docker-publish.yml` 在 `v*` tag push 时运行，为 amd64、arm64 和 arm/v7 发布 `ghcr.io/bjo163/mwx-isp:latest` 与版本 tag。 | 使用本仓库带 `packages: write` 权限的 `GITHUB_TOKEN`；无需 Docker Hub 凭据。 |
 
-Docker Hub 发布是必选门禁。GHCR 发布由于依赖 GitHub Packages 的外部 package
-access 设置，workflow 会把 GHCR push 独立成单独步骤，并先执行一次非破坏性的
-写权限预检：若凭据不具备 package 写权限（即 `permission_denied: write_package`
-签名），会直接跳过 GHCR 构建而不是在 push 中途失败，run summary 会给出 warning
-与恢复提示，不再让维护者误判 Docker Hub 是否已发布。
-
-发版前检查：
-
-- 确认 tag 前的 `origin/main` CI 已绿，且 tag 版本号未被占用。
-- 确认 Docker Hub secrets 存在且仍可写。
-- 确认 GHCR package `talkincode/toughradius` 继承本仓库权限，或配置了
-  `PKG_GITHUB_TOKEN`（可选 `PKG_GITHUB_USERNAME`）；文档只记录 secret 名称和权限要求，
-  不记录真实值。
-- tag 后检查 GitHub Release、Docker Hub `latest` / 版本 tag、GHCR `latest` / 版本
-  tag，以及两条 workflow 的最终结论。
-
-失败恢复：
-
-- 若 GitHub Release 成功、Docker Hub 成功、GHCR 失败，先修复 GHCR package access
-  或 token 权限，再重跑对应 tag workflow；不要为了同一源码重复创建错误版本 tag。
-- 若 Docker Hub 发布失败，视为发布未完成，修复 secret 或 registry 问题后重跑 workflow。
-- 若需要用新 patch tag 验证，先按 `release-version` SOP 重新审查未发布变更，避免跳过
-  版本判断。
-
+镜像发布到 GitHub Container Registry（GHCR）。如果镜像拉取被拒绝，请检查仓库 package 可见性与访问权限。发版后检查 GitHub Release、GHCR 镜像标签与工作流运行结果。
 <a id="report-pr-automation"></a>
 
 ### 周报 PR 自动化
@@ -179,9 +156,9 @@ MVP 增量（例如：厂商属性解析 → 认证集成 → 计费 → 管理�
   `.github/actionlint.y*ml` 时必须通过；该门禁运行 `actionlint -shellcheck=`，
   用于验证 GitHub Actions YAML、表达式与 action 输入。
 - **协议 / 端到端改动**在
-  [`test/integration/`](https://github.com/talkincode/toughradius/tree/main/test/integration)
+  [`test/integration/`](https://github.com/bjo163/mwx-isp/tree/main/test/integration)
   下附 CI 可执行的验收测试，并引用
-  [`docs/rfcs/`](https://github.com/talkincode/toughradius/tree/main/docs/rfcs)
+  [`docs/rfcs/`](https://github.com/bjo163/mwx-isp/tree/main/docs/rfcs)
   下对应的规范。
 - 产出一律走打了 `agent-roadmap` 标签的 PR，由 `review-pr` 门禁把关，仅在
   `agent-approved` 且 CI 全绿时合并。
@@ -206,7 +183,7 @@ MVP 增量（例如：厂商属性解析 → 认证集成 → 计费 → 管理�
 
 ## 下一步
 
-- [`AGENT.md`](https://github.com/talkincode/toughradius/blob/main/AGENT.md)
+- [`AGENT.md`](https://github.com/bjo163/mwx-isp/blob/main/AGENT.md)
   —— 完整、权威的 agent 开发指南。
 - [文档地图](./documentation-map.md) —— 找到 README、安全策略、功能清单、路线图
   与 RFC 索引。

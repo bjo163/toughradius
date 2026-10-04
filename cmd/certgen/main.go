@@ -1,5 +1,5 @@
 // Package main provides a command-line tool for generating TLS/SSL certificates
-// required by ToughRADIUS for RadSec (RADIUS over TLS) and other TLS scenarios.
+// required by MWX-ISP for RadSec (RADIUS over TLS) and other TLS scenarios.
 //
 // This tool supports generating CA root certificates, server certificates, and
 // client certificates with full SAN (Subject Alternative Name) extension support.
@@ -70,7 +70,7 @@ func main() {
 		showVersion = flag.Bool("version", false, "Show version info")
 
 		// CA options
-		caCommonName = flag.String("ca-cn", "ToughRADIUS CA", "CA certificate CommonName")
+		caCommonName = flag.String("ca-cn", "MWX-ISP CA", "CA certificate CommonName")
 
 		// Server certificate parameters
 		serverCommonName = flag.String("server-cn", "radius.example.com", "Server certificate CommonName")
@@ -83,7 +83,7 @@ func main() {
 		clientIPs        = flag.String("client-ips", "", "Client certificate IP addresses (comma-separated)")
 
 		// Organization information
-		organization = flag.String("org", "ToughRADIUS", "Organization name")
+		organization = flag.String("org", "MWX-ISP", "Organization name")
 		orgUnit      = flag.String("ou", "IT", "Organizational unit")
 		country      = flag.String("country", "CN", "Country code")
 		province     = flag.String("province", "Shanghai", "Province/State")
@@ -91,7 +91,7 @@ func main() {
 	)
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "ToughRADIUS Certificate Generator v%s\n\n", version)
+		fmt.Fprintf(os.Stderr, "MWX-ISP Certificate Generator v%s\n\n", version)
 		fmt.Fprintf(os.Stderr, "Usage:\n")
 		fmt.Fprintf(os.Stderr, "  %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
@@ -110,7 +110,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("ToughRADIUS Certificate Generator v%s\n", version)
+		fmt.Printf("MWX-ISP Certificate Generator v%s\n", version)
 		os.Exit(0)
 	}
 
@@ -164,7 +164,7 @@ func main() {
 // Parameters:
 //   - baseConfig: Base certificate configuration containing organization info, validity period, and key size
 //   - outputDir: Directory where certificates will be saved (created if doesn't exist)
-//   - caCN: CommonName for the CA certificate (e.g., "ToughRADIUS CA")
+//   - caCN: CommonName for the CA certificate (e.g., "MWX-ISP CA")
 //   - serverCN: CommonName for the server certificate (e.g., "radius.example.com")
 //   - serverDNS: Comma-separated DNS names for server SAN (e.g., "radius.example.com,*.radius.example.com")
 //   - serverIPs: Comma-separated IP addresses for server SAN (e.g., "192.168.1.100,127.0.0.1")
@@ -227,7 +227,7 @@ func generateAll(baseConfig certgen.CertConfig, outputDir, caCN, serverCN, serve
 // Parameters:
 //   - baseConfig: Base certificate configuration (organization info, validity, key size)
 //   - outputDir: Directory where CA certificate and key will be saved
-//   - commonName: The CommonName field for the CA certificate (e.g., "ToughRADIUS CA")
+//   - commonName: The CommonName field for the CA certificate (e.g., "MWX-ISP CA")
 //
 // Returns:
 //   - error: Returns error if directory creation, key generation, or certificate

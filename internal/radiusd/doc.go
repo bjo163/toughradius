@@ -1,4 +1,4 @@
-// Package radiusd implements ToughRADIUS protocol-serving pipelines.
+// Package radiusd implements MWX-ISP protocol-serving pipelines.
 //
 // The package hosts the authentication, accounting, and dynamic authorization
 // (CoA/Disconnect) request stages used by UDP RADIUS and RadSec frontends. It

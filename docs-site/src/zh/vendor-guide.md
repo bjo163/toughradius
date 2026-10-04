@@ -2,9 +2,9 @@
 
 > English version: [Vendor Integration Guide](../en/vendor-guide.md)
 
-ToughRADIUS 对所有设备都讲标准 RADIUS，并为其认识的厂商追加**厂商私有属性
+MWX-ISP 对所有设备都讲标准 RADIUS，并为其认识的厂商追加**厂商私有属性
 （VSA）**。本章先介绍所有设备通用的对接步骤，再按厂商给出对接案例：
-ToughRADIUS 下发什么、解析什么，以及设备侧的参考配置。
+MWX-ISP 下发什么、解析什么，以及设备侧的参考配置。
 
 > **NAS 记录上的厂商代码决定一切。** 属性增强按管理界面中 NAS 设备记录的
 > *厂商* 字段选择，而不是靠嗅探报文。如果把一台 MikroTik 登记为 `Standard`，
@@ -13,7 +13,7 @@ ToughRADIUS 下发什么、解析什么，以及设备侧的参考配置。
 > 📖 想要端到端的运维范例（PPPoE 分级套餐、Hotspot + MAC 认证、CoA / 强制下线）？
 > 见[场景实战手册](./cookbook.md)。本章是属性参考卡，实战手册是照着做的剧本。
 
-> **Portal 边界：** ToughRADIUS 是 RADIUS AAA 后端，不托管 Captive Portal
+> **Portal 边界：** MWX-ISP 是 RADIUS AAA 后端，不托管 Captive Portal
 > 登录页或访客开户注册流程。见
 > [Portal / Hotspot 对接边界](./portal-hotspot-boundary.md)。
 
@@ -22,7 +22,7 @@ ToughRADIUS 下发什么、解析什么，以及设备侧的参考配置。
 1. **登记 NAS**：在 **NAS 设备 → 新建** 填写源 IP 地址（或 identifier）、
    共享密钥，并选择正确的*厂商*。
 2. **设备指向服务器**：认证 UDP `1812`、计费 UDP `1813`、相同的共享密钥。
-3. **可选 CoA**：ToughRADIUS 默认向 NAS 的 UDP `3799` 发送 CoA/Disconnect
+3. **可选 CoA**：MWX-ISP 默认向 NAS 的 UDP `3799` 发送 CoA/Disconnect
    （RFC 5176）；若设备监听其他端口，请在 NAS 记录上设置 *CoA 端口*。
    每次交互最多等待 5 秒并重传 2 次。
 4. **创建计费策略与用户**，用 `go run ./cmd/radtest auth …` 验证
@@ -80,7 +80,7 @@ IPv4）、`Framed-IPv6-Prefix` / `Framed-IPv6-Address`（RFC 6911）、
 
 最经典的对接：PPPoE / Hotspot 配合 `Mikrotik-Rate-Limit`。
 
-ToughRADIUS 下发 `Mikrotik-Rate-Limit = "{up}k/{down}k"`，RouterOS 将其应用为
+MWX-ISP 下发 `Mikrotik-Rate-Limit = "{up}k/{down}k"`，RouterOS 将其应用为
 动态 simple queue（rx/tx 按路由器视角，即先用户上行）。
 
 ```routeros
@@ -96,7 +96,7 @@ ToughRADIUS 下发 `Mikrotik-Rate-Limit = "{up}k/{down}k"`，RouterOS 将其应�
 
 ## 华为 —— 厂商代码 2011
 
-典型的 BRAS（ME60/NE 系列）/ 汇聚场景。ToughRADIUS 下发速率四元组
+典型的 BRAS（ME60/NE 系列）/ 汇聚场景。MWX-ISP 下发速率四元组
 （`Huawei-Input/Output-Average-Rate`，峰值 ×4）、`Huawei-Domain-Name`
 （用户/策略配置了域时）以及静态 IPv6 的 `Huawei-Framed-IPv6-Address`。
 华为解析器可从 `NAS-Port-Id` 提取 VLAN，MAC 与 VLAN 绑定均可用。
@@ -163,13 +163,13 @@ domain default enable system
 
 ## 中兴 —— 厂商代码 3902
 
-ToughRADIUS 下发 `ZTE-Rate-Ctrl-SCR-Up/Down`（速率 ×1024），并从
+MWX-ISP 下发 `ZTE-Rate-Ctrl-SCR-Up/Down`（速率 ×1024），并从
 `NAS-Port-Id` 解析 VLAN。中兴 BRAS 的配置与华为类似，采用 radius 模板 + 域
 的模式：将认证/计费模板绑定到服务器地址、密钥及 1812/1813 端口即可。
 
 ## 爱快（iKuai）—— 厂商代码 10055
 
-国内常见的中小企业网关。ToughRADIUS 下发
+国内常见的中小企业网关。MWX-ISP 下发
 `RP-Upstream-Speed-Limit` / `RP-Downstream-Speed-Limit`
 （= `速率_kbps × 8192`，上限 Int32）。在爱快 Web 控制台：**认证计费 →
 RADIUS 计费** —— 填写服务器地址、端口 1812/1813 与共享密钥，并在 PPPoE
@@ -181,7 +181,7 @@ Aruba/HPE 同时具备请求解析与 `Access-Accept` 响应增强能力。请�
 读取报文中的 `Aruba-User-Vlan`，并保留与其他 VLAN-aware 解析器一致的
 `NAS-Port-Id` 回退。
 
-`Access-Accept` 中 ToughRADIUS 会下发：
+`Access-Accept` 中 MWX-ISP 会下发：
 
 | 属性 | 来源 | 边界 / no-op 规则 |
 | ---- | ---- | ----------------- |
@@ -193,7 +193,7 @@ Aruba/HPE 同时具备请求解析与 `Access-Accept` 响应增强能力。请�
 ## 标准 / 其他设备 —— 厂商代码 0
 
 任何符合 RFC 的 NAS（pfSense、strongSwan、各类 Wi-Fi 控制器等）都能以
-`Standard` 厂商代码对接 ToughRADIUS：凭据校验、会话控制、计费、IPv4/IPv6
+`Standard` 厂商代码对接 MWX-ISP：凭据校验、会话控制、计费、IPv4/IPv6
 属性一应俱全——只是没有私有限速属性。代码库还内置了更多厂商的属性**字典**
 （Microsoft、F5、PfSense、Hillstone 等）供二次开发。对 Juniper、Alcatel、
 Aruba、Radback 而言，当前能力不再只是“仅字典”：请以上文的请求解析器与

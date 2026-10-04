@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See LICENSE file in the project root for details.
  */
 
-// Package common provides general-purpose utility functions for the ToughRADIUS server.
+// Package common provides general-purpose utility functions for the MWX-ISP server.
 //
 // This package includes essential helpers for:
 //   - UUID generation (both string and int64 snowflake IDs)

@@ -1,4 +1,4 @@
-// Language toggle for the ToughRADIUS Handbook (mdBook output only).
+// Language toggle for the MWX-ISP Handbook (mdBook output only).
 //
 // The handbook keeps English and Chinese chapters as 1:1 mirrors under
 // src/en/ and src/zh/ with identical file names. This script adds a

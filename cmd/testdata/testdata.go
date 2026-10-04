@@ -1,4 +1,4 @@
-// Package main implements testdata, a database fixture seeding tool for ToughRADIUS benchmarks.
+// Package main implements testdata, a database fixture seeding tool for MWX-ISP benchmarks.
 //
 // testdata manages fixed test records in the database for benchmark and integration testing.
 // It provides two operations:

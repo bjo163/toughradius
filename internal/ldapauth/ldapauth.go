@@ -3,7 +3,7 @@
 // 4.2.
 //
 // It is a PAP-family authentication backend. Verifying a password requires
-// ToughRADIUS to perform a Bind with the user's cleartext password, so this
+// MWX-ISP to perform a Bind with the user's cleartext password, so this
 // backend can only support authentication methods where the server already
 // holds that cleartext: bare PAP and the inner PAP of EAP-TTLS (RFC 5281).
 // Challenge/response methods (CHAP, MS-CHAP, MS-CHAPv2, EAP-MD5,

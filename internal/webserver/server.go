@@ -306,7 +306,7 @@ func chromeDevtoolsManifest(c echo.Context) error {
 	}
 	baseURL := fmt.Sprintf("%s://%s", scheme, host)
 	payload := map[string]interface{}{
-		"description":          "ToughRADIUS exposes no remote debugging targets; this manifest satisfies Chrome DevTools well-known checks.",
+		"description":          "MWX-ISP exposes no remote debugging targets; this manifest satisfies Chrome DevTools well-known checks.",
 		"devtoolsFrontendUrl":  fmt.Sprintf("%s/admin", baseURL),
 		"documentation":        "https://developer.chrome.com/docs/devtools/",
 		"status":               "not_available",

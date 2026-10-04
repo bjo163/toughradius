@@ -44,7 +44,7 @@ var (
 	// guarantees a malformed inner exchange rejects rather than grants.
 	ErrPEAPInnerProtocol = errors.New("PEAP inner EAP-MSCHAPv2 protocol violation")
 	// ErrTTLSInnerNotImplemented is returned when an established EAP-TTLS tunnel
-	// carries a well-formed inner method that ToughRADIUS does not yet support.
+	// carries a well-formed inner method that MWX-ISP does not yet support.
 	// M9.3 implements inner PAP (a User-Password AVP); a tunnel that omits the
 	// User-Password AVP (e.g. an inner CHAP / MS-CHAP / MS-CHAP-V2 exchange, RFC
 	// 5281 §11.2.2-§11.2.4, scheduled for M9.4) rejects with this error rather

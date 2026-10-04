@@ -1,7 +1,7 @@
 // Project tasks configuration. See https://zed.dev/docs/tasks for documentation.
 [
   {
-    // Start the ToughRADIUS backend (Web/Admin API + RADIUS auth/acct + RadSec).
+    // Start the MWX-ISP backend (Web/Admin API + RADIUS auth/acct + RadSec).
     // SQLite is supported because CGO is disabled.
     "label": "Dev: Backend (go run)",
     "command": "go run main.go -c toughradius.yml",

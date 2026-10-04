@@ -1,8 +1,8 @@
-# ToughRADIUS Development Roadmap
+# MWX-ISP Development Roadmap
 
 Chinese version: [docs/roadmap.zh.md](roadmap.zh.md)
 
-This roadmap is the long-term development plan for ToughRADIUS. It is bound to the feature checklist in [`docs/feature-checklist.en.md`](feature-checklist.en.md): every milestone must reference at least one `TR-F` feature ID, and scope that cannot be mapped to the checklist must update the checklist before it is scheduled here.
+This roadmap is the long-term development plan for MWX-ISP. It is bound to the feature checklist in [`docs/feature-checklist.en.md`](feature-checklist.en.md): every milestone must reference at least one `TR-F` feature ID, and scope that cannot be mapped to the checklist must update the checklist before it is scheduled here.
 
 The Chinese roadmap keeps the detailed agent delivery log. This English roadmap is the default planning surface and task source: milestone status, guardrails, current execution order, and the next deliverable work. When roadmap scope or status changes, update both files in the same PR.
 
@@ -47,7 +47,7 @@ The Chinese roadmap keeps the detailed agent delivery log. This English roadmap 
 
 ## Cross-Cutting Baseline
 
-- Upstream RADIUS library tracking: ToughRADIUS uses `layeh.com/radius` through the `github.com/talkincode/radius` fork via `go.mod` `replace`. Important upstream fixes for security, protocol correctness, or attribute encoding must be evaluated for fork sync.
+- Upstream RADIUS library tracking: MWX-ISP uses `layeh.com/radius` through the `github.com/talkincode/radius` fork via `go.mod` `replace`. Important upstream fixes for security, protocol correctness, or attribute encoding must be evaluated for fork sync.
 - Protocol references: protocol behavior changes must cite the relevant RFC. Check `docs/rfcs/` first; missing standards are added through `.agents/skills/reference-rfc/SKILL.md`.
 - CI-backed acceptance: milestone acceptance must be backed by tests that run in CI. Protocol and end-to-end cases live under `test/integration/` with the `integration` build tag; pure logic belongs in `*_test.go`.
 
@@ -84,7 +84,7 @@ Agent-facing unchecked tasks:
 - Do not turn the dashboard into a generic monitoring platform.
 - Do not add multi-tenant SaaS semantics without a prior scope decision and migration design.
 - Do not rewrite the RADIUS protocol stack or replace the management framework without a specific defect and migration plan.
-- Do not build, host, or operate captive portal login pages, voucher/SMS/WeChat/payment onboarding, or vendor portal-server state machines. Portal belongs to another product; ToughRADIUS only integrates as the RADIUS auth/accounting backend.
+- Do not build, host, or operate captive portal login pages, voucher/SMS/WeChat/payment onboarding, or vendor portal-server state machines. Portal belongs to another product; MWX-ISP only integrates as the RADIUS auth/accounting backend.
 
 ## Completion Standard
 

@@ -2,165 +2,80 @@
 
 > English version: [Quick Start](../en/quickstart.md)
 
-本章带你从零搭建一个可用的 RADIUS 服务器并创建一个测试用户，然后介绍如何调试
-服务器行为。默认端口：管理界面 `1816`、RADIUS 认证 UDP `1812`、计费 UDP
-`1813`、RadSec TCP `2083`。
+本指南使用 Docker Compose 和 PostgreSQL 在 Linux VPS 部署 MWX-ISP，并完成首次登录和
+RADIUS 连通性检查。管理界面使用 TCP `1816`，RADIUS 认证使用 UDP `1812`，计费使用
+UDP `1813`，RadSec 使用 TCP `2083`。
 
-## 1. 安装
+## 1. 在 VPS 安装
 
-三种方式任选其一。
-
-### 方式 A —— 预编译二进制
-
-从 [GitHub Releases](https://github.com/talkincode/toughradius/releases)
-页面下载对应平台的二进制（`toughradius_linux_amd64`、`toughradius_linux_arm64`、
-`toughradius_darwin_arm64`、`toughradius_windows_amd64.exe` 等），然后：
+先在 Ubuntu 或 Debian VPS 安装 Docker Engine 与 Docker Compose 插件。如果需要 Caddy
+自动申请 HTTPS 证书，请先将域名 DNS 指向服务器，然后运行：
 
 ```bash
-chmod +x toughradius_linux_amd64
-sudo mv toughradius_linux_amd64 /usr/local/bin/toughradius
+git clone https://github.com/bjo163/mwx-isp.git
+cd mwx-isp
+sudo bash scripts/vps-install.sh
 ```
 
-### 方式 B —— Docker
+安装脚本会在 `/opt/mwx-isp/.env` 生成私密凭据、构建应用镜像，并启动 PostgreSQL、
+MWX-ISP 和 Caddy。它只显示一次生成的管理员密码，请立即安全保存。管理 Web 端口默认
+只绑定 localhost 并由 Caddy 代理；RADIUS 端口供 NAS 连接。检测到 systemd 时会启用
+每日自动更新定时器。生产使用前请阅读
+[`README.md`](https://github.com/bjo163/mwx-isp/blob/main/README.md) 和 VPS 部署说明。
 
-```bash
-docker pull talkincode/toughradius:latest
+将 `/opt/mwx-isp/.env` 中的 `MWX_ISP_DOMAIN` 设置为公网域名，Caddy 才能自动配置
+HTTPS。默认 `localhost` 仅适合本地检查。不要将 PostgreSQL 暴露到公网。
 
-docker run -d --name toughradius \
-  -p 1816:1816 -p 1812:1812/udp -p 1813:1813/udp -p 2083:2083 \
-  -v toughradius-data:/var/toughradius \
-  talkincode/toughradius:latest -c /etc/toughradius.yml
-```
+## 2. 登录
 
-镜像暴露 `1816/tcp`、`1812/udp`、`1813/udp`、`2083/tcp`。请将卷挂载到
-`/var/toughradius`（默认工作目录），使 SQLite 数据库、日志与证书在容器重启后
-得以保留。
-
-### 方式 C —— 源码构建
-
-需要 Go 1.25+ 与 Node.js 20+（React Admin 前端会被嵌入二进制）：
-
-```bash
-git clone https://github.com/talkincode/toughradius.git
-cd toughradius
-make build          # 先构建 web/ 再编译 Go 二进制 → release/toughradius
-```
-
-仅后端开发（SQLite 默认配置）：
-
-```bash
-make runs           # CGO_ENABLED=0 go run main.go -c toughradius.yml
-make runf           # 前端开发服务器 http://localhost:3000/admin
-```
-
-## 2. 配置
-
-ToughRADIUS 按以下顺序查找配置：`-c <文件>` 参数、`./toughradius.yml`、
-`/etc/toughradius.yml`、内置默认值。环境变量优先于配置文件
-（见[运维指南](./ops-guide.md#环境变量)）。
-
-一份精简的生产风格配置：
-
-```yaml
-system:
-  appid: ToughRADIUS
-  location: Asia/Shanghai
-  workdir: /var/toughradius     # 数据/日志/证书都在这里
-  debug: false
-
-web:
-  host: 0.0.0.0
-  port: 1816
-  secret: change-me-to-a-long-random-string   # JWT 签名密钥
-
-database:
-  type: sqlite                  # 或 postgres（需配 host/port/user/passwd）
-  name: toughradius.db          # 存放于 {workdir}/data/ 下
-
-radiusd:
-  enabled: true
-  host: 0.0.0.0
-  auth_port: 1812
-  acct_port: 1813
-  radsec_port: 2083
-  debug: true                   # 输出完整报文转储；生产环境建议关闭
-
-logger:
-  mode: production
-  file_enable: true
-  filename: /var/toughradius/toughradius.log
-```
-
-> **务必修改 `web.secret`**，它用于签发管理端登录令牌。首次启动的管理员口令是
-> 随机生成的（或由 `TOUGHRADIUS_ADMIN_PASSWORD` 指定）；请从
-> `{workdir}/private/admin-bootstrap-password` 读取，并在首次登录后立即修改。
-
-## 3. 初始化数据库并启动
-
-```bash
-# 仅第一次执行 —— 会删除并重建全部数据表
-toughradius -initdb -c /etc/toughradius.yml
-
-# 启动服务
-toughradius -c /etc/toughradius.yml
-```
-
-`-initdb` 是破坏性操作；后续升级直接启动即可——结构迁移在启动时自动完成。
-其他参数：`-v` 打印版本，`-printcfg` 以 JSON 打印合并后的配置。
-
-## 4. 登录管理界面
-
-打开 `http://<服务器>:1816`。引导管理员：
+打开 `https://<你的域名>/admin/`（安装期间也可使用本地代理地址），并使用：
 
 - 用户名：`admin`
-- 密码：写入 `{workdir}/private/admin-bootstrap-password`；若在首次启动前设置了
-  `TOUGHRADIUS_ADMIN_PASSWORD`，则使用该值
+- 密码：VPS 安装脚本显示的一次性密码
 
-没有公开的默认口令。请在 **账户设置** 中修改引导口令；忘记密码可用
-`cmd/reset-password` 重置（见[常见问题](./faq.md)）。
+登录后请修改密码。更新已有安装时会保留当前管理员密码。手动使用 Compose 时，将
+`.env.vps.example` 复制为 `.env`，替换全部 `CHANGE_ME` 值，再运行
+`docker compose up -d --build`。
 
-## 5. 登记 NAS 并创建用户
+## 3. 浏览示例数据
 
-1. **网络节点 → 新建** —— 创建一个节点（逻辑分组），如 `default`。
-2. **NAS 设备 → 新建** —— 登记你的网络设备：
-   - *IP 地址*：设备发出 RADIUS 报文的源地址。
-   - *密钥*：共享密钥，如 `testing123`。
-   - *厂商代码*：选择设备厂商（标准 / Cisco / 华为 / MikroTik / H3C / 中兴 /
-     爱快）——它决定下发哪些厂商私有属性，见[厂商对接指南](./vendor-guide.md)。
-   - *CoA 端口*：除非设备使用其他端口，保持 `3799`。
-3. **计费策略 → 新建** —— 例如 `100M`：并发数 `1`、上行 `51200` Kbps、
-   下行 `102400` Kbps。
-4. **RADIUS 用户 → 新建** —— 用户名 `test1`、密码 `111111`，选择策略并设置
-   过期时间。
+完全空白的新安装会在首次启动时自动加入标记清楚的合成示例数据；已有数据库不会被改动。
+示例 NAS 与 RADIUS 用户默认禁用。请只在隔离的测试环境中创建或启用测试记录。
 
-## 6. 用 radtest 验证
+默认英文管理界面包含 **Customers**、**Packages**、**Subscriptions**、**Billing**、
+**Network & Alerts** 和 **RADIUS** 等模块。客户、套餐、发票和付款编号由系统自动生成。
 
-仓库自带一个小型 RADIUS 客户端（示例即默认值）：
+## 4. 本地验证 RADIUS
+
+仓库内置了简易 RADIUS 客户端。在开发数据库中添加地址为 `127.0.0.1`、共享密钥为
+`testing123` 的 NAS，再创建一个已启用的测试用户，然后运行：
 
 ```bash
 go run ./cmd/radtest auth \
   -server 127.0.0.1 -secret testing123 \
   -username test1 -password 111111
 
-go run ./cmd/radtest flow ...   # 一次跑完 认证 + 计费开始 + 计费结束
+go run ./cmd/radtest flow ...   # 依次执行认证、计费开始和计费结束
 ```
 
-成功时会打印 `Access-Accept` 及返回的属性。`flow` 模式的会话会出现在
-**在线会话** 中，仪表盘计数随之增长。
+真实网络中，请使用 NAS 实际发送报文的源 IP 登记设备，并设置强共享密钥。仅在 VPS
+防火墙开放必要的 RADIUS 流量。正式服务前，使用实际 NAS 验证认证、计费和 Disconnect。
 
-## 7. 调试
+## 5. 备份与更新
 
-| 需求 | 方法 |
-| ---- | ---- |
-| 完整 RADIUS 报文转储 | YAML 中 `radiusd.debug: true`（或环境变量 `TOUGHRADIUS_RADIUS_DEBUG=true`），也可在运行时将 **系统配置 → RADIUS → 日志级别** 设为 `debug` |
-| 日志文件位置 | `logger.filename`，默认 `{workdir}/toughradius.log`；`logger.mode: development` 输出适合人读的控制台格式 |
-| 用户为何被拒绝 | 拒绝原因按类别计数（密码错误、已过期、MAC 绑定不符等）并显示在仪表盘；细节见日志 |
-| 查看生效配置 | `toughradius -printcfg -c <文件>` |
-| 压力测试 | `go run ./cmd/benchmark` —— 见[运维指南](./ops-guide.md#命令行工具) |
+```bash
+cd /opt/mwx-isp
+sudo scripts/backup-db.sh
+sudo scripts/vps-update.sh
+```
 
-## 下一步
+备份默认写入本地；请另外复制到安全的异地存储。自动更新跟随 `main`，更新前创建数据库
+备份，等待新应用健康检查；更新失败时会尝试回滚源码和镜像。请按自己的运维要求检查备份
+脚本及保留策略。
 
-- [厂商对接指南](./vendor-guide.md) —— 配置 Cisco、华为、MikroTik、H3C、
-  中兴、爱快及标准设备。
-- [管理系统用户手册](./admin-manual.md) —— 管理界面每个页面的说明。
-- [运维指南](./ops-guide.md) —— 生产部署、TLS、EAP 证书、备份与监控。
+## 后续阅读
+
+- [管理界面手册](./admin-manual.md) —— 熟悉各管理页面。
+- [运维指南](./ops-guide.md) —— 环境变量、证书、日志、备份和监控。
+- [MikroTik 场景手册](./cookbook-mikrotik.md) —— 配置常见 ISP NAS。
+- [常见问题](./faq.md) —— 排查安装与登录问题。

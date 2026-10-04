@@ -1,4 +1,4 @@
-// ToughRADIUS development container.
+// MWX-ISP development container.
 //
 // Provides a reproducible environment (Go + Node + PostgreSQL) for building the
 // backend/frontend and running the container-backed integration suite. The
@@ -8,10 +8,10 @@
 //   go test -tags=integration ./test/integration/...
 //
 {
-  "name": "ToughRADIUS Dev",
+  "name": "MWX-ISP Dev",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspaces/toughradius",
+  "workspaceFolder": "/workspaces/mwx-isp",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"

@@ -2,7 +2,7 @@
 
 > English version: [Operations Guide](../en/ops-guide.md)
 
-在生产环境运行 ToughRADIUS 所需的一切：配置参考、环境变量、TLS/EAP 证书、
+在生产环境运行 MWX-ISP 所需的一切：配置参考、环境变量、TLS/EAP 证书、
 存储、监控、备份以及随附的命令行工具。
 
 ## 进程模型
@@ -14,7 +14,7 @@ systemd、Docker 或同类工具托管。
 ```ini
 # /etc/systemd/system/toughradius.service（参考）
 [Unit]
-Description=ToughRADIUS server
+Description=MWX-ISP server
 After=network-online.target
 
 [Service]
@@ -44,7 +44,7 @@ WantedBy=multi-user.target
 
 ```yaml
 system:
-  appid: ToughRADIUS
+  appid: MWX-ISP
   location: Asia/Shanghai        # 定时任务/时间戳所用时区
   workdir: /var/toughradius      # 生产构建的默认值
   debug: false
@@ -83,7 +83,7 @@ logger:
 
 ### 工作目录结构
 
-启动时 ToughRADIUS 在 `system.workdir` 下创建：
+启动时 MWX-ISP 在 `system.workdir` 下创建：
 
 ```text
 /var/toughradius/

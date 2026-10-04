@@ -4,7 +4,7 @@
 >
 > 本章是[场景实战手册](./cookbook.md)的一部分，沿用其[五段式与阅读约定](./cookbook.md#每个场景的五段式)。
 
-MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。ToughRADIUS 为其
+MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。MWX-ISP 为其
 注册了专门的厂商增强器，认证通过后下发：
 
 - `Mikrotik-Rate-Limit = "{上行}k/{下行}k"` —— 字符串限速（由
@@ -13,7 +13,7 @@ MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。Tough
   `Framed-Pool`、`Framed-IP-Address` 等（由 `default_enhancer.go` 产生）。
 
 > **前置条件**：已在 **NAS 设备** 中把这台路由器登记为 *厂商 = MikroTik*、填写
-> 正确的源 IP 与共享密钥；ToughRADIUS 可被设备访问（认证 1812、计费 1813）。
+> 正确的源 IP 与共享密钥；MWX-ISP 可被设备访问（认证 1812、计费 1813）。
 > 若登记成 `Standard`，认证仍可成功，但**不会**下发 `Mikrotik-Rate-Limit`。
 
 ---
@@ -26,7 +26,7 @@ MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。Tough
 企业版下行 100M），账号到期自动断网且无法再拨，每账号限定并发会话数（防一号
 多拨），IP 由统一地址池分配。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
 1. **为每档套餐建一个计费策略**（**计费策略 → 新建**）：
    - **上行 / 下行速率**：单位为 **Kbps**。下行 30M 应填 `30720`，**不是** `30`；
@@ -55,7 +55,7 @@ MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。Tough
 ### 设备侧（RouterOS，参考示例，以实际固件为准）
 
 ```routeros
-# 指向 ToughRADIUS（认证/计费同一共享密钥）
+# 指向 MWX-ISP（认证/计费同一共享密钥）
 /radius add service=ppp address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
 /radius incoming set accept=yes port=3799
 
@@ -111,9 +111,9 @@ MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。Tough
 公共 WiFi / Hotspot 环境下，希望部分已登记设备（打印机、IoT、长期访客设备）
 **免门户**、直接按 MAC 地址放行并限速。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
-ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代码
+MWX-ISP 判定一次请求是否为 **MAC 认证**的条件是（锚定代码
 `auth_stages.go` / `eap_helper.go`）：
 
 > 当请求中解析出的 MAC 地址 **等于用户名** 时，即视为 MAC 认证；此时密码比对使用
@@ -126,7 +126,7 @@ ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代�
 2. 给该用户分配计费策略（速率、并发照常生效）。
 
 > **最大的坑是 MAC 格式**：大小写与分隔符必须与 RouterOS hotspot 发送的
-> `User-Name` 完全一致（ToughRADIUS 按字符串精确匹配）。RouterOS 的发送格式受
+> `User-Name` 完全一致（MWX-ISP 按字符串精确匹配）。RouterOS 的发送格式受
 > `mac-auth-mode` 等设置影响——**存什么就必须发什么**。
 
 ### 设备侧（RouterOS，参考示例，以实际固件为准）
@@ -162,7 +162,7 @@ ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代�
 对在线用户做实时管控：超出流量配额后限速（FUP）、临时强制重新认证，或直接把
 某会话踢下线。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
 在 **在线会话** 页选中某会话，可执行两类动作（锚定 `session_actions.go` 与
 [管理系统用户手册 · 在线会话](./admin-manual.md#在线会话)）：
@@ -174,7 +174,7 @@ ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代�
     （例如一条限速或限站规则）。
 - **强制下线（Disconnect-Request）**：直接终止该会话（操作需确认）。
 
-> **实现 FUP「在线变速」的正确路径**：ToughRADIUS 的 CoA **不直接改写**
+> **实现 FUP「在线变速」的正确路径**：MWX-ISP 的 CoA **不直接改写**
 > `Mikrotik-Rate-Limit`。要让某用户实时变速，标准做法是——先在计费策略 / 用户上
 > 改速率，**再对其发强制下线**；客户端自动重拨后即按新速率重新授权。这条路径与
 > 系统代码能力一致，适用于任意厂商。
@@ -189,7 +189,7 @@ ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代�
 /radius incoming set accept=yes port=3799
 ```
 
-- 防火墙需放行**入向 UDP 3799**（从 ToughRADIUS 到路由器）。
+- 防火墙需放行**入向 UDP 3799**（从 MWX-ISP 到路由器）。
 - 若使用 `Filter-Id` 方案，需在 RouterOS 预先定义同名的 filter / queue /
   address-list（以实际固件为准）。
 
@@ -211,12 +211,12 @@ ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代�
 
 ---
 
-## 场景 D：WPA2/WPA3 企业级 Wi-Fi —— 802.1X EAP 透传到 ToughRADIUS
+## 场景 D：WPA2/WPA3 企业级 Wi-Fi —— 802.1X EAP 透传到 MWX-ISP
 
 ### 需求 / 场景
 
 你在 MikroTik AP 上跑企业级 Wi-Fi（`WPA2-EAP` / `WPA3-EAP`，即 802.1X），希望把
-账号、证书与策略**集中到一处**：ToughRADIUS。员工既可以用**客户端证书**登录
+账号、证书与策略**集中到一处**：MWX-ISP。员工既可以用**客户端证书**登录
 （EAP-TLS，无需密码），也可以用**用户名 + 密码**登录（面向 Windows/AD 风格客户端
 的 PEAP-MSCHAPv2，或面向老账号库 / LDAP 后端的 EAP-TTLS）。
 
@@ -225,27 +225,27 @@ ToughRADIUS 判定一次请求是否为 **MAC 认证**的条件是（锚定代�
 > 的区别。**
 > 那篇广为流传的指南让 RouterOS **自己**充当 EAP 服务器（ROS6 直连证书库，或 ROS7
 > 用 **User Manager v5**）。而这里 MikroTik 只是**认证者（authenticator）**：用
-> `eap-methods=passthrough` 把 802.1X/EAP 会话**透传**给 ToughRADIUS，由
-> **ToughRADIUS 终结 EAP**。由此带来两个必须提前规划的差异：
+> `eap-methods=passthrough` 把 802.1X/EAP 会话**透传**给 MWX-ISP，由
+> **MWX-ISP 终结 EAP**。由此带来两个必须提前规划的差异：
 >
-> 1. **信任锚转移到 ToughRADIUS。** 客户端不再信任 `RouterCA`，而要信任
->    **签发 `EapTlsServerCert` 所选 ToughRADIUS 服务器证书的 CA**。你要把*那个*
+> 1. **信任锚转移到 MWX-ISP。** 客户端不再信任 `RouterCA`，而要信任
+>    **签发 `EapTlsServerCert` 所选 MWX-ISP 服务器证书的 CA**。你要把*那个*
 >    CA 分发到客户端设备。
-> 2. **路由器不再保存任何用于认证的用户/证书材料。** 所有身份都在 ToughRADIUS 上，
->    因此账号生命周期、限速策略、在线会话视图与计费都直接复用 ToughRADIUS。
+> 2. **路由器不再保存任何用于认证的用户/证书材料。** 所有身份都在 MWX-ISP 上，
+>    因此账号生命周期、限速策略、在线会话视图与计费都直接复用 MWX-ISP。
 
-### ToughRADIUS 侧
+### MWX-ISP 侧
 
 #### 0. 准备用于导入的证书
 
-先生成 PEM 材料，再导入 ToughRADIUS 托管证书库。用 `openssl` 建一个最小自建 CA ——
+先生成 PEM 材料，再导入 MWX-ISP 托管证书库。用 `openssl` 建一个最小自建 CA ——
 用 EC 密钥可让 TLS 记录更小，对 EAP 分片更友好：
 
 ```bash
 # 根 CA（把 ca.pem 分发到每台客户端设备）
 openssl ecparam -name prime256v1 -genkey -noout -out ca.key
 openssl req -x509 -new -key ca.key -sha256 -days 3650 -out ca.pem \
-  -subj "/CN=ToughRADIUS EAP Root CA"
+  -subj "/CN=MWX-ISP EAP Root CA"
 
 # RADIUS 服务器证书（CN/SAN 即客户端钉住的服务器身份）
 openssl ecparam -name prime256v1 -genkey -noout -out server.key
@@ -268,10 +268,10 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 ```
 
 > **EAP-TLS 身份绑定（锚定 `tlsengine/identity.go`，RFC 5216 §5.2）。**
-> 客户端证书通过链校验后，ToughRADIUS 按此顺序推导 **Peer-Id**：**SAN `rfc822Name`
+> 客户端证书通过链校验后，MWX-ISP 按此顺序推导 **Peer-Id**：**SAN `rfc822Name`
 >（email）→ SAN `dnsName` → 主题 `CN`**，并要求其与 RADIUS `User-Name`
 > 大小写不敏感地相等。当存在 SAN 时，**不再**接受 `CN` 作为备选。因此用上面这张证书，
-> ToughRADIUS 里要匹配的用户名是 **`alice@example.com`**，不是 `alice`。
+> MWX-ISP 里要匹配的用户名是 **`alice@example.com`**，不是 `alice`。
 
 #### 1. 导入材料并选择托管证书
 
@@ -308,7 +308,7 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 场景 A 完全一致）。
 
 > **透传场景最大的坑 —— 外层（匿名）身份。**
-> ToughRADIUS 用**外层 `User-Name`** 加载用户记录，并从*该*记录取密码；把单独的
+> MWX-ISP 用**外层 `User-Name`** 加载用户记录，并从*该*记录取密码；把单独的
 > *匿名*外层身份映射到真实账号的能力尚未实现（推迟到 M8.4）。因此
 > **PEAP / TTLS 的外层身份必须等于真实用户名** —— 在客户端上把“匿名身份”**留空**
 >（此时它会在明文外层身份里发送真实用户名），**或**把它设成与用户名相同。外层身份写成
@@ -316,9 +316,9 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 
 ### 设备侧（RouterOS，参考示例，请按你的固件核对）
 
-先在 ToughRADIUS 的 **NAS 设备** 中登记这台路由器（源 IP + 共享密钥；若你还想下发
+先在 MWX-ISP 的 **NAS 设备** 中登记这台路由器（源 IP + 共享密钥；若你还想下发
 `Mikrotik-Rate-Limit` 就选厂商 *MikroTik*，否则 *Standard* —— EAP 本身不需要 VSA）。
-然后把 AP 指向 ToughRADIUS，并让安全配置文件**透传 EAP**：
+然后把 AP 指向 MWX-ISP，并让安全配置文件**透传 EAP**：
 
 ```routeros
 # 1) wireless 服务的 RADIUS 服务器（密钥与 NAS 记录一致）
@@ -330,7 +330,7 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
     radius-eap-accounting=yes \
     unicast-ciphers=aes-ccm group-ciphers=aes-ccm
 /interface wireless set wlan1 security-profile=eap-passthrough \
-    ssid="ToughRADIUS-EAP" mode=ap-bridge disabled=no
+    ssid="MWX-ISP-EAP" mode=ap-bridge disabled=no
 
 # 2b) …或 CAPsMAN（与参考仓库的拓扑一致）
 /caps-man security add name=eap-passthrough authentication-types=wpa2-eap \
@@ -341,7 +341,7 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 # 2c) …或新版 /interface wifi（wifiwave2，ROS 7.13+）：透传是隐式的
 /interface wifi security add name=eap-sec authentication-types=wpa2-eap,wpa3-eap
 /interface wifi set wifi1 security=eap-sec \
-    configuration.ssid="ToughRADIUS-EAP" disabled=no
+    configuration.ssid="MWX-ISP-EAP" disabled=no
 ```
 
 > `eap-methods=passthrough`（经典 / CAPsMAN）正是让路由器从 EAP 终结者变成中继的开关。
@@ -352,7 +352,7 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 
 `radtest` **无法**驱动 EAP。请用 `eapol_test`（来自 `wpa_supplicant` / hostap）——
 即本项目 [EAP 验收测试报告](./eap-acceptance-reports.md) 所用的工具（v2.10）。它直接对
-ToughRADIUS 讲 RADIUS，因此你能在**接触真实射频之前**先验证服务器。存成下列任一文件后运行
+MWX-ISP 讲 RADIUS，因此你能在**接触真实射频之前**先验证服务器。存成下列任一文件后运行
 `eapol_test -c <文件>.conf -a <TOUGHRADIUS_IP> -p 1812 -s <SECRET>`，通过会打印
 `SUCCESS`：
 
@@ -362,7 +362,7 @@ network={
     key_mgmt=WPA-EAP
     eap=TLS
     identity="alice@example.com"      # == 证书 SAN email == TR 用户名
-    ca_cert="/etc/eap/ca.pem"         # 信任 ToughRADIUS 的服务器证书
+    ca_cert="/etc/eap/ca.pem"         # 信任 MWX-ISP 的服务器证书
     client_cert="/etc/eap/alice.pem"
     private_key="/etc/eap/alice.key"
 }
@@ -393,7 +393,7 @@ network={
 }
 ```
 
-- **ToughRADIUS 日志**：成功时记录
+- **MWX-ISP 日志**：成功时记录
   `radius auth success … is_eap=true result=success`；会话出现在**在线会话**页
   （射频上线后即带计费）。
 - **路由器侧**：`/log print where topics~"radius,wireless"`；查看已关联客户端用
@@ -414,7 +414,7 @@ network={
   Peer-Id**。记住顺序 **SAN email → SAN DNS → CN**，且带 SAN 的证书会忽略 `CN`：对示例
   证书，用户名须为 `alice@example.com`。要么改用户名，要么签一张仅含 CN 的证书并把用户名
   设为该 CN。
-- **客户端拒绝连接 / “无法验证服务器”** → 设备不信任 **ToughRADIUS** 的 CA。在客户端
+- **客户端拒绝连接 / “无法验证服务器”** → 设备不信任 **MWX-ISP** 的 CA。在客户端
   安装 `ca.pem`；在 **Android 11+** 上还要把 **域（Domain）** 字段填成服务器证书的
   CN/SAN（`radius.example.com`），这是 Android 现在强制要求的。
 - **PEAP / TTLS 密码正确却被拒为“用户不存在”** → 用了**匿名外层身份**。清空它（或设为真实
@@ -429,7 +429,7 @@ network={
   MS-CHAP / 隧道内 EAP。此外 TTLS 隧道钉死在 **TLS 1.2** —— 仅支持 TLS 1.3 的请求方无法
   完成第二阶段。
 - **认证成功但无计费 / 无在线会话** → 启用 `radius-eap-accounting=yes`（经典）/
-  `eap-radius-accounting=yes`（CAPsMAN），并确保 UDP **1813** 能到达 ToughRADIUS。
+  `eap-radius-accounting=yes`（CAPsMAN），并确保 UDP **1813** 能到达 MWX-ISP。
 
 ---
 

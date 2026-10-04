@@ -1,5 +1,5 @@
 // Package main provides a command-line tool for validating and inspecting
-// ToughRADIUS configuration schema files.
+// MWX-ISP configuration schema files.
 //
 // This tool ensures configuration schemas (typically config_schemas.json) follow
 // the required format and constraints before being loaded into the application.

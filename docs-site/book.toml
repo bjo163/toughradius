@@ -1,14 +1,14 @@
 [book]
-title = "ToughRADIUS Handbook"
-description = "Bilingual (English / 中文) handbook for the ToughRADIUS RADIUS server."
-authors = ["ToughRADIUS contributors"]
+title = "MWX-ISP Handbook"
+description = "Bilingual (English / 中文) handbook for the MWX-ISP ISP management and RADIUS platform."
+authors = ["MWX-ISP contributors"]
 language = "en"
 src = "src"
 
 [output.html]
 default-theme = "rust"
 preferred-dark-theme = "ayu"
-git-repository-url = "https://github.com/talkincode/toughradius"
+git-repository-url = "https://github.com/bjo163/mwx-isp"
 # Menu-bar EN/中文 toggle (mdBook output only; GitBook uses per-chapter links).
 additional-css = ["assets/lang-toggle.css"]
 additional-js = ["assets/lang-toggle.js"]

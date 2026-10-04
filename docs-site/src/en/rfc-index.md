@@ -2,16 +2,16 @@
 
 > 中文版本：[协议与 RFC 索引](../zh/rfc-index.md)
 
-ToughRADIUS implements standard RADIUS, EAP, dynamic-authorization, and
+MWX-ISP implements standard RADIUS, EAP, dynamic-authorization, and
 secure-transport protocols. This chapter is the curated, implementation-oriented
 index of the standards the project relies on, with each RFC mapped to where it is
 used in the code and on the
-[roadmap](https://github.com/talkincode/toughradius/blob/main/docs/roadmap.md).
+[roadmap](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.md).
 
 The full RFC texts are archived under
-[`docs/rfcs/`](https://github.com/talkincode/toughradius/tree/main/docs/rfcs);
+[`docs/rfcs/`](https://github.com/bjo163/mwx-isp/tree/main/docs/rfcs);
 the raw catalog of every file lives in
-[`docs/rfcs/README.md`](https://github.com/talkincode/toughradius/blob/main/docs/rfcs/README.md).
+[`docs/rfcs/README.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/rfcs/README.md).
 Where the two differ, the citations in this chapter take precedence.
 
 ## Implemented standards

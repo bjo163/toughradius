@@ -10,7 +10,7 @@
 `default_enhancer` 与各 checker——而非来自厂商。
 
 因此本章不重复四遍完整的五段式，而是各厂商的**差异速查**：对每台设备只说清
-**（1）** ToughRADIUS 下发哪个限速属性、单位倍率，**（2）** 请求 MAC / VLAN 如何解析
+**（1）** MWX-ISP 下发哪个限速属性、单位倍率，**（2）** 请求 MAC / VLAN 如何解析
 （从而哪些绑定可用），以及 **（3）** 端到端步骤该照哪本旗舰手册做。
 
 > **请配合一本旗舰手册阅读。** 任何场景的完整分步，请照
@@ -84,12 +84,12 @@ domain default enable system
 速率即为上限。
 
 **请求解析**（`zte_parser.go`）：MAC 来自 `Calling-Station-Id`，但中兴发的是**12 位
-纯十六进制字符串**；ToughRADIUS 会重排成 `aa:bb:cc:dd:ee:ff`。VLAN 从 `NAS-Port-Id`
+纯十六进制字符串**；MWX-ISP 会重排成 `aa:bb:cc:dd:ee:ff`。VLAN 从 `NAS-Port-Id`
 解析。**MAC 与 VLAN 绑定均支持**——但做 MAC 绑定时，所存 MAC 要用 `aa:bb:cc:dd:ee:ff`
 形式（这是解析器产出的格式）。
 
 **设备侧**：中兴 BRAS 与华为同样使用 radius-template + domain 模式——把认证 / 计费
-模板绑定到 ToughRADIUS 地址、共享密钥与端口 1812 / 1813（以实际固件为准）。
+模板绑定到 MWX-ISP 地址、共享密钥与端口 1812 / 1813（以实际固件为准）。
 
 ---
 
@@ -172,7 +172,7 @@ aaa server radius dynamic-author
   `0`），故 VLAN 检查总被跳过。改用 MAC 绑定，或换支持 VLAN 解析的厂商（华为 / H3C /
   中兴）。
 - **中兴 MAC 绑定从不匹配** → 把 MAC 按 `aa:bb:cc:dd:ee:ff` 存储（中兴发 12 位纯十六
-  进制，ToughRADIUS 比对前会重排成冒号形式）。
+  进制，MWX-ISP 比对前会重排成冒号形式）。
 
 ---
 

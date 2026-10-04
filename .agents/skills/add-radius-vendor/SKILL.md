@@ -1,6 +1,6 @@
 ---
 name: add-radius-vendor
-description: Add or extend vendor VSA parsing and response enhancement (TR-F005). Use when ToughRADIUS must recognize a vendor's request VSAs, or emit that vendor's proprietary attributes in Access-Accept.
+description: Add or extend vendor VSA parsing and response enhancement (TR-F005). Use when MWX-ISP must recognize a vendor's request VSAs, or emit that vendor's proprietary attributes in Access-Accept.
 ---
 
 # Skill: Add Vendor VSA Parsing / Response Enhancement
@@ -8,7 +8,7 @@ description: Add or extend vendor VSA parsing and response enhancement (TR-F005)
 > Feature ID: `TR-F005` | Milestone: M5
 
 ## When to use
-When ToughRADIUS must recognize a vendor's request VSAs, or emit that vendor's specific attributes in Access-Accept.
+When MWX-ISP must recognize a vendor's request VSAs, or emit that vendor's specific attributes in Access-Accept.
 
 ## Pre-research (read before writing)
 ```text

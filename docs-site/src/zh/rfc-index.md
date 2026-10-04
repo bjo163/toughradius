@@ -2,14 +2,14 @@
 
 > English version: [Protocol & RFC Reference](../en/rfc-index.md)
 
-ToughRADIUS 实现了标准 RADIUS、EAP、动态授权与安全传输等协议。本章是项目所依赖标准的
+MWX-ISP 实现了标准 RADIUS、EAP、动态授权与安全传输等协议。本章是项目所依赖标准的
 **精选、面向实现**的索引，将每个 RFC 映射到它在代码中的使用位置及
-[路线图](https://github.com/talkincode/toughradius/blob/main/docs/roadmap.zh.md)里程碑。
+[路线图](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.zh.md)里程碑。
 
 完整 RFC 文本归档于
-[`docs/rfcs/`](https://github.com/talkincode/toughradius/tree/main/docs/rfcs)；
+[`docs/rfcs/`](https://github.com/bjo163/mwx-isp/tree/main/docs/rfcs)；
 逐文件的原始目录见
-[`docs/rfcs/README.md`](https://github.com/talkincode/toughradius/blob/main/docs/rfcs/README.md)。
+[`docs/rfcs/README.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/rfcs/README.md)。
 当两者出现差异时，以本章的引用为准。
 
 ## 已实现的标准

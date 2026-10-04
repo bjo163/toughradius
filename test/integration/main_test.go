@@ -1,7 +1,7 @@
 //go:build integration
 
 // Package integration contains container-backed integration tests that exercise
-// ToughRADIUS against a real PostgreSQL database (the production default), which
+// MWX-ISP against a real PostgreSQL database (the production default), which
 // the unit-test suite never covers because it uses in-memory SQLite.
 //
 // These tests are gated behind the `integration` build tag and require a running
@@ -161,7 +161,7 @@ func runSuite(env pgEnv, m *testing.M) (code int, err error) {
 
 	cfg := &config.AppConfig{
 		System: config.SysConfig{
-			Appid:    "ToughRADIUS-IT",
+			Appid:    "MWX-ISP-IT",
 			Location: "Asia/Shanghai",
 			Workdir:  workdir,
 			Debug:    false,

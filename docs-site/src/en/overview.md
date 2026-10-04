@@ -2,7 +2,7 @@
 
 > 中文版本：[概述](../zh/overview.md)
 
-ToughRADIUS is a powerful, open-source RADIUS server written in Go, designed for
+MWX-ISP is a powerful, open-source RADIUS server written in Go, designed for
 ISPs, enterprise networks, and carriers. It implements the standard RADIUS
 protocols together with RadSec (RADIUS over TLS) and ships with a modern React
 Admin web management interface.

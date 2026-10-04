@@ -99,7 +99,7 @@ func main() {
 
 // printUsage displays help information.
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "ToughRADIUS Benchmark Tool v2.0\n\n")
+	fmt.Fprintf(os.Stderr, "MWX-ISP Benchmark Tool v2.0\n\n")
 	fmt.Fprintf(os.Stderr, "Usage:\n")
 	fmt.Fprintf(os.Stderr, "  bmtest [options]\n\n")
 	fmt.Fprintf(os.Stderr, "Test Modes:\n")

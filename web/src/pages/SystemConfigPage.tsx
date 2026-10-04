@@ -442,7 +442,7 @@ export const SystemConfigPage: React.FC = () => {
       const blob = await response.blob();
       const disposition = response.headers.get('Content-Disposition') || '';
       const match = disposition.match(/filename=([^;]+)/);
-      const filename = match ? match[1].trim() : `toughradius-backup-${Date.now()}.json`;
+      const filename = match ? match[1].trim() : `mwx-isp-backup-${Date.now()}.json`;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
