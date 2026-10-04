@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.2.1 — 2026-10-04
+
+Changes since v0.2.0:
+
+### Fixes and Improvements
+
+- set tag when publishing reusable release
+
 ## v0.2.0 — 2026-10-04
 
 Changes since v0.1.0:
