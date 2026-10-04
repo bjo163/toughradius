@@ -52,6 +52,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -trimpath -o release/mwx-isp-demo-seed-windows-amd64.exe ./cmd/demo-seed
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Push-Location services/mwx-control
+          go build -trimpath -o ../../release/mwx-control-windows-amd64.exe .
+          $controlBuildExit = $LASTEXITCODE
+          Pop-Location
+          if ($controlBuildExit -ne 0) { exit $controlBuildExit }
           Get-FileHash release/*.exe -Algorithm SHA256 | ForEach-Object {
             "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)"
           } | Set-Content release/SHA256SUMS.txt
