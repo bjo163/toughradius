@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 APP_DIR="${MWX_ISP_DIR:-/opt/mwx-isp}"
+ENV_BACKUP="${APP_DIR}.env.uninstalled"
 INTERACTIVE=false
 CHECK_ONLY=false
 
@@ -121,7 +122,14 @@ if [[ "${CHECK_ONLY}" == true ]]; then
       echo "Docker/Compose configuration check skipped; Docker will be installed before deployment."
     fi
   else
-    echo "No existing .env found; a new configuration will be generated during installation."
+    if [[ -f "${ENV_BACKUP}" ]]; then
+      if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=[^#]*CHANGE_ME' "${ENV_BACKUP}" || ! grep -Eq '^POSTGRES_PASSWORD=.+$' "${ENV_BACKUP}" || ! grep -Eq '^MWX_ISP_WEB_SECRET=.+$' "${ENV_BACKUP}"; then
+        fail "Preserved configuration ${ENV_BACKUP} exists but is incomplete or contains CHANGE_ME values; review it before reinstalling."
+      fi
+      echo "A preserved MWX-ISP configuration is available at ${ENV_BACKUP}; installation can restore it."
+    else
+      echo "No existing .env found; a new configuration will be generated during installation."
+    fi
   fi
   echo "Preflight completed. No changes were made."
   exit 0
@@ -366,6 +374,16 @@ if [[ ! -d "${APP_DIR}/.git" && -n "$(find "${APP_DIR}" -mindepth 1 -maxdepth 1 
   fail "${APP_DIR} exists and contains files but is not an MWX-ISP git checkout; move or back up its contents first."
 fi
 chmod 0750 "${APP_DIR}"
+if [[ ! -f "${APP_DIR}/.env" && -f "${ENV_BACKUP}" ]]; then
+  if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=[^#]*CHANGE_ME' "${ENV_BACKUP}"; then
+    fail "Preserved configuration ${ENV_BACKUP} contains an unresolved CHANGE_ME value. Review it manually; it was not restored."
+  fi
+  if ! grep -Eq '^POSTGRES_PASSWORD=.+$' "${ENV_BACKUP}" || ! grep -Eq '^MWX_ISP_WEB_SECRET=.+$' "${ENV_BACKUP}"; then
+    fail "Preserved configuration ${ENV_BACKUP} is incomplete. Restore a known-good .env backup manually."
+  fi
+  install -m 0600 -o root -g root -- "${ENV_BACKUP}" "${APP_DIR}/.env"
+  echo "Restored the configuration saved by the MWX-ISP uninstaller from ${ENV_BACKUP}."
+fi
 step "3/6" "Preparing the MWX-ISP checkout"
 if [[ ! -d "${APP_DIR}/.git" ]]; then
   git clone --depth 1 --single-branch --branch main https://github.com/bjo163/mwx-isp.git "${APP_DIR}"
@@ -407,12 +425,22 @@ fi
 
 if [[ ! -f "${APP_DIR}/.env" ]]; then
   existing_install_container="$(docker ps -aq --filter label=com.docker.compose.project=mwx-isp | head -n 1 || true)"
-  for volume in mwx-isp_postgres_data mwx-isp_mwx_isp_data; do
-    if docker volume inspect "${volume}" >/dev/null 2>&1; then
-      fail "Data volume '${volume}' exists but ${APP_DIR}/.env is missing. Restore the matching .env backup first; the installer will not generate new database credentials over existing data."
+  if docker volume inspect mwx-isp_postgres_data >/dev/null 2>&1; then
+    [[ -z "${existing_install_container}" ]] || fail "MWX-ISP containers exist but ${APP_DIR}/.env is missing. Restore the matching .env before continuing; no data was changed."
+    volume_driver="$(docker volume inspect --format '{{.Driver}}' mwx-isp_postgres_data)"
+    volume_mountpoint="$(docker volume inspect --format '{{.Mountpoint}}' mwx-isp_postgres_data)"
+    [[ "${volume_driver}" == local && -d "${volume_mountpoint}" ]] || fail "Cannot safely inspect PostgreSQL volume 'mwx-isp_postgres_data' (driver: ${volume_driver}). Restore the matching .env before continuing; no data was changed."
+    if [[ -s "${volume_mountpoint}/PG_VERSION" ]]; then
+      fail "PostgreSQL data volume 'mwx-isp_postgres_data' contains a database but ${APP_DIR}/.env is missing. Restore ${ENV_BACKUP} or another matching .env backup; no volume or database data was changed."
     fi
-  done
-  [[ -z "${existing_install_container}" ]] || fail "MWX-ISP containers exist but ${APP_DIR}/.env is missing. Restore the matching .env before continuing."
+    volume_contents="$(find "${volume_mountpoint}" -mindepth 1 -maxdepth 1 -print -quit)"
+    [[ -z "${volume_contents}" ]] || fail "PostgreSQL volume 'mwx-isp_postgres_data' is not initialized but contains files. It was left untouched; inspect or back it up before continuing."
+    echo "Found an uninitialized PostgreSQL volume from an interrupted clean install; removing that empty volume before generating fresh credentials."
+    docker volume rm mwx-isp_postgres_data >/dev/null
+  fi
+  if docker volume inspect mwx-isp_mwx_isp_data >/dev/null 2>&1; then
+    fail "Application data volume 'mwx-isp_mwx_isp_data' exists but ${APP_DIR}/.env is missing. Restore the matching .env backup before continuing; no data was changed."
+  fi
 fi
 
 if [[ ! -f "${APP_DIR}/.env" ]]; then
