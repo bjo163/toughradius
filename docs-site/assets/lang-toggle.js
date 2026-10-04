@@ -1,17 +1,17 @@
 // Language toggle for the MWX-ISP Handbook (mdBook output only).
 //
-// The handbook keeps English and Chinese chapters as 1:1 mirrors under
-// src/en/ and src/zh/ with identical file names. This script adds a
+// The handbook keeps English and Indonesian chapters under src/en/ and
+// src/id/ with matching file names. This script adds a
 // language switch link to the menu bar of every rendered page and scopes the
 // left sidebar to the active language:
 //
-//   - on /en/<page>.html  -> one link "中文"    pointing to /zh/<page>.html
-//   - on /zh/<page>.html  -> one link "English" pointing to /en/<page>.html
+//   - on /en/<page>.html  -> one link "Bahasa Indonesia" pointing to /id/<page>.html
+//   - on /id/<page>.html  -> one link "English" pointing to /en/<page>.html
 //   - on root-level pages (introduction, print) -> links to both language
 //     entry pages, since those pages have no single counterpart; the sidebar
 //     still defaults to English there
 //
-// Paths are rewritten on the last "/en/" or "/zh/" segment only, so the
+// Paths are rewritten on the last "/en/" or "/id/" segment only, so the
 // mapping works for any hosting base path (custom domain, github.io
 // project pages, `mdbook serve`, or file:// previews).
 //
@@ -20,16 +20,16 @@
 (function () {
   "use strict";
 
-  // counterpart returns the toggle target for the given pathname, or null
-  // for pages outside the en/zh tree (handled as "neutral" pages).
+// counterpart returns the toggle target for the given pathname, or null
+  // for pages outside the en/id tree (handled as "neutral" pages).
   function counterpart(pathname) {
     var enMatch = pathname.match(/^(.*)\/en\/([^/]*)$/);
     if (enMatch) {
-      return { href: enMatch[1] + "/zh/" + enMatch[2], label: "中文", lang: "zh" };
+      return { href: enMatch[1] + "/id/" + enMatch[2], label: "ID", lang: "id" };
     }
-    var zhMatch = pathname.match(/^(.*)\/zh\/([^/]*)$/);
-    if (zhMatch) {
-      return { href: zhMatch[1] + "/en/" + zhMatch[2], label: "English", lang: "en" };
+    var idMatch = pathname.match(/^(.*)\/id\/([^/]*)$/);
+    if (idMatch) {
+      return { href: idMatch[1] + "/en/" + idMatch[2], label: "EN", lang: "en" };
     }
     return null;
   }
@@ -57,7 +57,7 @@
           target.href,
           target.label,
           target.lang,
-          target.lang === "zh" ? "切换到中文版本" : "Switch to the English version"
+          target.lang === "id" ? "Beralih ke Bahasa Indonesia" : "Switch to English"
         ),
         buttons.firstChild
       );
@@ -65,14 +65,14 @@
     }
     // Neutral root pages (introduction.html, print.html, directory index):
     // offer both language entry points, resolved relative to the page.
-    var zh = makeLink("zh/overview.html", "中文", "zh", "中文手册");
-    var en = makeLink("en/overview.html", "English", "en", "English handbook");
-    buttons.insertBefore(zh, buttons.firstChild);
-    buttons.insertBefore(en, zh);
+    var id = makeLink("id/overview.html", "ID", "id", "Buku panduan Bahasa Indonesia");
+    var en = makeLink("en/overview.html", "EN", "en", "English handbook");
+    buttons.insertBefore(id, buttons.firstChild);
+    buttons.insertBefore(en, id);
   }
 
   function activeLanguage() {
-    return window.location.pathname.match(/\/zh\//) ? "zh" : "en";
+    return window.location.pathname.match(/\/id\//) ? "id" : "en";
   }
 
   function isLanguageRoot(item, lang) {
@@ -95,15 +95,15 @@
     }
     var lang = activeLanguage();
     sidebar.classList.toggle("lang-sidebar-en", lang === "en");
-    sidebar.classList.toggle("lang-sidebar-zh", lang === "zh");
+      sidebar.classList.toggle("lang-sidebar-id", lang === "id");
     Array.prototype.forEach.call(sidebar.children, function (item) {
       if (!item.classList || !item.classList.contains("chapter-item")) {
         return;
       }
       if (isLanguageRoot(item, "en")) {
         item.hidden = lang !== "en";
-      } else if (isLanguageRoot(item, "zh")) {
-        item.hidden = lang !== "zh";
+      } else if (isLanguageRoot(item, "id")) {
+        item.hidden = lang !== "id";
       }
     });
     return true;

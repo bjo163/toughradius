@@ -1,6 +1,6 @@
 # Security Policy
 
-> 中文版本：[安全策略](../zh/security-policy.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/security-policy.md)
 
 This chapter is the canonical home for MWX-ISP security advisories and the
 guidance that goes with them. The repository's

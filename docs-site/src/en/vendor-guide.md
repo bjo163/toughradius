@@ -1,6 +1,6 @@
 # Vendor Integration Guide
 
-> 中文版本：[厂商对接指南](../zh/vendor-guide.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/vendor-guide.md)
 
 MWX-ISP speaks standard RADIUS to every device and adds **vendor-specific
 attributes (VSAs)** for the vendors it knows. This chapter walks through the
