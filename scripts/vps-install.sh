@@ -2,23 +2,27 @@
 set -Eeuo pipefail
 
 APP_DIR="${MWX_ISP_DIR:-/opt/mwx-isp}"
-ASSUME_YES=false
+INTERACTIVE=false
 CHECK_ONLY=false
 
 usage() {
   cat <<EOF
 MWX-ISP VPS installer
 
-Usage: sudo bash scripts/vps-install.sh [--check] [--yes]
+Quick install:
+  curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash
+
+Usage: sudo bash scripts/vps-install.sh [--check] [--interactive]
 
   --check  Check host prerequisites and existing configuration without changes.
-  --yes    Use safe defaults without prompting (for automation).
+  --interactive  Ask for the domain and timezone instead of choosing defaults.
+  --yes    Use automatic defaults without prompting (the default behavior).
   --help   Show this help.
 
 Environment:
   MWX_ISP_DIR        Install directory (default: /opt/mwx-isp)
-  MWX_ISP_DOMAIN     Initial public domain (default: localhost)
-  MWX_ISP_TIMEZONE   Initial timezone (default: Asia/Jakarta)
+  MWX_ISP_DOMAIN     Optional public domain (auto-detected when possible)
+  MWX_ISP_TIMEZONE   Optional timezone (uses the server timezone or UTC)
 EOF
 }
 
@@ -26,7 +30,8 @@ while (($#)); do
   case "$1" in
     --help|-h) usage; exit 0 ;;
     --check) CHECK_ONLY=true ;;
-    --yes|-y) ASSUME_YES=true ;;
+    --interactive) INTERACTIVE=true ;;
+    --yes|-y) INTERACTIVE=false ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
   shift
@@ -37,8 +42,20 @@ if [[ ! "${APP_DIR}" =~ ^/[A-Za-z0-9_./-]+$ ]]; then
   echo "MWX_ISP_DIR must be an absolute path using only letters, numbers, dot, underscore, slash, and hyphen." >&2; exit 1
 fi
 
+if [[ -t 1 ]]; then
+  COLOR_GREEN=$'\033[1;32m'
+  COLOR_MUTED=$'\033[2m'
+  COLOR_RESET=$'\033[0m'
+else
+  COLOR_GREEN=""
+  COLOR_MUTED=""
+  COLOR_RESET=""
+fi
+printf '\n%s  MWX-ISP%s  %sVPS INSTALLER%s\n' "${COLOR_GREEN}" "${COLOR_RESET}" "${COLOR_MUTED}" "${COLOR_RESET}"
+printf '  PostgreSQL · Docker · secure first-run defaults\n\n'
+
 fail() { echo "ERROR: $*" >&2; exit 1; }
-step() { printf '\n[%s] %s\n' "$1" "$2"; }
+step() { printf '\n%s[%s]%s %s\n' "${COLOR_GREEN}" "$1" "${COLOR_RESET}" "$2"; }
 report_error() {
   local status=$? line="$1"
   trap - ERR
@@ -210,13 +227,36 @@ docker info >/dev/null 2>&1 || fail "Docker daemon is not responding. Check 'sys
 
 read_first_run_settings() {
   local domain timezone answer
-  domain="${MWX_ISP_DOMAIN:-localhost}"
-  timezone="${MWX_ISP_TIMEZONE:-Asia/Jakarta}"
-  if [[ "${ASSUME_YES}" != true ]]; then
-    [[ -t 0 ]] || fail "A new install needs a terminal for setup questions. Rerun with --yes for safe defaults or set MWX_ISP_DOMAIN and MWX_ISP_TIMEZONE."
-    read -r -p "Public domain for Caddy HTTPS [${domain}]: " answer || true
+  domain="${MWX_ISP_DOMAIN:-}"
+  timezone="${MWX_ISP_TIMEZONE:-}"
+  if [[ -z "${domain}" ]]; then
+    local detected_domain
+    detected_domain="$(hostname -f 2>/dev/null || true)"
+    case "${detected_domain,,}" in *.local|*.localhost|*.internal|*.lan) detected_domain="" ;; esac
+    if [[ "${detected_domain}" == *.* ]] && getent ahosts "${detected_domain}" >/dev/null 2>&1; then
+      domain="${detected_domain}"
+      echo "Detected server hostname: ${domain}"
+    else
+      domain=localhost
+      echo "No resolvable server hostname detected; using localhost with secure SSH-tunnel access."
+    fi
+  fi
+  if [[ -z "${timezone}" ]]; then
+    if command -v timedatectl >/dev/null 2>&1; then
+      timezone="$(timedatectl show -p Timezone --value 2>/dev/null || true)"
+    fi
+    if [[ -z "${timezone}" && -L /etc/localtime ]]; then
+      timezone="$(readlink /etc/localtime | sed 's#^.*/zoneinfo/##')"
+    fi
+    timezone="${timezone:-UTC}"
+  fi
+  if [[ "${INTERACTIVE}" == true ]]; then
+    [[ -t 0 || -r /dev/tty ]] || fail "--interactive needs a terminal. Run without that option for automatic defaults."
+    read_prompt "Public domain for Caddy HTTPS [${domain}]: "
+    answer="${REPLY}"
     domain="${answer:-${domain}}"
-    read -r -p "Server timezone [${timezone}]: " answer || true
+    read_prompt "Server timezone [${timezone}]: "
+    answer="${REPLY}"
     timezone="${answer:-${timezone}}"
   fi
   if [[ "${domain}" != localhost && ! "${domain}" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$ ]]; then
@@ -235,9 +275,11 @@ confirm_first_run_settings() {
   echo "  Timezone:          ${FIRST_RUN_TIMEZONE}"
   echo "  Data store:        PostgreSQL"
   echo "  Services:          MWX-ISP, Caddy, automatic backup/update timers (systemd)"
-  if [[ "${ASSUME_YES}" != true ]]; then
+  if [[ "${INTERACTIVE}" == true ]]; then
     local answer
-    read -r -p "Continue with these settings? [Y/n]: " answer || true
+    [[ -t 0 || -r /dev/tty ]] || fail "--interactive needs a terminal. Run without that option for automatic defaults."
+    read_prompt "Continue with these settings? [Y/n]: "
+    answer="${REPLY}"
     [[ ! "${answer}" =~ ^[Nn]$ ]] || fail "Installation cancelled before writing .env."
   fi
 }
@@ -248,6 +290,15 @@ set_env_value() {
     sed -i "s|^${key}=.*$|${key}=${value}|" "${file}"
   else
     printf '%s=%s\n' "${key}" "${value}" >> "${file}"
+  fi
+}
+
+read_prompt() {
+  local prompt="$1"
+  if [[ -r /dev/tty ]]; then
+    read -r -p "${prompt}" REPLY </dev/tty || true
+  else
+    read -r -p "${prompt}" REPLY || true
   fi
 }
 
@@ -495,10 +546,12 @@ mv -f "${INSTALL_STATE}.tmp" "${INSTALL_STATE}"
 step "6/6" "Installation complete"
 if [[ "${domain}" == localhost ]]; then
   echo "Admin UI: http://127.0.0.1:${web_port}/admin/ (local access; configure a public domain for HTTPS)."
+  echo "Remote access: ssh -L ${web_port}:127.0.0.1:${web_port} <ssh-user>@<server-ip>, then open http://127.0.0.1:${web_port}/admin/"
 else
-echo "Admin UI: https://${domain}/admin/ (allow DNS and certificate provisioning time on first start)."
+  echo "Admin UI: https://${domain}/admin/ (allow DNS and certificate provisioning time on first start)."
 fi
-echo "The app, PostgreSQL, and local proxy checks passed. Public HTTPS certificate readiness depends on DNS and inbound TCP 80/443."
+echo "Ready: PostgreSQL, MWX-ISP, and Caddy local routing passed their checks."
+echo "Public HTTPS needs DNS pointing to this VPS and inbound TCP 80/443."
 echo "Save the generated admin password printed above."
 echo "Open only the NAS ports you use: UDP 1812 (auth), UDP 1813 (accounting), TCP 2083 (RadSec). PostgreSQL is private."
 echo "The installer did not change your host firewall. Configure firewall rules using your existing SSH access method."
