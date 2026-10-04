@@ -1,5 +1,18 @@
 # MWX-ISP Changelog
 
+## v0.3.0 — 2026-10-04
+
+Changes since v0.2.4:
+
+### Features
+
+- import local ISP enhancements
+
+### Fixes and Improvements
+
+- resolve CI findings in ISP integration
+- install Docker prerequisites on VPS
+
 ## v0.2.4 — 2026-10-04
 
 Changes since v0.2.3:
