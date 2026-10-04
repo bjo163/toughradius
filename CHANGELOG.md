@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.4.0 — 2026-10-05
+
+Changes since v0.3.2:
+
+### Features
+
+- simplify VPS installation to one command
+
 ## v0.3.2 — 2026-10-04
 
 Changes since v0.3.1:
