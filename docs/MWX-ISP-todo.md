@@ -136,7 +136,9 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Tambahkan acceptance scenario untuk alur customer, paket, subscription/RADIUS user, invoice idempotent, overdue/grace, suspend/reject, accounting start/stop, pembayaran, reactivation, dan auth ulang.
 - [ ] Verifikasi acceptance scenario lifecycle ISP pada PostgreSQL/OpenLDAP di CI; eksekusi lokal tetap menunggu Docker aktif.
 - [x] Otomatiskan build Windows EXE dalam release workflow dan build matrix CI (AMD64); clean-checkout release tetap perlu dibuktikan bersama prosedur upgrade/backup.
-- [x] Buktikan backup/restore dan upgrade database pada instalasi uji (`scripts/backup-db.sh`, `scripts/restore-db.sh`, dan integrasi pre-update otomatis di `scripts/vps-update.sh`).
+- [x] Implementasikan backup harian PostgreSQL + volume aplikasi, checksum, retensi, restore terkonfirmasi, dan snapshot otomatis sebelum update (`scripts/backup-db.sh`, `scripts/restore-db.sh`, `scripts/vps-update.sh`).
+- [ ] Jalankan uji pemulihan penuh pada stack Docker PostgreSQL terisolasi dan uji migrasi antarversi; deployment pelanggan tetap membutuhkan salinan backup off-host dan uji restore berkala.
+- [ ] Perbarui TypeScript-ESLint bersama versi TypeScript yang didukung agar advisory dev dependency tersisa dapat ditutup; runtime dependency frontend lulus `npm audit --omit=dev`.
 
 ### C. Kesiapan operasional
 
