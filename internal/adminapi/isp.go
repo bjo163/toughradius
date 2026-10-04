@@ -447,33 +447,7 @@ func listPublicPackages(c echo.Context) error {
 	}
 
 	if len(pkgs) == 0 {
-		demo := []publicPackageDTO{
-			{
-				ID: 1, Code: "HOME-20", Name: "Home Fiber Starter", Price: 199000,
-				Description:  "Koneksi stabil dan hemat untuk kebutuhan harian, streaming HD & browsing keluarga.",
-				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 20480, DownRateKbps: 20480,
-				SpeedDisplay: "20 Mbps", Category: "Home Broadband",
-			},
-			{
-				ID: 2, Code: "HOME-50", Name: "Home Fiber Ultra", Price: 325000,
-				Description:  "Kecepatan tinggi tanpa kompromi, optimal untuk gaming rendah latensi, WFH & 4K multi-device.",
-				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 51200, DownRateKbps: 51200,
-				SpeedDisplay: "50 Mbps", Category: "Home Broadband",
-			},
-			{
-				ID: 3, Code: "BIZ-100", Name: "Business Pro Dedicated", Price: 750000,
-				Description:  "Koneksi simetris prioritas bisnis dengan jaminan SLA 99.8%, 1 IP Public Statis & dukungan NOC 24/7.",
-				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 102400, DownRateKbps: 102400,
-				SpeedDisplay: "100 Mbps", Category: "Corporate / Dedicated",
-			},
-			{
-				ID: 4, Code: "ENT-300", Name: "Enterprise GigaLine", Price: 1950000,
-				Description:  "Dedicated leased-line 1:1 langsung ke IIX/OpenIXP & global Tier-1 upstream, SLA 99.98%, MTTR < 2 Jam.",
-				BillingCycle: "monthly", FupLimitGB: 0, UpRateKbps: 307200, DownRateKbps: 307200,
-				SpeedDisplay: "300 Mbps", Category: "Enterprise / Leased Line",
-			},
-		}
-		return ok(c, demo)
+		return ok(c, []publicPackageDTO{})
 	}
 
 	profileIDs := make([]int64, 0, len(pkgs))
@@ -1402,94 +1376,10 @@ func lookupCustomerPortal(c echo.Context) error {
 	})
 }
 
-type paymentWebhookPayload struct {
-	InvoiceNo string `json:"invoice_no"`
-	Amount    int64  `json:"amount"`
-	Method    string `json:"method"`
-	Reference string `json:"reference"`
-	Status    string `json:"status"`
-	Notes     string `json:"notes"`
-}
-
 func handlePaymentWebhook(c echo.Context) error {
-	var in paymentWebhookPayload
-	if err := c.Bind(&in); err != nil {
-		return fail(c, 400, "INVALID_REQUEST", "Unable to parse webhook payload", err.Error())
-	}
-	invoiceNo := strings.TrimSpace(in.InvoiceNo)
-	if invoiceNo == "" {
-		return fail(c, 400, "INVOICE_REQUIRED", "invoice_no is required", nil)
-	}
-
-	st := strings.ToLower(strings.TrimSpace(in.Status))
-	if st != "" && st != "paid" && st != "settlement" && st != "success" && st != "capture" {
-		return ok(c, map[string]string{"result": "ignored_non_success_status", "status": st})
-	}
-
-	db := GetDB(c)
-	var inv domain.Invoice
-	if err := db.Where("invoice_no = ?", invoiceNo).First(&inv).Error; err != nil {
-		return fail(c, 404, "INVOICE_NOT_FOUND", "Invoice not found", nil)
-	}
-
-	if inv.Status == domain.InvoicePaid || inv.Balance <= 0 {
-		return ok(c, map[string]any{
-			"success":    true,
-			"result":     "already_paid",
-			"invoice_no": inv.InvoiceNo,
-		})
-	}
-
-	amount := in.Amount
-	if amount <= 0 || amount > inv.Balance {
-		amount = inv.Balance
-	}
-
-	method := strings.TrimSpace(in.Method)
-	if method == "" {
-		method = "bank_transfer"
-	}
-	ref := strings.TrimSpace(in.Reference)
-	if ref == "" {
-		ref = fmt.Sprintf("PGW-%d", time.Now().Unix())
-	}
-
-	payment := domain.Payment{
-		InvoiceID: inv.ID,
-		Amount:    amount,
-		Method:    method,
-		Reference: ref,
-		Notes:     strings.TrimSpace(in.Notes),
-	}
-
-	if err := billing.RecordPayment(db, &payment, time.Now(), true); err != nil {
-		return fail(c, 500, "PAYMENT_RECORD_FAILED", "Failed to record payment: "+err.Error(), nil)
-	}
-
-	var customer domain.Customer
-	if db.First(&customer, inv.CustomerID).Error == nil {
-		if rawPhone := strings.TrimSpace(customer.Phone); rawPhone != "" {
-			if recipient, err := notify.NormalizeRecipient(rawPhone); err == nil {
-				if provider, providerOK := GetAppContext(c).(app.NotificationProvider); providerOK {
-					if manager, err := provider.WhatsAppManager(); err == nil && manager.Status().State == "connected" {
-						body := fmt.Sprintf("Halo %s,\n\nPembayaran tagihan %s sebesar Rp %s telah BERHASIL diverifikasi otomatis oleh Payment Gateway (Ref: %s).\nLayanan internet Anda aktif kembali. Terima kasih!",
-							customer.Name, inv.InvoiceNo, formatIDR(payment.Amount), payment.Reference)
-						_ = manager.Send(c.Request().Context(), recipient, body)
-					}
-				}
-			}
-		}
-	}
-
-	return ok(c, map[string]any{
-		"success":    true,
-		"invoice_no": inv.InvoiceNo,
-		"payment_no": payment.PaymentNo,
-		"amount":     payment.Amount,
-		"status":     "paid",
-	})
+	return fail(c, http.StatusServiceUnavailable, "PAYMENT_PROVIDER_UNCONFIGURED",
+		"Payment callbacks are disabled until a verified payment provider is configured", nil)
 }
-
 func applySubscriptionFUP(c echo.Context) error {
 	id, err := parseIDParam(c, "id")
 	if err != nil {
@@ -1677,161 +1567,12 @@ func resetSubscriptionFUP(c echo.Context) error {
 	})
 }
 
-type vaChannelInfo struct {
-	BankName      string `json:"bank_name"`
-	BankCode      string `json:"bank_code"`
-	AccountNumber string `json:"account_number"`
-	AccountName   string `json:"account_name"`
-	Instructions  string `json:"instructions"`
-}
-
 func getInvoicePaymentChannel(c echo.Context) error {
-	id, err := parseIDParam(c, "id")
-	if err != nil {
-		return fail(c, 400, "INVALID_ID", "Invalid invoice ID", nil)
-	}
-	db := GetDB(c)
-	var inv domain.Invoice
-	if err := db.First(&inv, id).Error; err != nil {
-		return fail(c, 404, "NOT_FOUND", "Invoice not found", nil)
-	}
-	var customer domain.Customer
-	db.First(&customer, inv.CustomerID)
-	var pkg domain.InternetPackage
-	var sub domain.Subscription
-	if db.First(&sub, inv.SubscriptionID).Error == nil {
-		db.First(&pkg, sub.PackageID)
-	}
-
-	bcaVA := fmt.Sprintf("8277%08d", customer.ID)
-	mandiriVA := fmt.Sprintf("88908%07d", customer.ID)
-	briVA := fmt.Sprintf("10248%08d", customer.ID)
-	bniVA := fmt.Sprintf("988%09d", customer.ID)
-
-	// Standard Indonesian QRIS Payload Generation (EMVCo Compatible)
-	qrisPayload := fmt.Sprintf("00020101021226670016ID.CO.MWXISP.WWW01189360000000000000000215%015d520448145303360540%d5802ID5914MWX ISP NETWORK6007JAKARTA62070703A016304ABCD",
-		inv.ID, inv.Balance)
-
-	expiresAt := time.Now().Add(24 * time.Hour)
-	if !inv.DueDate.IsZero() && inv.DueDate.After(time.Now()) {
-		expiresAt = inv.DueDate.Add(23*time.Hour + 59*time.Minute)
-	}
-
-	channels := []vaChannelInfo{
-		{
-			BankName:      "BCA Virtual Account",
-			BankCode:      "BCA",
-			AccountNumber: bcaVA,
-			AccountName:   "MWX-ISP - " + customer.Name,
-			Instructions:  "Transfer via BCA Mobile / KlikBCA / ATM BCA pilih menu Transfer > Virtual Account.",
-		},
-		{
-			BankName:      "Bank Mandiri Virtual Account",
-			BankCode:      "MANDIRI",
-			AccountNumber: mandiriVA,
-			AccountName:   "MWX-ISP - " + customer.Name,
-			Instructions:  "Transfer via Livin' by Mandiri / ATM Mandiri pilih menu Bayar > Multi Payment > Masukkan No VA.",
-		},
-		{
-			BankName:      "BRI Virtual Account (BRIVA)",
-			BankCode:      "BRI",
-			AccountNumber: briVA,
-			AccountName:   "MWX-ISP - " + customer.Name,
-			Instructions:  "Transfer via BRImo / ATM BRI pilih menu Pembayaran > BRIVA > Masukkan No BRIVA.",
-		},
-		{
-			BankName:      "BNI Virtual Account",
-			BankCode:      "BNI",
-			AccountNumber: bniVA,
-			AccountName:   "MWX-ISP - " + customer.Name,
-			Instructions:  "Transfer via BNI Mobile Banking / ATM BNI pilih menu Transfer > Virtual Account Billing.",
-		},
-	}
-
-	return ok(c, map[string]any{
-		"invoice_id":    inv.ID,
-		"invoice_no":    inv.InvoiceNo,
-		"customer_id":   customer.ID,
-		"customer_no":   customer.CustomerNo,
-		"customer_name": customer.Name,
-		"package_name":  pkg.Name,
-		"amount":        inv.Balance,
-		"total":         inv.Total,
-		"paid_amount":   inv.PaidAmount,
-		"status":        inv.Status,
-		"due_date":      inv.DueDate.Format("2006-01-02"),
-		"expires_at":    expiresAt.Format(time.RFC3339),
-		"qris_payload":  qrisPayload,
-		"merchant_name": "MWX-ISP Broadband Enterprise",
-		"va_channels":   channels,
-	})
-}
-
-type simulatePayInput struct {
-	Method    string `json:"method"`
-	Reference string `json:"reference"`
+	return fail(c, http.StatusServiceUnavailable, "PAYMENT_PROVIDER_UNCONFIGURED",
+		"Online payment channels are unavailable until a verified payment provider is configured", nil)
 }
 
 func simulateInvoicePayment(c echo.Context) error {
-	id, err := parseIDParam(c, "id")
-	if err != nil {
-		return fail(c, 400, "INVALID_ID", "Invalid invoice ID", nil)
-	}
-	db := GetDB(c)
-	var inv domain.Invoice
-	if err := db.First(&inv, id).Error; err != nil {
-		return fail(c, 404, "NOT_FOUND", "Invoice not found", nil)
-	}
-	if inv.Status == domain.InvoicePaid || inv.Balance <= 0 {
-		return ok(c, map[string]any{
-			"success":    true,
-			"result":     "already_paid",
-			"invoice_no": inv.InvoiceNo,
-		})
-	}
-	var in simulatePayInput
-	_ = c.Bind(&in)
-	method := strings.TrimSpace(in.Method)
-	if method == "" {
-		method = "qris_instant"
-	}
-	ref := strings.TrimSpace(in.Reference)
-	if ref == "" {
-		ref = fmt.Sprintf("SIM-%d", time.Now().UnixNano()%1000000000)
-	}
-
-	payment := domain.Payment{
-		InvoiceID: inv.ID,
-		Amount:    inv.Balance,
-		Method:    method,
-		Reference: ref,
-		Notes:     "Pembayaran instan diverifikasi otomatis",
-	}
-
-	if err := billing.RecordPayment(db, &payment, time.Now(), true); err != nil {
-		return fail(c, 500, "PAYMENT_RECORD_FAILED", "Failed to record payment: "+err.Error(), nil)
-	}
-
-	var customer domain.Customer
-	if db.First(&customer, inv.CustomerID).Error == nil && customer.Phone != "" {
-		if recipient, err := notify.NormalizeRecipient(customer.Phone); err == nil {
-			if provider, providerOK := GetAppContext(c).(app.NotificationProvider); providerOK {
-				if manager, err := provider.WhatsAppManager(); err == nil && manager.Status().State == "connected" {
-					body := fmt.Sprintf("Halo %s,\n\nPembayaran tagihan %s sebesar Rp %s telah BERHASIL diverifikasi via %s (Ref: %s).\nLayanan internet Anda aktif normal. Terima kasih atas kepercayaan Anda!",
-						customer.Name, inv.InvoiceNo, formatIDR(payment.Amount), strings.ToUpper(payment.Method), payment.Reference)
-					_ = manager.Send(c.Request().Context(), recipient, body)
-				}
-			}
-		}
-	}
-
-	return ok(c, map[string]any{
-		"success":    true,
-		"invoice_no": inv.InvoiceNo,
-		"payment_no": payment.PaymentNo,
-		"amount":     payment.Amount,
-		"status":     "paid",
-		"reference":  payment.Reference,
-		"method":     payment.Method,
-	})
+	return fail(c, http.StatusGone, "SIMULATED_PAYMENT_DISABLED",
+		"Simulated payments cannot settle invoices. Record a payment only after it has been received", nil)
 }

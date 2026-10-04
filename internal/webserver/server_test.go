@@ -24,12 +24,19 @@ func TestJwtSkipFuncDoesNotBypassWithDevmode(t *testing.T) {
 		return c
 	}
 
-	// Public routes are skipped.
+	// Authentication and public branding are intentionally available before login.
 	assert.True(t, skip(newCtx("/ready")))
 	assert.True(t, skip(newCtx(apiBasePath+"/auth/login")))
 	assert.True(t, skip(newCtx(apiBasePath+"/auth/tenants")))
 	assert.True(t, skip(newCtx(apiBasePath+"/public/branding")))
 	assert.True(t, skip(newCtx(apiBasePath+"/public/branding/logo")))
+
+	// Business and customer data routes require a signed operator token.
+	assert.False(t, skip(newCtx(apiBasePath+"/public/packages")))
+	assert.False(t, skip(newCtx(apiBasePath+"/public/register")))
+	assert.False(t, skip(newCtx(apiBasePath+"/public/vouchers/check")))
+	assert.False(t, skip(newCtx(apiBasePath+"/portal/lookup")))
+	assert.False(t, skip(newCtx(apiBasePath+"/portal/payments/webhook")))
 
 	// Protected routes are never skipped.
 	assert.False(t, skip(newCtx(apiBasePath+"/users")))

@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPackageCodeIsGeneratedAndStableOnEdit(t *testing.T) {
@@ -51,6 +52,19 @@ func TestPackageCodeIsGeneratedAndStableOnEdit(t *testing.T) {
 	require.NoError(t, db.First(&updated, first.ID).Error)
 	require.Equal(t, "PKG-000001", updated.Code)
 	require.Equal(t, "Updated package", updated.Name)
+}
+
+func TestListPublicPackagesDoesNotInventOffersWhenCatalogIsEmpty(t *testing.T) {
+	db, e, appCtx := CreateTestAppContext(t)
+	require.NoError(t, db.AutoMigrate(&domain.InternetPackage{}))
+
+	req := httptest.NewRequest(http.MethodGet, "/public/packages", nil)
+	rec := httptest.NewRecorder()
+	ctx := CreateTestContext(e, db, req, rec, appCtx)
+
+	require.NoError(t, listPublicPackages(ctx))
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"data":[]}`, rec.Body.String())
 }
 
 func TestLookupCustomerPortal(t *testing.T) {
@@ -192,79 +206,50 @@ func TestSendInvoiceWhatsAppValidation(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec2.Code)
 }
 
-func TestHandlePaymentWebhook(t *testing.T) {
+func TestUnconfiguredPaymentEndpointsFailClosed(t *testing.T) {
 	db, e, appCtx := CreateTestAppContext(t)
-	require.NoError(t, db.AutoMigrate(&domain.Customer{}, &domain.InternetPackage{}, &domain.Subscription{}, &domain.Invoice{}, &domain.Payment{}, &domain.RadiusUser{}, &domain.BillingEvent{}, &domain.DocumentSequence{}))
+	require.NoError(t, db.AutoMigrate(&domain.Invoice{}, &domain.Payment{}))
 
-	cust := domain.Customer{Name: "Webhook Customer", Phone: "08123456789"}
-	require.NoError(t, db.Create(&cust).Error)
-
-	rUser := domain.RadiusUser{Username: "webhookuser", Status: "disabled"}
-	require.NoError(t, db.Create(&rUser).Error)
-
-	sub := domain.Subscription{
-		CustomerID:       cust.ID,
-		RadiusUserID:     rUser.ID,
-		Status:           domain.SubscriptionSuspended,
-		SuspensionReason: domain.SuspensionBillingOverdue,
-	}
-	require.NoError(t, db.Create(&sub).Error)
-
-	inv := domain.Invoice{
-		CustomerID:     cust.ID,
-		SubscriptionID: sub.ID,
-		InvoiceNo:      "INV-202610-009999",
-		Total:          350000,
-		Balance:        350000,
-		Status:         domain.InvoiceOverdue,
-	}
+	inv := domain.Invoice{InvoiceNo: "INV-202610-009999", Total: 250000, Balance: 250000, Status: domain.InvoiceIssued}
 	require.NoError(t, db.Create(&inv).Error)
 
-	body := `{"invoice_no":"INV-202610-009999","amount":350000,"method":"bank_transfer","reference":"TRIPAY-987654","status":"paid"}`
-	req := httptest.NewRequest(http.MethodPost, "/portal/payments/webhook", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	c := CreateTestContext(e, db, req, rec, appCtx)
-
-	require.NoError(t, handlePaymentWebhook(c))
-	require.Equal(t, http.StatusOK, rec.Code)
-
-	var resp struct {
-		Data struct {
-			Success   bool   `json:"success"`
-			InvoiceNo string `json:"invoice_no"`
-			PaymentNo string `json:"payment_no"`
-			Status    string `json:"status"`
-		} `json:"data"`
+	tests := []struct {
+		name       string
+		path       string
+		body       string
+		statusCode int
+		handler    func(echo.Context) error
+	}{
+		{name: "unsigned webhook", path: "/portal/payments/webhook", body: `{"invoice_no":"INV-202610-009999","amount":250000,"status":"paid"}`, statusCode: http.StatusServiceUnavailable, handler: handlePaymentWebhook},
+		{name: "simulated payment", path: fmt.Sprintf("/portal/invoices/%d/simulate-pay", inv.ID), body: `{"method":"qris_instant","reference":"SIM-123"}`, statusCode: http.StatusGone, handler: simulateInvoicePayment},
+		{name: "unconfigured payment channel", path: fmt.Sprintf("/portal/invoices/%d/payment-channel", inv.ID), statusCode: http.StatusServiceUnavailable, handler: getInvoicePaymentChannel},
 	}
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	require.True(t, resp.Data.Success)
-	require.Equal(t, "INV-202610-009999", resp.Data.InvoiceNo)
-	require.Equal(t, "paid", resp.Data.Status)
 
-	var checkInv domain.Invoice
-	require.NoError(t, db.First(&checkInv, inv.ID).Error)
-	require.Equal(t, domain.InvoicePaid, checkInv.Status)
-	require.Equal(t, int64(0), checkInv.Balance)
-	require.Equal(t, int64(350000), checkInv.PaidAmount)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tt.path, strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			ctx := CreateTestContext(e, db, req, rec, appCtx)
+			if tt.name != "unsigned webhook" {
+				ctx.SetParamNames("id")
+				ctx.SetParamValues(fmt.Sprintf("%d", inv.ID))
+			}
+			require.NoError(t, tt.handler(ctx))
+			require.Equal(t, tt.statusCode, rec.Code)
 
-	var checkSub domain.Subscription
-	require.NoError(t, db.First(&checkSub, sub.ID).Error)
-	require.Equal(t, domain.SubscriptionActive, checkSub.Status)
-	require.Equal(t, "", checkSub.SuspensionReason)
+			var current domain.Invoice
+			require.NoError(t, db.First(&current, inv.ID).Error)
+			require.Equal(t, domain.InvoiceIssued, current.Status)
+			require.Equal(t, int64(250000), current.Balance)
+			require.Zero(t, current.PaidAmount)
 
-	var checkUser domain.RadiusUser
-	require.NoError(t, db.First(&checkUser, rUser.ID).Error)
-	require.Equal(t, "enabled", checkUser.Status)
-
-	req2 := httptest.NewRequest(http.MethodPost, "/portal/payments/webhook", strings.NewReader(body))
-	req2.Header.Set("Content-Type", "application/json")
-	rec2 := httptest.NewRecorder()
-	c2 := CreateTestContext(e, db, req2, rec2, appCtx)
-	require.NoError(t, handlePaymentWebhook(c2))
-	require.Equal(t, http.StatusOK, rec2.Code)
+			var paymentCount int64
+			require.NoError(t, db.Model(&domain.Payment{}).Count(&paymentCount).Error)
+			require.Zero(t, paymentCount)
+		})
+	}
 }
-
 func TestFUPApplyAndReset(t *testing.T) {
 	db, e, appCtx := CreateTestAppContext(t)
 	require.NoError(t, db.AutoMigrate(&domain.Customer{}, &domain.InternetPackage{}, &domain.Subscription{}, &domain.RadiusProfile{}, &domain.RadiusUser{}, &domain.BillingEvent{}))
@@ -334,60 +319,39 @@ func TestFUPApplyAndReset(t *testing.T) {
 	require.Equal(t, 50000, checkUser.DownRate)
 }
 
-func TestInvoicePaymentChannelAndSimulatePay(t *testing.T) {
+func TestInvoicePaymentChannelAndSimulatePayFailClosed(t *testing.T) {
 	db, e, appCtx := CreateTestAppContext(t)
-	require.NoError(t, db.AutoMigrate(&domain.Customer{}, &domain.InternetPackage{}, &domain.Subscription{}, &domain.Invoice{}, &domain.Payment{}, &domain.BillingEvent{}, &domain.DocumentSequence{}))
+	require.NoError(t, db.AutoMigrate(&domain.Customer{}, &domain.Invoice{}, &domain.Payment{}))
 
-	cust := domain.Customer{Name: "Dewi Lestari", CustomerNo: "CUST-0099", Status: "active"}
-	require.NoError(t, db.Create(&cust).Error)
+	customer := domain.Customer{Name: "Test Customer", CustomerNo: "CUST-0099", Status: "active"}
+	require.NoError(t, db.Create(&customer).Error)
+	invoice := domain.Invoice{CustomerID: customer.ID, InvoiceNo: "INV-202610-008888", Total: 250000, Balance: 250000, Status: domain.InvoiceIssued}
+	require.NoError(t, db.Create(&invoice).Error)
 
-	inv := domain.Invoice{
-		CustomerID: cust.ID,
-		InvoiceNo:  "INV-202610-008888",
-		Total:      250000,
-		Balance:    250000,
-		Status:     domain.InvoiceIssued,
-	}
-	require.NoError(t, db.Create(&inv).Error)
-
-	// 1. Get Payment Channel
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/portal/invoices/%d/payment-channel", inv.ID), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/portal/invoices/%d/payment-channel", invoice.ID), nil)
 	rec := httptest.NewRecorder()
-	c := CreateTestContext(e, db, req, rec, appCtx)
-	c.SetParamNames("id")
-	c.SetParamValues(fmt.Sprintf("%d", inv.ID))
+	ctx := CreateTestContext(e, db, req, rec, appCtx)
+	ctx.SetParamNames("id")
+	ctx.SetParamValues(fmt.Sprintf("%d", invoice.ID))
+	require.NoError(t, getInvoicePaymentChannel(ctx))
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
 
-	require.NoError(t, getInvoicePaymentChannel(c))
-	require.Equal(t, http.StatusOK, rec.Code)
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/portal/invoices/%d/simulate-pay", invoice.ID), strings.NewReader(`{"method":"qris_instant"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	ctx = CreateTestContext(e, db, req, rec, appCtx)
+	ctx.SetParamNames("id")
+	ctx.SetParamValues(fmt.Sprintf("%d", invoice.ID))
+	require.NoError(t, simulateInvoicePayment(ctx))
+	require.Equal(t, http.StatusGone, rec.Code)
 
-	var channelResp struct {
-		Data struct {
-			InvoiceNo   string          `json:"invoice_no"`
-			Amount      int64           `json:"amount"`
-			QRISPayload string          `json:"qris_payload"`
-			VAChannels  []vaChannelInfo `json:"va_channels"`
-		} `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &channelResp))
-	require.Equal(t, "INV-202610-008888", channelResp.Data.InvoiceNo)
-	require.NotEmpty(t, channelResp.Data.QRISPayload)
-	require.Len(t, channelResp.Data.VAChannels, 4)
+	var persisted domain.Invoice
+	require.NoError(t, db.First(&persisted, invoice.ID).Error)
+	require.Equal(t, domain.InvoiceIssued, persisted.Status)
+	require.Equal(t, int64(250000), persisted.Balance)
+	require.Zero(t, persisted.PaidAmount)
 
-	// 2. Simulate Pay
-	body := `{"method":"qris_instant","reference":"QRIS-TEST-1234"}`
-	req2 := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/portal/invoices/%d/simulate-pay", inv.ID), strings.NewReader(body))
-	req2.Header.Set("Content-Type", "application/json")
-	rec2 := httptest.NewRecorder()
-	c2 := CreateTestContext(e, db, req2, rec2, appCtx)
-	c2.SetParamNames("id")
-	c2.SetParamValues(fmt.Sprintf("%d", inv.ID))
-
-	require.NoError(t, simulateInvoicePayment(c2))
-	require.Equal(t, http.StatusOK, rec2.Code)
-
-	var checkInv domain.Invoice
-	require.NoError(t, db.First(&checkInv, inv.ID).Error)
-	require.Equal(t, domain.InvoicePaid, checkInv.Status)
-	require.Equal(t, int64(0), checkInv.Balance)
-	require.Equal(t, int64(250000), checkInv.PaidAmount)
+	var payments int64
+	require.NoError(t, db.Model(&domain.Payment{}).Count(&payments).Error)
+	require.Zero(t, payments)
 }

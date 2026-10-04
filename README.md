@@ -12,6 +12,12 @@ tenant-aware administration, network monitoring, alerts, and a web console.
 
 ## What it includes
 
+For current engineering priorities, see the [detailed audit and implementation backlog](docs/MWX-ISP-audit-backlog-2026-10-05.md),
+[task checklist](docs/MWX-ISP-todo.md), and [product blueprint](docs/MWX-ISP-blueprint.md).
+The October 2026 static audit identifies unresolved public-payment, tenant-isolation,
+voucher-consistency and application-backup gaps. Proposed features are listed separately
+from verified capabilities; the backlog includes evidence, dependencies and acceptance criteria.
+
 - **ISP operations and billing:** customers, packages, subscriptions, invoices,
   payments, automatic document numbering, and billing-based suspend/reactivate.
 - **Network access:** RADIUS authentication and accounting, NAS management,

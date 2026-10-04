@@ -2,6 +2,70 @@
 
 Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait benar-benar selesai.
 
+## Audit lanjutan 2026-10-05 — pekerjaan terbuka
+
+Sumber detail dan kriteria penerimaan: [45 kartu audit, penguatan, dan brainstorming](MWX-ISP-audit-backlog-2026-10-05.md). Baseline `8de4dc5`. Semua item di bawah belum diimplementasikan pada pekerjaan dokumentasi ini; ceklis historis selanjutnya tetap merekam delivery sebelumnya. Detail sublangkah ada pada kartu agar tidak diduplikasi.
+
+- [x] Audit statis lanjutan dan susun 45 kartu dengan bukti/klasifikasi, entry point, dependensi, langkah dan acceptance.
+- [x] Tautkan backlog ke README, blueprint, feature checklist dan roadmap.
+
+### Temuan implementasi
+
+- [ ] [A01 — Hentikan pelunasan melalui simulate-pay](MWX-ISP-audit-backlog-2026-10-05.md#a01) (P0; Terbukti dari kode).
+- [ ] [A02 — Tutup webhook pembayaran yang belum terverifikasi](MWX-ISP-audit-backlog-2026-10-05.md#a02) (P0; Terbukti dari kode).
+- [ ] [A03 — Scope semua endpoint publik ke tenant terverifikasi](MWX-ISP-audit-backlog-2026-10-05.md#a03) (P0; Terbukti dari kode).
+- [ ] [A04 — Batasi pembukaan data pelanggan dari lookup publik](MWX-ISP-audit-backlog-2026-10-05.md#a04) (P0; Terbukti dari kode).
+- [ ] [A05 — Nomor batch voucher benar-benar unik](MWX-ISP-audit-backlog-2026-10-05.md#a05) (P1; Terbukti dari kode).
+- [ ] [A06 — Buktikan dan perbaiki kelayakan akun voucher RADIUS](MWX-ISP-audit-backlog-2026-10-05.md#a06) (P1; Celah integrasi dari kode; perlu reproduksi auth).
+- [ ] [A07 — Hubungkan masa berlaku dan kuota voucher ke runtime](MWX-ISP-audit-backlog-2026-10-05.md#a07) (P1; Celah integrasi dari pencarian kode).
+- [ ] [A08 — Transaksi atomik batch, voucher dan kredensial](MWX-ISP-audit-backlog-2026-10-05.md#a08) (P1; Terbukti dari kode).
+- [ ] [A09 — Penghapusan voucher tidak boleh sukses palsu](MWX-ISP-audit-backlog-2026-10-05.md#a09) (P1; Terbukti dari kode).
+- [ ] [A10 — Registrasi pelanggan dan work order atomik](MWX-ISP-audit-backlog-2026-10-05.md#a10) (P1; Terbukti dari kode).
+- [ ] [A11 — Tolak paket registrasi yang tidak tersedia](MWX-ISP-audit-backlog-2026-10-05.md#a11) (P1; Terbukti dari kode).
+- [ ] [A12 — Satukan sequence tiket dan work order](MWX-ISP-audit-backlog-2026-10-05.md#a12) (P1; Terbukti dari kode).
+- [ ] [A13 — Lengkapi cakupan backup JSON aplikasi](MWX-ISP-audit-backlog-2026-10-05.md#a13) (P1; Terbukti dari kode).
+- [ ] [A14 — Edit ODP bisa mengosongkan nilai](MWX-ISP-audit-backlog-2026-10-05.md#a14) (P2; Terbukti dari kode).
+- [ ] [A15 — Cetak seluruh voucher batch melalui pagination](MWX-ISP-audit-backlog-2026-10-05.md#a15) (P2; Terbukti dari kode).
+- [ ] [A16 — Hubungkan pilihan paket pada generator voucher](MWX-ISP-audit-backlog-2026-10-05.md#a16) (P1; Terbukti dari kode).
+- [ ] [A17 — Audit IP menghormati waktu yang diminta](MWX-ISP-audit-backlog-2026-10-05.md#a17) (P2; Terbukti dari kode).
+- [ ] [A18 — Jelaskan jenis probe TCP dan dukung alamat IPv6](MWX-ISP-audit-backlog-2026-10-05.md#a18) (P2; Terbukti dari kode).
+- [ ] [A19 — Jangan mempublikasikan paket fiktif ketika katalog kosong](MWX-ISP-audit-backlog-2026-10-05.md#a19) (P2; Terbukti dari kode).
+- [ ] [A20 — Selaraskan scope dokumen dengan fitur yang telah ada](MWX-ISP-audit-backlog-2026-10-05.md#a20) (P1; Terbukti dari dokumen dan route).
+
+### Verifikasi dan penguatan
+
+- [ ] [H01 — Audit join, raw SQL dan relasi tenant](MWX-ISP-audit-backlog-2026-10-05.md#h01) (P1; Perlu verifikasi).
+- [ ] [H02 — Matriks izin per aksi dan UI](MWX-ISP-audit-backlog-2026-10-05.md#h02) (P1; Perlu verifikasi).
+- [ ] [H03 — Rate limit surface publik dan registrasi](MWX-ISP-audit-backlog-2026-10-05.md#h03) (P1; Penguatan).
+- [ ] [H04 — Concurrency dan replay pembayaran](MWX-ISP-audit-backlog-2026-10-05.md#h04) (P1; Perlu verifikasi).
+- [ ] [H05 — Suspend/reactivate dan kegagalan NAS](MWX-ISP-audit-backlog-2026-10-05.md#h05) (P1; Perlu verifikasi).
+- [ ] [H06 — Buktikan disaster recovery dan migrasi](MWX-ISP-audit-backlog-2026-10-05.md#h06) (P1; Perlu verifikasi).
+- [ ] [H07 — Integritas alokasi port ODP](MWX-ISP-audit-backlog-2026-10-05.md#h07) (P1; Perlu verifikasi).
+- [ ] [H08 — Validasi pool IPAM dan kapasitas subnet](MWX-ISP-audit-backlog-2026-10-05.md#h08) (P2; Perlu verifikasi).
+- [ ] [H09 — Kebenaran grafik trafik dan data stale](MWX-ISP-audit-backlog-2026-10-05.md#h09) (P2; Perlu verifikasi).
+- [ ] [H10 — Scope ingestion syslog](MWX-ISP-audit-backlog-2026-10-05.md#h10) (P1; Perlu verifikasi).
+- [ ] [H11 — WhatsApp tahan putus koneksi dan dedup](MWX-ISP-audit-backlog-2026-10-05.md#h11) (P2; Perlu verifikasi).
+- [ ] [H12 — State UI, cache tenant dan pagination](MWX-ISP-audit-backlog-2026-10-05.md#h12) (P2; Perlu verifikasi).
+- [ ] [H13 — EN/ID, aksesibilitas dan branding konsisten](MWX-ISP-audit-backlog-2026-10-05.md#h13) (P2; Penguatan).
+- [ ] [H14 — Installer/update/release sebagai satu alur](MWX-ISP-audit-backlog-2026-10-05.md#h14) (P1; Perlu verifikasi).
+- [ ] [H15 — Demo, data migration dan fixture sintetis](MWX-ISP-audit-backlog-2026-10-05.md#h15) (P2; Penguatan).
+
+### Brainstorming — belum dijadwalkan
+
+- [ ] [F01 — Halaman kesiapan operasional](MWX-ISP-audit-backlog-2026-10-05.md#f01) (P2; Usulan; belum dijadwalkan).
+- [ ] [F02 — Timeline aktivitas pelanggan](MWX-ISP-audit-backlog-2026-10-05.md#f02) (P2; Usulan; belum dijadwalkan).
+- [ ] [F03 — Integrasi satu payment gateway sungguhan](MWX-ISP-audit-backlog-2026-10-05.md#f03) (P2; Usulan; keputusan scope/provider diperlukan).
+- [ ] [F04 — Portal pelanggan minimum dengan login](MWX-ISP-audit-backlog-2026-10-05.md#f04) (P2; Usulan; keputusan scope diperlukan).
+- [ ] [F05 — Work order teknisi minimum](MWX-ISP-audit-backlog-2026-10-05.md#f05) (P3; Usulan; keputusan scope diperlukan).
+- [ ] [F06 — Maintenance window dan penekanan alert turunan](MWX-ISP-audit-backlog-2026-10-05.md#f06) (P3; Usulan; belum dijadwalkan).
+- [ ] [F07 — Support bundle tersensor](MWX-ISP-audit-backlog-2026-10-05.md#f07) (P2; Usulan; belum dijadwalkan).
+- [ ] [F08 — Import pelanggan dengan preview dan dry-run](MWX-ISP-audit-backlog-2026-10-05.md#f08) (P2; Usulan; belum dijadwalkan).
+- [ ] [F09 — Status backup dan drill pemulihan](MWX-ISP-audit-backlog-2026-10-05.md#f09) (P2; Usulan; belum dijadwalkan).
+- [ ] [F10 — API integrasi dengan token scoped](MWX-ISP-audit-backlog-2026-10-05.md#f10) (P3; Usulan; keputusan scope diperlukan).
+
+Urutan: containment A01–A04 → transaksi/nomor/backup/scope → pembuktian operasi → UI/deployment → proposal terpilih. Kartu F memerlukan keputusan scope; membaca backlog tidak mengotorisasi ekspansi produk.
+
+
 ## Tahap 0 — Kenali proyek dan persiapan
 
 - [x] Tinjau struktur backend dan frontend lokal.
@@ -252,8 +316,8 @@ Catatan Enterprise Features & WhatsApp Hybrid (2026-10-04):
   - Mempertahankan library `whatsmeow` native Go (ringan ~25 MB RAM, terintegrasi satu binary, tidak memerlukan runtime Node.js/Baileys).
   - Server-side direct send untuk Invoice (`POST /isp/invoices/:id/send-whatsapp`) dan Payment Receipt (`POST /isp/payments/:id/send-whatsapp`).
   - Fallback client-side 1-click WhatsApp (`wa.me`) untuk operator web/mobile.
-- Public Customer Portal Lookup (`GET /portal/lookup?q=...`): Mendukung pencarian mandiri status pelanggan, paket, total tunggakan, dan riwayat tagihan berbasis nomor pelanggan, nomor HP, atau NIK.
-- Public Customer Self-Service Portal (`/portal`): Halaman web mandiri responsif modern (mobile-first, dark theme, panduan transfer bank dengan salin nomor rekening 1-klik, dan tombol konfirmasi WhatsApp otomatis).
-- Payment Gateway Webhook (`POST /portal/payments/webhook`): Integrasi webhook otomatis untuk Tripay / Midtrans / QRIS; mencatat payment, melunasi invoice, mengaktifkan kembali subscription tertunggak, mengaktifkan akun RADIUS, dan mengirim notifikasi WhatsApp otomatis secara instan 24/7.
+- Tenant-scoped operator customer lookup (`GET /portal/lookup?q=...`): API memerlukan JWT operator; customer-owned public self-service belum tersedia.
+- Operator portal preview (`/portal`): Route ada di UI tetapi wajib login operator. Online payment belum terhubung; jangan tampilkan QRIS/VA sintetis sebagai metode pembayaran nyata.
+- Payment callback (`POST /portal/payments/webhook`): Dinonaktifkan dengan `PAYMENT_PROVIDER_UNCONFIGURED` sampai ada provider, signature verification, replay defense, dan amount validation yang benar.
 - Fair Usage Policy (FUP) & Bandwidth Tracking: Menambahkan batas kuota FUP (`fup_limit_gb`), batas throttle unduh (`fup_rate_down`), dan batas throttle unggah (`fup_rate_up`) pada paket internet, serta mendeteksi status throttled otomatis di detail subscription.
 - Database Retention & Archiving Scheduler: Pembersihan berkala otomatis untuk sampel monitoring jaringan > 30 hari, antrean notifikasi > 30 hari, dan histori billing audit > 180 hari.
