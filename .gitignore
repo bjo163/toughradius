@@ -23,6 +23,9 @@ coverage.out
 /toughradius.yaml
 /.toughradius/
 /.env
+/.env.installing.*
+/.mwx-isp-install-state
+/.mwx-isp-install-state.tmp
 /tmp/
 log_info.log
 __debug_bin*

@@ -19,17 +19,36 @@ cd mwx-isp
 sudo bash scripts/vps-install.sh
 ```
 
-The installer creates private credentials in `/opt/mwx-isp/.env`, builds the
-application image, and starts PostgreSQL, MWX-ISP, and Caddy. It prints the
-generated admin password once: save it securely. The web port is bound to
-localhost behind Caddy; RADIUS ports are exposed for NAS connections. The
-installer enables a daily update timer when systemd is available. Review the
+Run a read-only host check first with `sudo bash scripts/vps-install.sh --check`
+if you want to inspect prerequisites before making changes. On a new interactive
+install, the installer asks for the public hostname and timezone. For automation,
+pass `--yes`; safe defaults are `localhost` and `Asia/Jakarta`. Preconfigure a
+public hostname and timezone without prompts like this:
+
+```bash
+sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash scripts/vps-install.sh --yes
+```
+
+The installer creates private credentials in `/opt/mwx-isp/.env`, pulls the
+PostgreSQL and MWX-ISP release images, and starts PostgreSQL, MWX-ISP, and Caddy.
+It prints the generated admin password once: save it securely. The web port is
+bound to localhost behind Caddy; RADIUS ports are exposed for NAS connections.
+It waits for PostgreSQL and app health checks and verifies the local Caddy route
+before reporting success. Public HTTPS certificates depend on DNS pointing to
+the VPS and inbound TCP 80/443 being reachable. If a first install is interrupted,
+rerun the installer to resume; when services or data already exist, it creates a
+safety backup before continuing. Existing `.env` values and data volumes are
+preserved. The installer does not change host firewall rules. It enables daily
+update and backup timers when systemd is available. Review the
 [`README.md`](https://github.com/bjo163/mwx-isp/blob/main/README.md) before
 production use.
 
 Set `MWX_ISP_DOMAIN` in `/opt/mwx-isp/.env` to the public DNS name for automatic
 HTTPS. The default `localhost` is suitable only for local checks. Do not expose
-PostgreSQL to the public network.
+PostgreSQL to the public network. Allow TCP 80/443 for Caddy and only the RADIUS
+ports needed by your NAS (UDP 1812/1813 and TCP 2083 for RadSec). Set firewall
+rules using your VPS provider or existing host firewall so your SSH access stays
+available.
 
 ## 2. Sign in
 
@@ -42,6 +61,13 @@ sign in with:
 Change the password after signing in. Existing installations keep their current
 admin password when updated. For manual Compose setup, copy `.env.vps.example`
 to `.env`, replace every `CHANGE_ME` value, and run `docker compose up -d --build`.
+
+For the first ISP setup, review the generated sample records, set the deployment
+branding and tenant identity, add the NAS and its shared secret, attach a RADIUS
+profile to a test user, then verify authentication and accounting from that NAS.
+Keep sample NAS and RADIUS users disabled until you are in an isolated test
+network. Configure monitoring targets and optional WhatsApp alerts only after
+the core RADIUS flow works.
 
 ## 3. Try the sample records
 

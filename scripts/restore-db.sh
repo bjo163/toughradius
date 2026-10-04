@@ -4,7 +4,7 @@ set -Eeuo pipefail
 APP_DIR="${MWX_ISP_DIR:-/opt/mwx-isp}"
 if [[ "${EUID}" -ne 0 ]]; then echo "Run restore as root." >&2; exit 1; fi
 exec 9>/run/lock/mwx-isp-update.lock
-if ! flock -n 9; then echo "An MWX-ISP update or restore is already running." >&2; exit 1; fi
+if ! flock -n 9; then echo "An MWX-ISP install, update, or restore is already running." >&2; exit 1; fi
 if [[ $# -ne 1 ]]; then echo "Usage: $0 <backup-directory>" >&2; exit 2; fi
 backup_dir="$(realpath -e -- "$1")"
 [[ -f "${backup_dir}/database.dump" && -f "${backup_dir}/application-data.tar.gz" && -f "${backup_dir}/SHA256SUMS" ]] || { echo "Backup set is incomplete: ${backup_dir}" >&2; exit 1; }
