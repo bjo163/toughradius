@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.2.2 — 2026-10-04
+
+Changes since v0.2.1:
+
+### Fixes and Improvements
+
+- allow safe backfill of unpublished tags
+
 ## v0.2.1 — 2026-10-04
 
 Changes since v0.2.0:
