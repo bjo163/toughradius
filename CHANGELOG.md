@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.5.0 — 2026-10-05
+
+Changes since v0.4.1:
+
+### Features
+
+- add private peer gossip service
+
 ## v0.4.1 — 2026-10-05
 
 Changes since v0.4.0:
