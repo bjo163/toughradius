@@ -63,6 +63,10 @@ Compose configuration, and restart the stack without deleting data:
 curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
 ```
 
+If a previous uninstall removed the directory your SSH shell was using, run
+`cd /opt` once before rerunning the installer. The installer now recovers from
+that stale shell directory automatically.
+
 ## Build from source
 
 Requirements: the Go version specified in `go.mod` and Node.js 18 or newer.

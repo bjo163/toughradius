@@ -5,6 +5,11 @@ APP_DIR="${MWX_ISP_DIR:-/opt/mwx-isp}"
 INTERACTIVE=false
 CHECK_ONLY=false
 
+# The previous uninstall release removed the directory a caller may be using
+# as its current working directory. Recover immediately so later commands and
+# git clone do not inherit a deleted cwd.
+cd / || { echo "Cannot enter a safe working directory." >&2; exit 1; }
+
 usage() {
   cat <<EOF
 MWX-ISP VPS installer

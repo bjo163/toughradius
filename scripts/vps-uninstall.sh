@@ -6,6 +6,9 @@ PURGE=false
 REMOVE_BACKUPS=false
 ASSUME_YES=false
 
+# Recover from the previous release, which could delete the caller's cwd.
+cd / || { echo "Cannot enter a safe working directory." >&2; exit 1; }
+
 usage() {
   cat <<EOF
 MWX-ISP VPS uninstaller
@@ -134,23 +137,23 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 if [[ -d "${APP_DIR}" ]]; then
-  if [[ "${PURGE}" == true ]]; then
-    rm -rf --one-file-system -- "${APP_DIR}"
-  else
-    # Keep the exact DB credentials needed by the preserved volume, outside the install path.
-    if [[ -f "${APP_DIR}/.env" ]]; then
-      config_backup="${APP_DIR}.env.uninstalled"
-      install -m 0600 -o root -g root -- "${APP_DIR}/.env" "${config_backup}"
-    fi
-    rm -rf --one-file-system -- "${APP_DIR}"
+  if [[ "${PURGE}" != true && -f "${APP_DIR}/.env" ]]; then
+    # Keep the exact DB credentials needed by preserved volumes, outside the install path.
+    config_backup="${APP_DIR}.env.uninstalled"
+    install -m 0600 -o root -g root -- "${APP_DIR}/.env" "${config_backup}"
   fi
+  # Keep the empty directory itself: the caller's interactive shell may be in it,
+  # and deleting it leaves that shell with a broken cwd. The installer can clone
+  # into an existing empty directory on reinstall.
+  find "${APP_DIR}" -mindepth 1 -maxdepth 1 -exec rm -rf --one-file-system -- {} +
+  chmod 0750 "${APP_DIR}"
 fi
 
 if [[ "${PURGE}" == true ]]; then
   if [[ -e "${APP_DIR}.env.uninstalled" ]]; then rm -f -- "${APP_DIR}.env.uninstalled"; fi
-  echo "MWX-ISP has been fully uninstalled and its data volumes removed."
+  echo "MWX-ISP has been fully uninstalled and its data volumes removed. The empty install directory was kept for shell safety."
 else
-  echo "MWX-ISP services and installation files have been removed. Database and app data volumes were preserved."
+  echo "MWX-ISP services and installation files have been removed. Database and app data volumes were preserved. The empty install directory was kept for shell safety."
   if [[ -f "${APP_DIR}.env.uninstalled" ]]; then
     echo "Configuration backup (contains database credentials): ${APP_DIR}.env.uninstalled"
     echo "Restore it as ${APP_DIR}/.env before reinstalling, or keep it safe for a future restore."
