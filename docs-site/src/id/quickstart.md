@@ -39,14 +39,21 @@ data yang ada dipertahankan. Firewall host tidak diubah otomatis. Pada host
 systemd, installer mengaktifkan update dan backup harian.
 
 Atur `MWX_ISP_DOMAIN` dalam `/opt/mwx-isp/.env` ke domain publik untuk HTTPS.
-`localhost` hanya untuk pemeriksaan lokal. Buka TCP 80/443 untuk Caddy dan hanya
+Jika memakai `localhost`, layanan admin tetap privat. Buka TCP 80/443 untuk Caddy dan hanya
 port NAS yang dipakai: UDP 1812/1813 serta TCP 2083 jika memakai RadSec. Jangan
 publikasikan port PostgreSQL. Tambahkan aturan firewall lewat pengelolaan VPS
 atau firewall yang sudah digunakan, sambil menjaga akses SSH.
 
 ## 2. Login
 
-Buka `https://<domain-anda>/admin/`, lalu masuk dengan username `admin` dan
+Jika domain publik telah disetel, buka `https://<domain-anda>/admin/`. Jika
+installer memakai `localhost`, buat SSH tunnel dari komputer Anda:
+
+```bash
+ssh -L 1816:127.0.0.1:1816 <user>@<ip-server>
+```
+
+Lalu buka `http://localhost:1816/admin/`. Masuk dengan username `admin` dan
 password satu-kali dari installer. Segera ubah password setelah login. Saat
 update, instalasi yang sudah ada tetap menggunakan password saat ini.
 

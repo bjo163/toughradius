@@ -48,7 +48,7 @@ For a new manual install, pass an explicit MWX-ISP config path, such as `-c /etc
 ```yaml
 system:
   appid: MWX-ISP
-  location: Asia/Shanghai        # cron/timestamp timezone
+  location: Asia/Jakarta         # cron/timestamp timezone
   workdir: /var/toughradius      # default in production builds
   debug: false
 web:
@@ -90,7 +90,7 @@ On startup MWX-ISP creates under `system.workdir`:
 
 ```text
 /var/toughradius/
-├── data/        # SQLite database, metrics data
+├── data/        # local SQLite data (when selected) and metrics data
 ├── logs/
 ├── private/     # TLS material (mode 0700)
 ├── public/
@@ -129,10 +129,12 @@ See the [Admin UI Manual](./admin-manual.md#system-config).
 
 ## Database
 
-- **SQLite** (default) — pure-Go driver, zero CGO, file at
-  `{workdir}/data/<name>`. Fine for small/medium deployments; back up the file.
-- **PostgreSQL** — set `database.type: postgres` plus host/user/password.
-  Recommended for production scale and concurrent accounting load.
+- **PostgreSQL** is the default and recommended database for production. Keep
+  its data in a persistent volume and use the backup/restore procedures below.
+- **SQLite** is available when explicitly selected for local development or
+  supported legacy deployments. Its database file is stored under
+  `{workdir}/data/`; do not assume this file contains production data when the
+  installation uses PostgreSQL.
 
 Schema migration (GORM `AutoMigrate`) runs automatically at every startup, so
 upgrades are: stop, replace the binary, start. `-initdb` is for first

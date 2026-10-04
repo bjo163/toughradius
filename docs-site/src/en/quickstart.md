@@ -44,7 +44,7 @@ update and backup timers when systemd is available. Review the
 production use.
 
 Set `MWX_ISP_DOMAIN` in `/opt/mwx-isp/.env` to the public DNS name for automatic
-HTTPS. The default `localhost` is suitable only for local checks. Do not expose
+HTTPS. The default `localhost` keeps the admin service private. Do not expose
 PostgreSQL to the public network. Allow TCP 80/443 for Caddy and only the RADIUS
 ports needed by your NAS (UDP 1812/1813 and TCP 2083 for RadSec). Set firewall
 rules using your VPS provider or existing host firewall so your SSH access stays
@@ -52,14 +52,20 @@ available.
 
 ## 2. Sign in
 
-Open `https://<your-domain>/admin/` (or the local proxy URL during setup) and
-sign in with:
+Open `https://<your-domain>/admin/` when using a public domain. If the installer
+selected `localhost`, connect from your computer with an SSH tunnel:
+
+```bash
+ssh -L 1816:127.0.0.1:1816 <user>@<server-ip>
+```
+
+Then open `http://localhost:1816/admin/`. Sign in with:
 
 - Username: `admin`
 - Password: the one-time password printed by the VPS installer
 
 Change the password after signing in. Existing installations keep their current
-admin password when updated. For manual Compose setup, copy `.env.vps.example`
+admin password when updated. For manual source setup, copy `.env.vps.example`
 to `.env`, replace every `CHANGE_ME` value, and run `docker compose up -d --build`.
 
 For the first ISP setup, review the generated sample records, set the deployment
