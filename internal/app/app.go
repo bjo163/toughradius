@@ -16,6 +16,7 @@ import (
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/networkmonitor"
 	"github.com/bjo163/mwx-isp/internal/notify"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cast"
@@ -113,7 +114,8 @@ func (a *Application) initializeOperationalServices(cfg *config.AppConfig) {
 			message = fmt.Sprintf("MWX-ISP: network target %s (%s) has recovered.", target.Name, target.Address)
 		}
 		key := fmt.Sprintf("network:%d:%s:%d", target.ID, to, at.Unix())
-		if err := a.notificationOutbox.Enqueue(eventType, key, message); err != nil {
+		ctx := tenancy.WithTenantID(context.Background(), target.TenantID)
+		if err := a.notificationOutbox.EnqueueContext(ctx, eventType, key, message); err != nil {
 			zap.L().Warn("enqueue network alert failed", zap.Error(err))
 		}
 	})

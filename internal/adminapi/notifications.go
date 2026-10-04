@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/notify"
 	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
@@ -46,9 +46,8 @@ func registerNotificationRoutes() {
 
 func readNotifySettings(db *gorm.DB) (domain.NotificationSettings, error) {
 	var row domain.NotificationSettings
-	err := db.First(&row, 1).Error
+	err := db.First(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		row.ID = 1
 		row.RecipientsJSON = "[]"
 		row.EventsJSON = "[]"
 		return row, nil
@@ -92,7 +91,9 @@ func putWhatsAppSettings(c echo.Context) error {
 		return fail(c, 400, "RISK_ACK_REQUIRED", "Acknowledge WhatsApp integration and account policy risks before enabling", nil)
 	}
 	recipients := make([]string, 0, len(in.Recipients))
-	if len(in.Recipients) > 20 { return fail(c, 400, "RECIPIENT_LIMIT", "At most 20 operator recipients are supported", nil) }
+	if len(in.Recipients) > 20 {
+		return fail(c, 400, "RECIPIENT_LIMIT", "At most 20 operator recipients are supported", nil)
+	}
 	seen := map[string]bool{}
 	for _, candidate := range in.Recipients {
 		normalized, err := notify.NormalizeRecipient(candidate)
@@ -122,9 +123,8 @@ func putWhatsAppSettings(c echo.Context) error {
 		return fail(c, 400, "EVENT_REQUIRED", "Select at least one notification event", nil)
 	}
 	var row domain.NotificationSettings
-	err := GetDB(c).First(&row, 1).Error
+	err := GetDB(c).First(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		row.ID = 1
 	} else if err != nil {
 		return fail(c, 500, "DATABASE_ERROR", "Failed to load notification settings", nil)
 	}
@@ -149,7 +149,7 @@ func putWhatsAppSettings(c echo.Context) error {
 
 func pairingAllowed(c echo.Context) (app.NotificationProvider, error) {
 	var settings domain.NotificationSettings
-	if err := GetDB(c).First(&settings, 1).Error; err != nil {
+	if err := GetDB(c).First(&settings).Error; err != nil {
 		return nil, errors.New("save settings and acknowledge the risks before pairing")
 	}
 	if !settings.WhatsAppEnabled || settings.RiskAcknowledgedAt == nil {
@@ -200,7 +200,7 @@ func sendWhatsAppTest(c echo.Context) error {
 		return fail(c, 400, "INVALID_REQUEST", "Invalid recipient", nil)
 	}
 	var settings domain.NotificationSettings
-	if err := GetDB(c).First(&settings, 1).Error; err != nil || !settings.WhatsAppEnabled || settings.RiskAcknowledgedAt == nil {
+	if err := GetDB(c).First(&settings).Error; err != nil || !settings.WhatsAppEnabled || settings.RiskAcknowledgedAt == nil {
 		return fail(c, 400, "NOTIFICATIONS_DISABLED", "Enable WhatsApp alerts and acknowledge risk first", nil)
 	}
 	var recipients []string

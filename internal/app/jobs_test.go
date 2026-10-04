@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestRunBillingForTenantScopesInvoiceGenerationAndDisconnect(t *testing.T) {
 		sub := domain.Subscription{SubscriptionNo: "SUB-001", CustomerID: customer.ID, PackageID: pkg.ID,
 			RadiusUserID: user.ID, Status: domain.SubscriptionActive, StartDate: now.AddDate(0, -1, 0), BillingDay: 1}
 		require.NoError(t, tenantDB.Create(&sub).Error)
-		session := domain.RadiusOnline{Username: user.Username, AcctSessionId: "session-" + string(rune('0'+tenantID/10))}
+		session := domain.RadiusOnline{Username: user.Username, AcctSessionId: fmt.Sprintf("session-%d", tenantID)}
 		require.NoError(t, tenantDB.Create(&session).Error)
 	}
 

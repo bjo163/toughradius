@@ -160,9 +160,18 @@ func (a *Application) SchedNetworkMonitorTask() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	if err := a.networkMonitor.PollDue(ctx, time.Now()); err != nil {
-		zap.L().Warn("network monitor poll failed", zap.Error(err))
-		a.enqueueSchedulerFailure("network-monitor", "network monitor polling failed")
+	var tenants []domain.Tenant
+	if err := a.gormDB.WithContext(ctx).Where("status = ?", "active").Order("id ASC").Find(&tenants).Error; err != nil {
+		zap.L().Warn("active tenant query failed for network monitor", zap.Error(err))
+		a.enqueueSchedulerFailure("network-monitor-tenants", "active tenant query failed")
+		return
+	}
+	for _, tenant := range tenants {
+		tenantCtx := tenancy.WithTenantID(ctx, tenant.ID)
+		if err := a.networkMonitor.PollDue(tenantCtx, time.Now()); err != nil {
+			zap.L().Warn("tenant network monitor poll failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			a.enqueueSchedulerFailure("network-monitor", fmt.Sprintf("network monitor polling failed for tenant %d", tenant.ID))
+		}
 	}
 }
 
@@ -174,11 +183,19 @@ func (a *Application) SchedNotificationOutboxTask() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	if err := a.NotifyBillingEvents(ctx, time.Now().Add(-2*time.Minute)); err != nil {
-		zap.L().Warn("billing notification enqueue failed", zap.Error(err))
+	var tenants []domain.Tenant
+	if err := a.gormDB.WithContext(ctx).Where("status = ?", "active").Order("id ASC").Find(&tenants).Error; err != nil {
+		zap.L().Warn("active tenant query failed for notification dispatcher", zap.Error(err))
+		return
 	}
-	if err := a.notificationOutbox.ProcessOnce(ctx, time.Now()); err != nil {
-		zap.L().Warn("notification outbox processing failed", zap.Error(err))
+	for _, tenant := range tenants {
+		tenantCtx := tenancy.WithTenantID(ctx, tenant.ID)
+		if err := a.NotifyBillingEvents(tenantCtx, time.Now().Add(-2*time.Minute)); err != nil {
+			zap.L().Warn("tenant billing notification enqueue failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
+		if err := a.notificationOutbox.ProcessOnce(tenantCtx, time.Now()); err != nil {
+			zap.L().Warn("tenant notification outbox processing failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
 	}
 }
 

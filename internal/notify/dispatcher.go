@@ -54,8 +54,14 @@ func NewDispatcher(db *gorm.DB, sender Sender) *Dispatcher {
 // enabled and risk acknowledgement is present. A stable dedupe key makes
 // repeated scheduler processing harmless. It returns database/JSON errors.
 func (d *Dispatcher) Enqueue(eventType, dedupeKey, body string) error {
+	return d.EnqueueContext(context.Background(), eventType, dedupeKey, body)
+}
+
+// EnqueueContext queues an event using the caller's tenant-scoped context.
+func (d *Dispatcher) EnqueueContext(ctx context.Context, eventType, dedupeKey, body string) error {
+	db := d.db.WithContext(ctx)
 	var settings domain.NotificationSettings
-	if err := d.db.Where("id = ?", 1).First(&settings).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := db.First(&settings).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("load notification settings: %w", err)
@@ -92,7 +98,7 @@ func (d *Dispatcher) Enqueue(eventType, dedupeKey, body string) error {
 			NextAttemptAt: time.Now(),
 			CreatedAt:     time.Now(),
 		}
-		if err := d.db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "tenant_id"}, {Name: "dedupe_key"}}, DoNothing: true}).Create(&row).Error; err != nil {
+		if err := db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "tenant_id"}, {Name: "dedupe_key"}}, DoNothing: true}).Create(&row).Error; err != nil {
 			return fmt.Errorf("enqueue notification: %w", err)
 		}
 	}
@@ -114,7 +120,7 @@ func (d *Dispatcher) EnqueueBillingEvents(ctx context.Context, since time.Time) 
 			eventType = "billing.reactivated"
 		}
 		body := fmt.Sprintf("MWX-ISP: subscription #%d was %s. Review the billing record in the admin dashboard.", event.SubscriptionID, status)
-		if err := d.Enqueue(eventType, fmt.Sprintf("billing-event:%d", event.ID), body); err != nil {
+		if err := d.EnqueueContext(ctx, eventType, fmt.Sprintf("billing-event:%d", event.ID), body); err != nil {
 			return err
 		}
 	}
@@ -130,11 +136,12 @@ func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 		return nil
 	}
 	defer d.mu.Unlock()
-	if err := d.db.WithContext(ctx).Where("created_at < ? AND status IN ?", now.Add(-30*24*time.Hour), []string{"sent", "failed", persistedCanceledOutboxStatus}).Delete(&domain.NotificationOutbox{}).Error; err != nil {
+	db := d.db.WithContext(ctx)
+	if err := db.Where("created_at < ? AND status IN ?", now.Add(-30*24*time.Hour), []string{"sent", "failed", persistedCanceledOutboxStatus}).Delete(&domain.NotificationOutbox{}).Error; err != nil {
 		return fmt.Errorf("prune notification history: %w", err)
 	}
 	var rows []domain.NotificationOutbox
-	if err := d.db.WithContext(ctx).
+	if err := db.
 		Where("status IN ? AND next_attempt_at <= ?", []string{"pending", "retry"}, now).
 		Order("id ASC").Limit(maxOutboxBatch).Find(&rows).Error; err != nil {
 		return fmt.Errorf("load outbound notifications: %w", err)
@@ -143,12 +150,12 @@ func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		allowed, err := d.deliveryAllowed(row)
+		allowed, err := d.deliveryAllowedContext(ctx, row)
 		if err != nil {
 			return err
 		}
 		if !allowed {
-			if err := d.db.Model(&row).Updates(map[string]any{"status": persistedCanceledOutboxStatus, "last_error": "Notification settings changed"}).Error; err != nil {
+			if err := db.Model(&row).Updates(map[string]any{"status": persistedCanceledOutboxStatus, "last_error": "Notification settings changed"}).Error; err != nil {
 				return fmt.Errorf("cancel notification after settings change: %w", err)
 			}
 			continue
@@ -158,7 +165,7 @@ func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 		cancel()
 		if err == nil {
 			sentAt := now
-			if updateErr := d.db.Model(&row).Updates(map[string]any{
+			if updateErr := db.Model(&row).Updates(map[string]any{
 				"status": "sent", "sent_at": &sentAt, "attempts": row.Attempts + 1, "last_error": "",
 			}).Error; updateErr != nil {
 				return fmt.Errorf("mark notification delivered: %w", updateErr)
@@ -173,7 +180,7 @@ func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 			delay = 0
 		}
 		lastError := "WhatsApp delivery failed"
-		if updateErr := d.db.Model(&row).Updates(map[string]any{
+		if updateErr := db.Model(&row).Updates(map[string]any{
 			"status":          status,
 			"attempts":        attempts,
 			"next_attempt_at": now.Add(delay),
@@ -185,9 +192,9 @@ func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 	return nil
 }
 
-func (d *Dispatcher) deliveryAllowed(row domain.NotificationOutbox) (bool, error) {
+func (d *Dispatcher) deliveryAllowedContext(ctx context.Context, row domain.NotificationOutbox) (bool, error) {
 	var settings domain.NotificationSettings
-	if err := d.db.First(&settings, 1).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := d.db.WithContext(ctx).First(&settings).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if err != nil {
 		return false, fmt.Errorf("recheck notification settings: %w", err)

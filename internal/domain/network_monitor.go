@@ -72,7 +72,7 @@ func (NetMonitorIncident) TableName() string { return "net_monitor_incident" }
 // operational WhatsApp notifications. It contains no WhatsApp device keys.
 type NotificationSettings struct {
 	ID                 int64      `json:"id,string" gorm:"primaryKey"`
-	TenantID           int64      `json:"-" gorm:"not null;default:1;index"`
+	TenantID           int64      `json:"-" gorm:"not null;default:1;uniqueIndex:udx_notification_settings_tenant"`
 	WhatsAppEnabled    bool       `json:"whatsapp_enabled"`
 	RiskAcknowledgedAt *time.Time `json:"risk_acknowledged_at,omitempty"`
 	RecipientsJSON     string     `json:"recipients_json" gorm:"type:text"`
