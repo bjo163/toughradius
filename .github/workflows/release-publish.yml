@@ -10,6 +10,11 @@ on:
         description: SemVer tag created by the main-branch release workflow
         required: true
         type: string
+      make_latest:
+        description: Whether this release should become the latest GitHub release
+        required: false
+        default: true
+        type: boolean
 
 concurrency:
   group: release-${{ github.ref }}
@@ -271,6 +276,7 @@ jobs:
           body_path: release_notes.md
           draft: false
           prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
+          make_latest: ${{ inputs.make_latest }}
           files: |
             ./release/mwx-isp_linux_amd64
             ./release/mwx-isp_linux_arm64
