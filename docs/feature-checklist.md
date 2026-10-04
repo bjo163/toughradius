@@ -2,6 +2,14 @@
 
 Development roadmap: [docs/roadmap.md](roadmap.md)
 
+## Audit follow-up (2026-10-05)
+
+The [detailed audit backlog](MWX-ISP-audit-backlog-2026-10-05.md) records 20 implementation findings/gaps, 15 verification/hardening tasks and 10 unscheduled proposals at local baseline `8de4dc5`. These are static-review findings, not completed fixes or runtime acceptance evidence. Previously delivered feature labels do not certify subsequently added surfaces.
+
+M18 maps containment and verification to existing API, UI, storage, billing, deployment and tenant boundaries. Existing public payment mutations, public tenant scoping, voucher consistency and application JSON backup coverage require follow-up. Repairing existing unsafe behavior does not authorize extending a payment, captive-portal or CRM product.
+
+Scope drift is explicitly tracked by A20: public portal, vouchers, tickets, IPAM and ODP appear in code while the non-goals below still exclude portions of that product surface. Keep the non-goals until a scope decision reconciles them; do not silently assign a new approved feature ID to brainstorming. F03/F04/F05/F10 are proposals requiring scope review; all F items remain unscheduled. English/Indonesian handbook claims must follow the resulting implementation and evidence.
+
 This document is the feature scope baseline for MWX-ISP. Future requirements, issues, pull requests, and code changes must first align with the feature IDs in this checklist. If a request cannot be mapped to an existing feature ID, update this checklist with the scope change before implementation starts.
 
 ## Maintenance Rules

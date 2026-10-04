@@ -1,6 +1,18 @@
 # MWX-ISP — Blueprint Produk
 
 **Nama:** MWX-ISP
+
+## Addendum audit 2026-10-05 — prioritas pematangan
+
+[Backlog terperinci 45 kartu](MWX-ISP-audit-backlog-2026-10-05.md) dan [todo aktif](MWX-ISP-todo.md) memperbarui prioritas pekerjaan. Ini hasil audit statis baseline `8de4dc5`; belum ada perbaikan produk atau uji runtime dalam pekerjaan dokumentasi ini. Delivery historis di bawah tidak berarti tambahan fitur terbaru sudah terverifikasi.
+
+Prioritas pertama adalah menutup pelunasan publik tanpa verifikasi, menetapkan tenant context pada public API, serta melindungi lookup data pelanggan. Berikutnya: transaksi voucher/registrasi, sequence nomor, backup model operasional, pembuktian kuota/expiry voucher, dan akurasi diagnostik. M18 pada roadmap menampung containment dan penguatan; ekspansi produk tetap proposal.
+
+**Gap scope:** kode sekarang sudah memiliki portal, voucher, tiket, IPAM dan ODP, sementara bagian batas ruang lingkup di bawah masih mencatat sebagian sebagai non-goal. A20 mencatat rekonsiliasi keep/harden/hide/deprecate yang harus dilakukan sebelum ekspansi. Memperbaiki kebocoran atau kehilangan data pada surface existing tidak membutuhkan pembangunan produk baru. Usulan gateway, portal berlogin, work order lanjutan dan API token ditandai perlu keputusan scope.
+
+**Arah arsitektur:** gunakan modular monolith dan service billing/RADIUS existing; semua akses publik memerlukan tenant resolution tepercaya; perubahan dokumen bisnis dan akun terkait harus atomik; seluruh data durable harus memiliki jalur recovery. UI wajib membedakan demo, belum dikonfigurasi, pending, failed dan hasil runtime nyata.
+
+Sepuluh opsi pengembangan setelah fondasi selesai: readiness dashboard, timeline pelanggan, satu gateway terverifikasi, portal pelanggan berlogin, work order teknisi, maintenance window, support bundle tersensor, import dry-run, status backup/restore drill, dan token API scoped. Detail MVP, dependency dan acceptance ada di kartu F01–F10. Tidak ada rencana menghidupkan kembali MWX Control/P2P/remote shell yang sebelumnya dibatalkan.
 **Deskripsi:** ISP Management + RADIUS + Billing
 **Target:** satu deployment MWX-ISP untuk mengelola beberapa organisasi ISP atau RT/RW Net yang terisolasi, dengan operator platform dan operator tenant.
 

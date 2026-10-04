@@ -2,24 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Container, Card, CardContent, Typography, TextField, Button,
-  Stack, Chip, Divider, Alert, Snackbar, Table, TableBody, TableCell,
+  Stack, Chip, Alert, Snackbar, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab,
   useTheme
 } from '@mui/material';
 import {
   Search as SearchIcon,
   WhatsApp as WhatsAppIcon,
-  ContentCopy as CopyIcon,
   Wifi as WifiIcon,
   CheckCircle as CheckCircleIcon,
   Lock as LockIcon,
-  QrCode2 as QrCodeIcon,
-  AccountBalance as BankIcon,
-  FlashOn as FlashIcon,
-  Timer as TimerIcon,
 } from '@mui/icons-material';
 import { useBranding } from '../branding/BrandingContext';
+import { apiRequest } from '../utils/apiClient';
 
 type InvoiceItem = {
   id: string | number;
@@ -41,32 +36,6 @@ type CustomerPortalData = {
   invoices: InvoiceItem[];
 };
 
-interface VAChannel {
-  bank_name: string;
-  bank_code: string;
-  account_number: string;
-  account_name: string;
-  instructions: string;
-}
-
-interface PaymentChannelData {
-  invoice_id: number;
-  invoice_no: string;
-  customer_id: number;
-  customer_no: string;
-  customer_name: string;
-  package_name: string;
-  amount: number;
-  total: number;
-  paid_amount: number;
-  status: string;
-  due_date: string;
-  expires_at: string;
-  qris_payload: string;
-  merchant_name: string;
-  va_channels: VAChannel[];
-}
-
 const idrFormat = (val?: number | null) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
 
@@ -82,15 +51,6 @@ export const CustomerPortalPage = () => {
   const [data, setData] = useState<CustomerPortalData | null>(null);
   const [toast, setToast] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  // Payment Modal State
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
-  const [channelData, setChannelData] = useState<PaymentChannelData | null>(null);
-  const [channelLoading, setChannelLoading] = useState(false);
-  const [paymentTab, setPaymentTab] = useState(0);
-  const [simulating, setSimulating] = useState(false);
-  const [simulationSuccess, setSimulationSuccess] = useState<string | null>(null);
-
   const doSearch = async (searchTerm: string) => {
     const q = searchTerm.trim();
     if (!q) return;
@@ -98,14 +58,8 @@ export const CustomerPortalPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/portal/lookup?q=${encodeURIComponent(q)}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || 'Pelanggan tidak ditemukan. Pastikan data sudah sesuai.');
-      }
-      setData(json.data);
+      const result = await apiRequest<CustomerPortalData>(`/portal/lookup?q=${encodeURIComponent(q)}`);
+      setData(result);
     } catch (err: any) {
       setError(err?.message || 'Gagal memuat data pelanggan');
       setData(null);
@@ -128,58 +82,6 @@ export const CustomerPortalPage = () => {
     void doSearch(query);
   };
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setToast({ open: true, message: `${label} berhasil disalin!` });
-    });
-  };
-
-  const handleOpenPayment = async (inv: InvoiceItem) => {
-    setSelectedInvoice(inv);
-    setPaymentModalOpen(true);
-    setChannelLoading(true);
-    setSimulationSuccess(null);
-    try {
-      const res = await fetch(`/api/v1/portal/invoices/${inv.id}/payment-channel`, {
-        headers: { Accept: 'application/json' },
-      });
-      const json = await res.json();
-      if (res.ok && json.data) {
-        setChannelData(json.data);
-      } else {
-        throw new Error(json.message || 'Gagal memuat kanal pembayaran');
-      }
-    } catch (err: any) {
-      setToast({ open: true, message: err?.message || 'Gagal memuat QRIS & VA' });
-    } finally {
-      setChannelLoading(false);
-    }
-  };
-
-  const handleSimulatePayment = async (method = 'qris_instant') => {
-    if (!selectedInvoice) return;
-    setSimulating(true);
-    try {
-      const res = await fetch(`/api/v1/portal/invoices/${selectedInvoice.id}/simulate-pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ method, reference: `SIM-${Date.now()}` }),
-      });
-      const json = await res.json();
-      if (res.ok && json.data?.success) {
-        setSimulationSuccess(`Pembayaran ${idrFormat(selectedInvoice.balance)} Berhasil Diverifikasi Instan! Layanan Aktif.`);
-        // Reload customer portal data
-        void doSearch(query);
-      } else {
-        throw new Error(json.message || 'Simulasi pembayaran gagal');
-      }
-    } catch (err: any) {
-      setToast({ open: true, message: err?.message || 'Gagal memproses simulasi' });
-    } finally {
-      setSimulating(false);
-    }
-  };
-
   const openWhatsAppConfirmation = () => {
     if (!data) return;
     const amountStr = idrFormat(data.outstanding);
@@ -187,9 +89,6 @@ export const CustomerPortalPage = () => {
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
-
-  const unpaidInvoices = data?.invoices?.filter(i => i.balance > 0) || [];
-  const firstUnpaid = unpaidInvoices[0];
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 8 }}>
@@ -228,7 +127,7 @@ export const CustomerPortalPage = () => {
               {branding.product_name}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Customer Self-Service Portal
+              Authenticated Operator Lookup
             </Typography>
           </Box>
         </Stack>
@@ -249,7 +148,7 @@ export const CustomerPortalPage = () => {
         {/* Search Hero */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Chip
-            label="PORTAL PELANGGAN RESMI"
+            label="INTERNAL OPERATOR VIEW"
             color="primary"
             size="small"
             sx={{ fontWeight: 800, letterSpacing: '0.1em', mb: 1.5, px: 1 }}
@@ -258,7 +157,7 @@ export const CustomerPortalPage = () => {
             Cek Tagihan & Status Layanan
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 540, mx: 'auto', mb: 3 }}>
-            Masukkan No. Pelanggan (e.g. MWX-000001), No. Telepon WhatsApp, atau No. KTP Anda untuk melihat tagihan dan bayar instan via QRIS.
+            Masukkan identitas pelanggan untuk melihat tagihan. Akses ini memerlukan login operator dan hanya menampilkan data organisasi yang sedang dipilih.
           </Typography>
 
           {/* Search Box */}
@@ -399,21 +298,10 @@ export const CustomerPortalPage = () => {
                           {idrFormat(data.outstanding)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Pilih pembayaran mandiri instan via QRIS / VA atau konfirmasi manual via WhatsApp.
+                          Pembayaran online belum dikonfigurasi. Catat pembayaran di halaman admin setelah dana benar-benar diterima.
                         </Typography>
                       </Box>
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                        {firstUnpaid && (
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<QrCodeIcon />}
-                            onClick={() => handleOpenPayment(firstUnpaid)}
-                            sx={{ fontWeight: 800, borderRadius: 2, px: 2.5, py: 1 }}
-                          >
-                            Bayar Sekarang (QRIS & VA)
-                          </Button>
-                        )}
                         <Button
                           variant="outlined"
                           color="success"
@@ -489,22 +377,9 @@ export const CustomerPortalPage = () => {
                                   />
                                 </TableCell>
                                 <TableCell align="right">
-                                  {!isPaid ? (
-                                    <Button
-                                      size="small"
-                                      variant="contained"
-                                      color="primary"
-                                      startIcon={<QrCodeIcon sx={{ fontSize: 16 }} />}
-                                      onClick={() => handleOpenPayment(inv)}
-                                      sx={{ textTransform: 'none', fontWeight: 700, py: 0.25, px: 1.5 }}
-                                    >
-                                      Bayar
-                                    </Button>
-                                  ) : (
-                                    <Typography variant="caption" color="text.secondary">
-                                      Lunas
-                                    </Typography>
-                                  )}
+                                  <Typography variant="caption" color="text.secondary">
+                                    {isPaid ? 'Lunas' : 'Konfirmasi manual'}
+                                  </Typography>
                                 </TableCell>
                               </TableRow>
                             );
@@ -532,230 +407,6 @@ export const CustomerPortalPage = () => {
           </Typography>
         </Box>
       </Container>
-
-      {/* DYNAMIC QRIS & VIRTUAL ACCOUNT PAYMENT DIALOG */}
-      <Dialog
-        open={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" fontWeight={800}>
-              Pembayaran Tagihan Instan
-            </Typography>
-            <Chip
-              label={selectedInvoice?.invoice_no}
-              color="primary"
-              variant="outlined"
-              sx={{ fontWeight: 800, fontFamily: 'monospace' }}
-            />
-          </Stack>
-        </DialogTitle>
-
-        <DialogContent dividers>
-          {channelLoading || !channelData ? (
-            <Box sx={{ py: 6, textAlign: 'center' }}>
-              <CircularProgress size={36} />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Menghasilkan kode pembayaran QRIS dan nomor Virtual Account...
-              </Typography>
-            </Box>
-          ) : simulationSuccess ? (
-            <Box sx={{ py: 4, textAlign: 'center' }}>
-              <CheckCircleIcon color="success" sx={{ fontSize: 64, mb: 1 }} />
-              <Typography variant="h5" fontWeight={800} color="success.main" sx={{ mb: 1 }}>
-                Pembayaran Berhasil!
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                {simulationSuccess}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Notifikasi bukti bayar telah diteruskan via WhatsApp otomatis.
-              </Typography>
-            </Box>
-          ) : (
-            <Box>
-              {/* Payment Summary Box */}
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, mb: 2.5 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      TOTAL YANG HARUS DIBAYAR
-                    </Typography>
-                    <Typography variant="h4" fontWeight={900} color="primary.main" fontFamily="monospace">
-                      {idrFormat(channelData.amount)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Pelanggan: <strong>{channelData.customer_name}</strong> ({channelData.package_name})
-                    </Typography>
-                  </Box>
-                  <Chip
-                    icon={<TimerIcon sx={{ fontSize: 16 }} />}
-                    label="Batas: 24 Jam"
-                    color="warning"
-                    size="small"
-                    sx={{ fontWeight: 700 }}
-                  />
-                </Stack>
-              </Paper>
-
-              <Tabs
-                value={paymentTab}
-                onChange={(_, v) => setPaymentTab(v)}
-                variant="fullWidth"
-                sx={{ mb: 2.5, borderBottom: 1, borderColor: 'divider' }}
-              >
-                <Tab icon={<QrCodeIcon />} iconPosition="start" label="QRIS Instan" sx={{ fontWeight: 700 }} />
-                <Tab icon={<BankIcon />} iconPosition="start" label="Virtual Account (VA)" sx={{ fontWeight: 700 }} />
-              </Tabs>
-
-              {/* TAB 0: QRIS */}
-              {paymentTab === 0 && (
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
-                    Scan QRIS di bawah ini menggunakan GoPay, OVO, Dana, ShopeePay, BCA Mobile, Livin' by Mandiri, BRImo, atau aplikasi m-Banking Anda.
-                  </Typography>
-
-                  {/* QRIS Frame */}
-                  <Box
-                    sx={{
-                      display: 'inline-block',
-                      p: 2,
-                      bgcolor: '#fff',
-                      borderRadius: 3,
-                      border: '3px solid #000',
-                      boxShadow: '4px 4px 0px #000',
-                      mb: 2,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        bgcolor: '#c00',
-                        color: '#fff',
-                        py: 0.5,
-                        px: 2,
-                        borderRadius: 1,
-                        fontWeight: 900,
-                        fontSize: 14,
-                        letterSpacing: '0.1em',
-                        mb: 1.5,
-                      }}
-                    >
-                      QRIS STANDAR PEMBAYARAN NASIONAL
-                    </Box>
-
-                    {/* QR Code SVG / Visual Box */}
-                    <Box
-                      sx={{
-                        width: 220,
-                        height: 220,
-                        mx: 'auto',
-                        bgcolor: '#f5f5f5',
-                        border: '2px dashed #999',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        p: 1.5,
-                      }}
-                    >
-                      <QrCodeIcon sx={{ fontSize: 130, color: '#111' }} />
-                      <Typography variant="caption" sx={{ color: '#333', fontWeight: 800, mt: -1 }}>
-                        {channelData.merchant_name}
-                      </Typography>
-                    </Box>
-
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, color: '#333' }}>
-                      NMID: ID1020038927163 • MWX-ISP BROADBAND
-                    </Typography>
-                  </Box>
-
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<CopyIcon />}
-                      onClick={() => copyToClipboard(channelData.qris_payload, 'Payload QRIS')}
-                      sx={{ textTransform: 'none', fontWeight: 600 }}
-                    >
-                      Salin QRIS String
-                    </Button>
-                  </Stack>
-                </Box>
-              )}
-
-              {/* TAB 1: VIRTUAL ACCOUNT */}
-              {paymentTab === 1 && (
-                <Stack spacing={2}>
-                  {channelData.va_channels.map((va, idx) => (
-                    <Paper key={idx} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Box>
-                          <Typography variant="subtitle2" fontWeight={800}>
-                            {va.bank_name}
-                          </Typography>
-                          <Typography variant="h6" fontWeight={900} color="primary.main" fontFamily="monospace">
-                            {va.account_number}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {va.account_name}
-                          </Typography>
-                        </Box>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<CopyIcon />}
-                          onClick={() => copyToClipboard(va.account_number, va.bank_name)}
-                          sx={{ textTransform: 'none', fontWeight: 700 }}
-                        >
-                          Salin
-                        </Button>
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
-                        Cara Bayar: {va.instructions}
-                      </Typography>
-                    </Paper>
-                  ))}
-                </Stack>
-              )}
-
-              {/* SIMULATION ACTION BUTTON */}
-              <Divider sx={{ my: 3 }} />
-              <Box sx={{ p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff', borderRadius: 2 }}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5}>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                      Uji Simulasi Bayar Instan (Self-Service Test)
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Verifikasi langsung transaksi pembayaran secara otomatis tanpa menunggu webhook bank.
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<FlashIcon />}
-                    onClick={() => handleSimulatePayment('qris_instant')}
-                    disabled={simulating}
-                    sx={{ fontWeight: 800, textTransform: 'none', minWidth: 160 }}
-                  >
-                    {simulating ? <CircularProgress size={20} color="inherit" /> : 'Simulasi Bayar'}
-                  </Button>
-                </Stack>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setPaymentModalOpen(false)}>
-            {simulationSuccess ? 'Selesai' : 'Tutup'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Copy Toast */}
       <Snackbar

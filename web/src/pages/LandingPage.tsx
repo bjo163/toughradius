@@ -25,6 +25,7 @@ import {
   HowToReg as RegisterIcon,
 } from '@mui/icons-material';
 import { useBranding } from '../branding/BrandingContext';
+import { apiRequest } from '../utils/apiClient';
 
 type PublicPackage = {
   id: string;
@@ -155,19 +156,11 @@ export const LandingPage: React.FC = () => {
     setRegLoading(true);
     setRegError(null);
     try {
-      const res = await fetch('/api/v1/public/register', {
+      const result = await apiRequest<any>('/public/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
         body: JSON.stringify(regForm),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || 'Gagal memproses pendaftaran.');
-      }
-      setRegSuccess(json.data);
+      setRegSuccess(result);
     } catch (err: any) {
       setRegError(err?.message || 'Terjadi kesalahan jaringan saat mengirim pendaftaran.');
     } finally {
@@ -179,15 +172,10 @@ export const LandingPage: React.FC = () => {
     const fetchPackages = async () => {
       setLoadingPackages(true);
       try {
-        const res = await fetch('/api/v1/public/packages', {
-          headers: { Accept: 'application/json' },
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setPackages(json.data || json || []);
-        }
+        const result = await apiRequest<PublicPackage[]>('/public/packages');
+        setPackages(result);
       } catch (e) {
-        console.warn('Failed to fetch public packages, fallback to defaults', e);
+        console.warn('Failed to fetch organization packages', e);
       } finally {
         setLoadingPackages(false);
       }
@@ -203,14 +191,8 @@ export const LandingPage: React.FC = () => {
     setBillError(null);
     setBillResult(null);
     try {
-      const res = await fetch(`/api/v1/portal/lookup?q=${encodeURIComponent(q)}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || 'Pelanggan tidak ditemukan. Cek Nomor Pelanggan / No HP Anda.');
-      }
-      setBillResult(json.data);
+      const result = await apiRequest<any>(`/portal/lookup?q=${encodeURIComponent(q)}`);
+      setBillResult(result);
     } catch (err: any) {
       setBillError(err?.message || 'Gagal memuat data pelanggan');
     } finally {
@@ -226,14 +208,8 @@ export const LandingPage: React.FC = () => {
     setVoucherError(null);
     setVoucherResult(null);
     try {
-      const res = await fetch(`/api/v1/public/vouchers/check?code=${encodeURIComponent(code)}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || 'Voucher tidak ditemukan. Periksa kode voucher Anda.');
-      }
-      setVoucherResult(json.data);
+      const result = await apiRequest<VoucherLookupResult>(`/public/vouchers/check?code=${encodeURIComponent(code)}`);
+      setVoucherResult(result);
     } catch (err: any) {
       setVoucherError(err?.message || 'Kode voucher tidak valid');
     } finally {
