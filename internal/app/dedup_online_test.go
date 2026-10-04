@@ -3,15 +3,15 @@ package app
 import (
 	"testing"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 
 // TestDedupOnlineSessions verifies the pre-migration cleanup removes duplicate
-// radius_online rows (left over from before the unique index existed) so that
-// AutoMigrate can subsequently create the unique index on acct_session_id.
+// radius_online rows for a tenant so AutoMigrate can create the tenant-scoped
+// unique index on tenant_id and acct_session_id.
 func TestDedupOnlineSessions(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
@@ -36,7 +36,7 @@ func TestDedupOnlineSessions(t *testing.T) {
 	// And the unique index must now reject a duplicate acct_session_id.
 	err = db.Exec(
 		`INSERT INTO radius_online (id, acct_session_id, username) VALUES (99,'sess-1','u')`).Error
-	require.Error(t, err, "unique index should reject duplicate acct_session_id after migration")
+	require.Error(t, err, "unique index should reject duplicate session IDs inside one tenant")
 }
 
 // TestDedupOnlineSessions_NoTable verifies the cleanup is a no-op (no panic,
@@ -51,7 +51,7 @@ func TestDedupOnlineSessions_NoTable(t *testing.T) {
 // TestUpgradePath_LegacyNonUniqueIndex reproduces the upgrade scenario from the
 // PR review: a deployment that already has the legacy non-unique index
 // (idx_radius_online_acct_session_id) plus duplicate rows. After dedup + legacy
-// index drop, AutoMigrate must create the unique index so ON CONFLICT works.
+// index drop, AutoMigrate must create the tenant-scoped unique index so ON CONFLICT works.
 func TestUpgradePath_LegacyNonUniqueIndex(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
@@ -72,10 +72,10 @@ func TestUpgradePath_LegacyNonUniqueIndex(t *testing.T) {
 	require.False(t, db.Migrator().HasIndex(&domain.RadiusOnline{}, "idx_radius_online_acct_session_id"),
 		"legacy non-unique index should be dropped")
 	require.NoError(t, db.AutoMigrate(&domain.RadiusOnline{}))
-	require.True(t, db.Migrator().HasIndex(&domain.RadiusOnline{}, "udx_radius_online_acct_session_id"),
+	require.True(t, db.Migrator().HasIndex(&domain.RadiusOnline{}, "udx_radius_online_tenant_session"),
 		"unique index should be created after migration")
 
 	err = db.Exec(
 		`INSERT INTO radius_online (id, acct_session_id, username) VALUES (99,'sess-1','u')`).Error
-	require.Error(t, err, "unique index must reject duplicate acct_session_id on the upgrade path")
+	require.Error(t, err, "unique index must reject duplicate session IDs inside one tenant on the upgrade path")
 }

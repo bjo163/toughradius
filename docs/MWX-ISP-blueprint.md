@@ -314,3 +314,13 @@ Tidak membuat demo mode yang meniru traffic nyata, workflow wizard yang menulis 
 - Online sessions, test certificates, operator account, WhatsApp session/outbox, dan secret/operator credentials tidak disimulasikan. Accounting history sintetis yang ber-marker hanya untuk visualisasi chart.
 - NAS dan RadiusUser sample dibuat disabled; password RADIUS contoh `123456` tidak bisa dipakai sampai operator mengaktifkannya. Tetap tandai data sebagai sintetis dan jangan gunakan pada layanan/customer nyata.
 - Verifikasi wajib mencakup run dua kali, cleanup, relasi Customer→Subscription→RADIUS User dan Package→Profile, sequence invoice/payment, serta data tanpa marker yang dipertahankan.
+
+## 15. Isolasi organisasi ISP / RT/RW Net (TR-F033)
+
+- Gunakan satu deployment dan PostgreSQL shared-schema dengan tenant ID eksplisit pada data tenant. Branding produk MWX tetap global; identitas perusahaan dan invoice berada dalam ruang lingkup tenant.
+- Data lama dimigrasikan ke organisasi `default` tanpa mengganti ID, kata sandi, relasi bisnis, atau nomor pelanggan/dokumen yang sudah ada. Migrasi harus idempoten dan dapat dipulihkan dari backup sebelum tenant kedua dibuat.
+- Nama login pelanggan RADIUS, nomor customer, kode paket, nomor subscription/invoice/payment, sequence dokumen, nama target monitoring, kunci deduplikasi notifikasi, dan ID session boleh berulang antar-tenant namun tetap unik pada tenant yang sama.
+- Perubahan skema dan indeks tenant saat ini sedang dikerjakan. Login tenant, API tenant, resolusi NAS-first, pekerjaan latar, dan UI tenant belum aktif; jangan menganggap deployment sudah multi-tenant sebelum semua M15.1–M15.7 lulus.
+- NAS RADIUS harus dapat dipetakan secara tidak ambigu berdasarkan sumber paket sebelum secret dibaca. Untuk tahap awal, alamat IP sumber NAS harus unik pada listener bersama; alamat yang ambigu ditolak, bukan dipilih dengan urutan query.
+- Operator platform dapat mengelola organisasi; operator tenant hanya melihat dan mengubah tenant aktifnya. Tenant ID dari request tidak menjadi otoritas, relasi silang tenant ditolak, dan semua aksi RADIUS/CoA mengikuti tenant NAS yang tervalidasi.
+- Validasi akhir mencakup PostgreSQL, duplikasi nama RADIUS lintas tenant, migrasi data legacy, kontrol IDOR, billing/sequences, monitoring/notifikasi, Accounting, CoA/Disconnect, backup/restore, serta EN/ID handbook.

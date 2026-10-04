@@ -92,7 +92,7 @@ func (d *Dispatcher) Enqueue(eventType, dedupeKey, body string) error {
 			NextAttemptAt: time.Now(),
 			CreatedAt:     time.Now(),
 		}
-		if err := d.db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "dedupe_key"}}, DoNothing: true}).Create(&row).Error; err != nil {
+		if err := d.db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "tenant_id"}, {Name: "dedupe_key"}}, DoNothing: true}).Create(&row).Error; err != nil {
 			return fmt.Errorf("enqueue notification: %w", err)
 		}
 	}

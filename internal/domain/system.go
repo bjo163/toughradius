@@ -37,6 +37,7 @@ func (SysConfig) TableName() string {
 
 type SysOpr struct {
 	ID        int64     `json:"id,string" form:"id"`
+	TenantID  int64     `json:"-" form:"-" gorm:"not null;default:1;index"`
 	Realname  string    `json:"realname" form:"realname"`
 	Mobile    string    `json:"mobile" form:"mobile"`
 	Email     string    `json:"email" form:"email"`
@@ -92,6 +93,7 @@ func (SysCert) TableName() string {
 
 type SysOprLog struct {
 	ID        int64     `json:"id,string"`
+	TenantID  int64     `json:"-" gorm:"not null;default:1;index"`
 	OprName   string    `json:"opr_name"`
 	OprIp     string    `json:"opr_ip"`
 	OptAction string    `json:"opt_action"`

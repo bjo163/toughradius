@@ -11,6 +11,10 @@ func TestSysConfig_TableName(t *testing.T) {
 	assert.Equal(t, "sys_config", model.TableName())
 }
 
+func TestTenant_TableName(t *testing.T) {
+	assert.Equal(t, "tenant", (Tenant{}).TableName())
+}
+
 func TestSysOpr_TableName(t *testing.T) {
 	model := SysOpr{}
 	assert.Equal(t, "sys_opr", model.TableName())
@@ -88,6 +92,7 @@ func TestTableNameUniqueness(t *testing.T) {
 
 	// Ensure all table names follow snake_case
 	expectedNames := map[string]bool{
+		"tenant":                      true,
 		"sys_config":                  true,
 		"sys_opr":                     true,
 		"sys_opr_log":                 true,

@@ -7,6 +7,7 @@ import "time"
 // NetNode network node
 type NetNode struct {
 	ID        int64     `json:"id,string" form:"id"`
+	TenantID  int64     `json:"-" form:"-" gorm:"not null;default:1;index"`
 	Name      string    `json:"name" form:"name"`
 	Remark    string    `json:"remark" form:"remark"`
 	Tags      string    `json:"tags" form:"tags"`
@@ -21,7 +22,8 @@ func (NetNode) TableName() string {
 
 // NetNas NAS device data model, typically gateway-type devices, can be used as BRAS equipment
 type NetNas struct {
-	ID         int64     `json:"id,string" form:"id"`            // Primary key ID
+	ID         int64     `json:"id,string" form:"id"` // Primary key ID
+	TenantID   int64     `json:"-" form:"-" gorm:"not null;default:1;index"`
 	NodeId     int64     `json:"node_id,string" form:"node_id"`  // Node ID
 	Name       string    `json:"name" form:"name"`               // Device name
 	Identifier string    `json:"identifier" form:"identifier"`   // Device identifier - RADIUS
