@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.7.2 — 2026-10-05
+
+Changes since v0.7.1:
+
+### Fixes and Improvements
+
+- close unverified public billing flows (#31)
+
 ## v0.7.1 — 2026-10-05
 
 Changes since v0.7.0:
