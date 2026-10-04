@@ -19,6 +19,8 @@ const customEnglishMessages: TranslationMessages = {
     welcome: 'Welcome back',
   },
   menu: {
+    platform: 'Platform',
+    tenants: 'ISP Tenants',
     dashboard: 'Dashboard',
     isp: 'ISP Management',
     services: 'Services',

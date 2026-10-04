@@ -228,6 +228,9 @@ func (a *Application) Init(cfg *config.AppConfig) {
 	// Create or rotate the bootstrap super-admin before the admin API listens
 	// so a well-known password is never reachable on a fresh or upgraded node.
 	a.checkSuper()
+	if err := a.bootstrapPlatformAdminFromEnvironment(); err != nil {
+		zap.L().Error("platform administrator bootstrap failed", zap.Error(err))
+	}
 
 	// wait for database initialization to complete
 	go func() {
@@ -432,6 +435,8 @@ func (a *Application) dropLegacyTenantUniqueIndices() error {
 		model interface{}
 		name  string
 	}{
+		{&domain.SysOpr{}, "idx_sys_opr_username"},
+		{&domain.SysOpr{}, "sys_opr_username_key"},
 		{&domain.RadiusUser{}, "idx_radius_user_username"},
 		{&domain.RadiusOnline{}, "udx_radius_online_acct_session_id"},
 		{&domain.Customer{}, "idx_isp_customer_customer_no"},

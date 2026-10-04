@@ -30,6 +30,11 @@ func TestPostgresTenantBillingAndSequencesAreIsolated(t *testing.T) {
 
 	for index, tenantID := range tenantIDs {
 		tenantDB := db.WithContext(tenancy.WithTenantID(context.Background(), tenantID))
+		operator := domain.SysOpr{ID: common.UUIDint64(), TenantID: tenantID, Username: "tenant-admin", Level: "super", Status: "enabled"}
+		require.NoError(t, db.Create(&operator).Error,
+			"the same operator username must be valid for a different tenant")
+		require.Error(t, db.Create(&domain.SysOpr{ID: common.UUIDint64(), TenantID: tenantID, Username: "tenant-admin", Level: "operator", Status: "enabled"}).Error,
+			"the operator username must remain unique inside one tenant")
 		customer := domain.Customer{ID: common.UUIDint64(), CustomerNo: "SAME-001", Name: fmt.Sprintf("Tenant %d customer", index), Status: domain.CustomerActive}
 		require.NoError(t, tenantDB.Create(&customer).Error)
 		pkg := domain.InternetPackage{ID: common.UUIDint64(), Code: "SAME-PKG", Name: "Home", Price: 150000, RadiusProfileID: 1, BillingCycle: "monthly", Status: "active"}

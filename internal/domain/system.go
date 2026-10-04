@@ -36,19 +36,20 @@ func (SysConfig) TableName() string {
 }
 
 type SysOpr struct {
-	ID        int64     `json:"id,string" form:"id"`
-	TenantID  int64     `json:"-" form:"-" gorm:"not null;default:1;index"`
-	Realname  string    `json:"realname" form:"realname"`
-	Mobile    string    `json:"mobile" form:"mobile"`
-	Email     string    `json:"email" form:"email"`
-	Username  string    `json:"username" form:"username"`
-	Password  string    `json:"password" form:"password"`
-	Level     string    `json:"level" form:"level"`
-	Status    string    `json:"status" form:"status"`
-	Remark    string    `json:"remark" form:"remark"`
-	LastLogin time.Time `json:"last_login" form:"last_login"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            int64     `json:"id,string" form:"id"`
+	TenantID      int64     `json:"-" form:"-" gorm:"not null;default:1;index;uniqueIndex:udx_sys_opr_tenant_username,priority:1"`
+	PlatformAdmin bool      `json:"-" form:"-" gorm:"not null;default:false;index"`
+	Realname      string    `json:"realname" form:"realname"`
+	Mobile        string    `json:"mobile" form:"mobile"`
+	Email         string    `json:"email" form:"email"`
+	Username      string    `json:"username" form:"username" gorm:"uniqueIndex:udx_sys_opr_tenant_username,priority:2"`
+	Password      string    `json:"password" form:"password"`
+	Level         string    `json:"level" form:"level"`
+	Status        string    `json:"status" form:"status"`
+	Remark        string    `json:"remark" form:"remark"`
+	LastLogin     time.Time `json:"last_login" form:"last_login"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // TableName Specify table name

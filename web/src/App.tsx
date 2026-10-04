@@ -11,6 +11,7 @@ import { SystemConfigPage } from './pages/SystemConfigPage';
 import OperationsPage from './pages/OperationsPage';
 import UserGuidePage from './pages/UserGuidePage';
 import BrandingPage from './pages/BrandingPage';
+import { PlatformTenantsPage } from './pages/PlatformTenantsPage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomLayout, CustomError } from './components';
 import { createAppTheme } from './theme';
@@ -202,6 +203,7 @@ const App = ({ initialBranding = defaultProductBranding }: AppProps) => {
       <Route path="/system/branding" element={<BrandingPage />} />
       <Route path="/operations" element={<OperationsPage />} />
       <Route path="/guide" element={<UserGuidePage />} />
+      <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
     </CustomRoutes>
     </Admin>
   </BrandingContext.Provider>

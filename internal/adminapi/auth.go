@@ -152,11 +152,15 @@ func loginHandler(c echo.Context) error {
 	}(operator.ID, tenant.ID)
 
 	operator.Password = ""
+	permissions := []string{}
+	if operator.PlatformAdmin {
+		permissions = append(permissions, "platform_admin")
+	}
 	return ok(c, map[string]interface{}{
 		"token":        token,
 		"user":         operator,
 		"tenant":       tenant,
-		"permissions":  []string{},
+		"permissions":  permissions,
 		"tokenExpires": time.Now().Add(tokenTTL).Unix(),
 	})
 }
