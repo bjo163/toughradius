@@ -50,3 +50,5 @@ is the default database for production; SQLite is available for local developmen
 - [FAQ](./faq.md) — common installation and operations questions.
 - [Documentation Map](./documentation-map.md) — roadmap, security policy,
   feature scope, and technical references.
+- [MWX-Control](./mwx-control.md) — the private developer-operated peer
+  service for MWX-ISP instance status.

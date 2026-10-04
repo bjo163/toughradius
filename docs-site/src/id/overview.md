@@ -49,3 +49,5 @@ pengembangan lokal.
 - [FAQ](./faq.md) — jawaban untuk pertanyaan umum.
 - [Peta Dokumentasi](./documentation-map.md) — roadmap, keamanan, cakupan fitur,
   dan referensi teknis.
+- [MWX-Control](./mwx-control.md) — service peer privat milik developer untuk
+  melihat status instance MWX-ISP.

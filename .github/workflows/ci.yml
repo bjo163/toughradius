@@ -73,6 +73,27 @@ jobs:
           echo "docs_only=${docs_only}" >> "$GITHUB_OUTPUT"
           echo "eap_acceptance=${eap_acceptance}" >> "$GITHUB_OUTPUT"
 
+  controlplane:
+    name: MWX-Control Build
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.docs_only != 'true'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: services/mwx-control/go.sum
+
+      - name: Build MWX-Control
+        working-directory: services/mwx-control
+        run: go build -trimpath ./...
+
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
