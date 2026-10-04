@@ -6,15 +6,10 @@ node participates directly in encrypted WAN gossip. The control node is a
 bootstrap peer, not a central database: the peer mesh can continue exchanging
 membership while that node is unavailable.
 
-Peer gossip shares only node ID/name, configured MWX-ISP version, agent and
-optional instance-health state, and health-check time. The owner CLI connects
-to VPS hosts over SSH using verified host keys to discover Docker containers
-and Compose projects, open an interactive shell, run explicit container
-start/stop/restart actions, or invoke MWX-ISP's rollback-aware VPS updater.
-It does not transfer files or read subscriber, RADIUS credential, billing,
-container environment, or application configuration data. Docker actions and
-updates require typing a confirmation phrase. SSH privileges on each VPS define
-the remote shell and Docker permissions.
+The first version shares only node ID/name, configured MWX-ISP version, agent
+and optional instance-health state, and health-check time. It does not transfer
+subscriber, RADIUS credential, billing, or configuration data. It has no shell,
+command execution, file transfer, remote update, or remote configuration API.
 
 ## Run the developer control node
 
@@ -36,34 +31,14 @@ Start the control service:
 docker compose up -d --build
 ```
 
-The owner API is bound to host loopback on port `8080`. The Windows owner
-executable is published as `mwx-control_windows_amd64.exe` in the MWX-ISP GitHub
-release assets. The CLI uses its built-in SSH client; Windows OpenSSH is not
-required. Configure a private key and a `known_hosts` file containing verified
-host keys for the control host and every VPS node. Do not trust keys copied from
-an unauthenticated network scan.
+The owner API is bound to host loopback on port `8080`. Reach it remotely with
+an SSH tunnel and query the read-only inventory:
 
-```powershell
-$env:MWX_CONTROL_SSH_HOST = 'control.example.com'
-$env:MWX_CONTROL_SSH_USER = 'root'
-$env:MWX_CONTROL_SSH_KEY = "$HOME/.ssh/mwx-control-owner"
-$env:MWX_CONTROL_KNOWN_HOSTS = "$HOME/.ssh/known_hosts"
-$env:MWX_CONTROL_ADMIN_TOKEN = '<owner-token>'
-./mwx-control_windows_amd64.exe nodes
-./mwx-control_windows_amd64.exe services <node-id>
-./mwx-control_windows_amd64.exe projects <node-id>
-./mwx-control_windows_amd64.exe docker restart <node-id> <container-name>
-./mwx-control_windows_amd64.exe update <node-id>
-./mwx-control_windows_amd64.exe shell <node-id>
+```bash
+ssh -L 8080:127.0.0.1:8080 <ssh-user>@<control-server>
+curl -H "Authorization: Bearer <MWX_CONTROL_ADMIN_TOKEN>" \
+  http://127.0.0.1:8080/api/v1/nodes
 ```
-
-The node's advertised public IP is used for direct SSH on port 22; pass
-`--ssh-port` when needed. The owner SSH public key must be authorized on the
-control host and enrolled VPS nodes. `update` calls
-`/opt/mwx-isp/scripts/vps-update.sh`. The CLI appends operation/node/target/time
-and outcome metadata to `~/.mwx-control/audit.jsonl`; it does not log tokens,
-private keys, shell input, or remote output. This log is local to the PC and is
-not a tamper-proof server audit trail.
 
 The unauthenticated `/healthz` endpoint contains only service health. The node
 inventory requires the owner token.
@@ -94,16 +69,8 @@ Protect it like a production secret and restrict gossip traffic with firewall
 allowlists. This version does not provide individual node revocation: if the
 key is exposed, generate a new key and update every node before restarting the
 cluster. The owner token is separate and grants read-only inventory access.
-Remote shell and Docker actions use SSH rather than gossip; the SSH account/key
-and verified host keys are separate trust boundaries. The CLI does not upload
-or download files. The owner must explicitly request and confirm each shell,
-container, or update action.
 
 Membership and health are live, in-memory state and are rebuilt as peers
 reconnect after a restart. This service is an early fleet-status foundation;
 it is not a consensus system and must not be used to coordinate billing,
-authentication, or configuration writes. The CLI connects directly to each
-VPS over SSH, so nodes need reachable SSH endpoints. This release does not
-create a VPN or route private networks; WireGuard overlay support is a separate
-planned milestone. The CLI is unsigned; verify release checksums before running
-it.
+authentication, or configuration writes.

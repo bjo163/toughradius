@@ -2,11 +2,7 @@ module github.com/bjo163/mwx-isp/services/mwx-control
 
 go 1.26.0
 
-require (
-	github.com/hashicorp/memberlist v0.7.0
-	golang.org/x/crypto v0.57.0
-	golang.org/x/term v0.46.0
-)
+require github.com/hashicorp/memberlist v0.7.0
 
 require (
 	github.com/google/btree v1.1.3 // indirect
@@ -19,6 +15,6 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/miekg/dns v1.1.73 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
