@@ -16,20 +16,48 @@ cd mwx-isp
 sudo bash scripts/vps-install.sh
 ```
 
-Installer menyiapkan kredensial privat, membangun image, lalu menjalankan
-PostgreSQL, MWX-ISP, dan Caddy. Simpan password admin satu-kali yang dicetak
-installer. Web admin hanya terikat ke localhost di belakang Caddy; port RADIUS
-dibuka untuk koneksi NAS. Installer juga mengaktifkan update harian melalui
-systemd jika tersedia.
+Jalankan pemeriksaan host tanpa perubahan:
+
+```bash
+sudo bash scripts/vps-install.sh --check
+```
+
+Pada instalasi baru interaktif, installer menanyakan domain publik dan zona
+waktu. Untuk otomasi, tambahkan `--yes`;
+default aman adalah `localhost` dan `Asia/Jakarta`. Contoh domain publik:
+
+```bash
+sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash scripts/vps-install.sh --yes
+```
+
+Installer membuat kredensial privat, menarik image rilis PostgreSQL dan MWX-ISP,
+lalu menjalankan PostgreSQL, MWX-ISP, dan Caddy. Simpan password admin satu-kali
+yang dicetak installer. Installer menunggu health check PostgreSQL dan aplikasi
+serta memeriksa rute Caddy lokal sebelum menyatakan selesai. Sertifikat HTTPS
+publik bergantung pada DNS yang mengarah ke VPS dan akses masuk TCP 80/443. Jika
+instalasi baru terputus, jalankan ulang installer; bila layanan atau data sudah
+ada, installer membuat backup sebelum melanjutkan. Konfigurasi `.env` dan volume
+data yang ada dipertahankan. Firewall host tidak diubah otomatis. Pada host
+systemd, installer mengaktifkan update dan backup harian.
 
 Atur `MWX_ISP_DOMAIN` dalam `/opt/mwx-isp/.env` ke domain publik untuk HTTPS.
-Jangan publikasikan port PostgreSQL ke internet.
+`localhost` hanya untuk pemeriksaan lokal. Buka TCP 80/443 untuk Caddy dan hanya
+port NAS yang dipakai: UDP 1812/1813 serta TCP 2083 jika memakai RadSec. Jangan
+publikasikan port PostgreSQL. Tambahkan aturan firewall lewat pengelolaan VPS
+atau firewall yang sudah digunakan, sambil menjaga akses SSH.
 
 ## 2. Login
 
 Buka `https://<domain-anda>/admin/`, lalu masuk dengan username `admin` dan
 password satu-kali dari installer. Segera ubah password setelah login. Saat
 update, instalasi yang sudah ada tetap menggunakan password saat ini.
+
+Untuk mulai mengoperasikan ISP: tinjau data contoh, atur branding dan identitas
+tenant, daftarkan NAS beserta shared secret, tautkan profil RADIUS ke akun uji,
+lalu validasi autentikasi dan accounting dari NAS tersebut. Biarkan NAS dan
+akun RADIUS contoh tetap nonaktif sampai berada di jaringan uji terisolasi.
+Tambahkan target monitoring dan alert WhatsApp opsional setelah alur RADIUS inti
+berhasil.
 
 ## 3. Jelajahi data contoh
 

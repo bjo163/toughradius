@@ -3,8 +3,10 @@ set -Eeuo pipefail
 
 APP_DIR="${MWX_ISP_DIR:-/opt/mwx-isp}"
 cd "${APP_DIR}"
-exec 9>/run/lock/mwx-isp-update.lock
-if ! flock -n 9; then echo "Another MWX-ISP update is already running."; exit 0; fi
+if [[ "${MWX_ISP_DEPLOY_LOCK_HELD:-false}" != true ]]; then
+  exec 9>/run/lock/mwx-isp-update.lock
+  if ! flock -n 9; then echo "Another MWX-ISP install, update, or restore is already running."; exit 0; fi
+fi
 [[ -f .env && -f docker-compose.yml && -d .git ]] || { echo "No MWX-ISP Compose installation found in ${APP_DIR}." >&2; exit 1; }
 if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=[^#]*CHANGE_ME' .env; then echo "Replace all CHANGE_ME values in ${APP_DIR}/.env first." >&2; exit 1; fi
 if [[ -n "$(git status --porcelain)" ]]; then
