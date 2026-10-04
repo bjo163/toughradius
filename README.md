@@ -75,7 +75,6 @@ deployment, follow the [Operations Guide](https://bjo163.github.io/mwx-isp/en/op
 ## Project references
 
 - [Product blueprint](docs/MWX-ISP-blueprint.md)
-- [MWX-Control private peer service](services/mwx-control/README.md)
 - [Feature scope checklist](docs/feature-checklist.md)
 - [Development roadmap](docs/roadmap.md)
 - [Agent development guide](AGENT.md)

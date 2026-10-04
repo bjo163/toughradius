@@ -187,10 +187,6 @@ jobs:
           # Build for Windows ARM64
           echo "Building for Windows ARM64..."
           CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_windows_arm64.exe main.go
-
-          # Standalone MWX-Control service / Windows owner CLI.
-          CONTROL_LDFLAGS="-s -w -X main.version=${VERSION} -X main.buildTime=${BUILD_TIME} -X main.gitCommit=${COMMIT}"
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go -C services/mwx-control build -trimpath -ldflags "${CONTROL_LDFLAGS}" -o ../../release/mwx-control_windows_amd64.exe .
           
           # Create checksums
           cd ./release
@@ -225,7 +221,6 @@ jobs:
           echo "| macOS | ARM64 (Apple Silicon) | \`mwx-isp_darwin_arm64\` |" >> release_notes.md
           echo "| Windows | x86_64 (AMD64) | \`mwx-isp_windows_amd64.exe\` |" >> release_notes.md
           echo "| Windows | ARM64 | \`mwx-isp_windows_arm64.exe\` |" >> release_notes.md
-          echo "| Windows | x86_64 owner control CLI / VPS service | \`mwx-control_windows_amd64.exe\` |" >> release_notes.md
           echo "" >> release_notes.md
           echo "### 🐳 Docker" >> release_notes.md
           echo "" >> release_notes.md
@@ -292,7 +287,6 @@ jobs:
             ./release/mwx-isp_darwin_arm64
             ./release/mwx-isp_windows_amd64.exe
             ./release/mwx-isp_windows_arm64.exe
-            ./release/mwx-control_windows_amd64.exe
             ./release/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
