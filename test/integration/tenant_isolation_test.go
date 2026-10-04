@@ -70,6 +70,16 @@ func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	username := "private-user-" + suffix
 	user := domain.RadiusUser{ID: common.UUIDint64(), ProfileId: profile.ID, Username: username, Password: "private-secret", Status: common.ENABLED, ExpireTime: time.Now().AddDate(1, 0, 0)}
 	require.NoError(t, tenantDB.Create(&user).Error)
+	node := domain.NetNode{ID: common.UUIDint64(), Name: "Private node " + suffix}
+	require.NoError(t, tenantDB.Create(&node).Error)
+	nas := domain.NetNas{ID: common.UUIDint64(), NodeId: node.ID, Name: "Private NAS " + suffix, Identifier: "private-nas-" + suffix, Ipaddr: uniqueNASIP(), Secret: "private-nas-secret", VendorCode: "0", Status: common.ENABLED}
+	require.NoError(t, tenantDB.Create(&nas).Error)
+	operator := domain.SysOpr{ID: common.UUIDint64(), Username: "private-operator-" + suffix, Password: "hash", Level: "admin", Status: common.ENABLED}
+	require.NoError(t, tenantDB.Create(&operator).Error)
+	accounting := domain.RadiusAccounting{ID: common.UUIDint64(), Username: username, AcctSessionId: "private-accounting-" + suffix}
+	require.NoError(t, tenantDB.Create(&accounting).Error)
+	session := domain.RadiusOnline{ID: common.UUIDint64(), Username: username, AcctSessionId: "private-session-" + suffix}
+	require.NoError(t, tenantDB.Create(&session).Error)
 	customer := domain.Customer{ID: common.UUIDint64(), CustomerNo: "PRIVATE-" + suffix, Name: "Private Customer", Status: domain.CustomerActive}
 	require.NoError(t, tenantDB.Create(&customer).Error)
 	pkg := domain.InternetPackage{ID: common.UUIDint64(), Code: "PRIVATE-" + suffix, Name: "Private Package", Price: 100000, RadiusProfileID: profile.ID, BillingCycle: "monthly", Status: "active"}
@@ -78,6 +88,19 @@ func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	client := newAPIClient(t) // authenticates into the default tenant
 	status, body := client.get(t, fmt.Sprintf("/api/v1/users/%d", user.ID))
 	require.Equalf(t, http.StatusNotFound, status, "cross-tenant user detail leaked: %s", body)
+	for _, path := range []string{
+		fmt.Sprintf("/api/v1/radius-profiles/%d", profile.ID),
+		fmt.Sprintf("/api/v1/network/nodes/%d", node.ID),
+		fmt.Sprintf("/api/v1/network/nas/%d", nas.ID),
+		fmt.Sprintf("/api/v1/system/operators/%d", operator.ID),
+		fmt.Sprintf("/api/v1/accounting/%d", accounting.ID),
+		fmt.Sprintf("/api/v1/sessions/%d", session.ID),
+		fmt.Sprintf("/api/v1/isp/customers/%d", customer.ID),
+		fmt.Sprintf("/api/v1/isp/packages/%d", pkg.ID),
+	} {
+		status, body = client.get(t, path)
+		require.Equalf(t, http.StatusNotFound, status, "cross-tenant resource %s must be hidden: %s", path, body)
+	}
 	status, body = client.get(t, "/api/v1/users")
 	require.Equalf(t, http.StatusOK, status, "list users response: %s", body)
 	require.NotContains(t, string(body), username, "cross-tenant user must not appear in tenant listing")
