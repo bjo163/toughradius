@@ -223,6 +223,12 @@ the published services while keeping `.env` and persistent data:
 curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
 ```
 
+If an older uninstall removed the directory your SSH session was using, first
+run `cd /opt` in that session, then rerun the installer. The current installer
+recovers automatically from a stale working directory. Future uninstalls keep
+the empty install directory so an active shell remains usable and reinstall can
+clone into it.
+
 Pass `--check` to run the installer's non-mutating preflight. Repair requires
 the existing install directory and the matching `.env` when data volumes exist.
 If PostgreSQL and the app are stopped, start them and create a backup before

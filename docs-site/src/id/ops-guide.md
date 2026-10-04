@@ -56,6 +56,12 @@ memulihkan layanan tanpa mengganti `.env` atau volume data:
 curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
 ```
 
+Jika uninstall lama menghapus direktori yang sedang dipakai sesi SSH, jalankan
+`cd /opt` pada sesi tersebut lalu ulangi installer. Installer terbaru otomatis
+memulihkan working directory yang sudah tidak valid. Uninstall berikutnya
+membiarkan direktori instalasi kosong agar shell aktif tetap bisa dipakai dan
+installer dapat melakukan clone ulang ke sana.
+
 Tambahkan `--check` untuk preflight tanpa perubahan. Repair membutuhkan
 direktori instalasi dan `.env` yang cocok jika volume data sudah ada. Jika
 PostgreSQL dan aplikasi berhenti, nyalakan keduanya dan buat backup terlebih
