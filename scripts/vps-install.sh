@@ -7,10 +7,67 @@ if [[ ! "${APP_DIR}" =~ ^/[A-Za-z0-9_./-]+$ ]]; then
   echo "MWX_ISP_DIR must be an absolute path using only letters, numbers, dot, underscore, slash, and hyphen." >&2; exit 1
 fi
 
-for command in docker openssl git; do
+install_docker() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ ! -r /etc/os-release ]]; then
+    echo "Cannot identify this Linux distribution. Install Docker Engine and the Docker Compose plugin manually." >&2
+    echo "Official guide: https://docs.docker.com/engine/install/" >&2
+    exit 1
+  fi
+  # shellcheck disable=SC1091
+  . /etc/os-release
+  case "${ID:-}" in
+    ubuntu|debian) ;;
+    *)
+      echo "Automatic Docker installation supports Ubuntu and Debian; detected '${PRETTY_NAME:-${ID:-unknown}}'." >&2
+      echo "Install Docker Engine and the Docker Compose plugin, then rerun this script." >&2
+      echo "Official guide: https://docs.docker.com/engine/install/" >&2
+      exit 1
+      ;;
+  esac
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get is required to install Docker automatically on ${ID}." >&2
+    exit 1
+  fi
+
+  echo "Installing Docker Engine and Docker Compose plugin for ${PRETTY_NAME:-${ID}}..."
+  apt-get update
+  apt-get install -y ca-certificates curl
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL "https://download.docker.com/linux/${ID}/gpg" -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+
+  local arch codename
+  arch="$(dpkg --print-architecture)"
+  codename="${VERSION_CODENAME:-}"
+  if [[ -z "${codename}" ]] && command -v lsb_release >/dev/null 2>&1; then
+    codename="$(lsb_release -cs)"
+  fi
+  if [[ -z "${codename}" ]]; then
+    echo "Could not determine the ${ID} release codename; install Docker manually." >&2
+    exit 1
+  fi
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/%s %s stable\n' \
+    "${arch}" "${ID}" "${codename}" > /etc/apt/sources.list.d/docker.list
+
+  apt-get update
+  if command -v docker >/dev/null 2>&1; then
+    # Keep an existing Engine installation and add only the missing Compose plugin.
+    apt-get install -y docker-compose-plugin
+  else
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  fi
+  systemctl enable --now docker
+}
+
+install_docker
+
+for command in openssl git; do
   if ! command -v "${command}" >/dev/null 2>&1; then
-    echo "Missing ${command}. Install Docker Engine and the Docker Compose plugin first." >&2
-    echo "Official guide: https://docs.docker.com/engine/install/" >&2; exit 1
+    echo "Missing required command: ${command}." >&2; exit 1
   fi
 done
 command -v flock >/dev/null 2>&1 || { echo "flock is required to serialize automatic and manual updates." >&2; exit 1; }
