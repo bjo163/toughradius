@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.7.1 — 2026-10-05
+
+Changes since v0.7.0:
+
+### Fixes and Improvements
+
+- recover after uninstall removes current directory
+
 ## v0.7.0 — 2026-10-05
 
 Changes since v0.6.0:
