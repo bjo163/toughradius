@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.7.0 — 2026-10-05
+
+Changes since v0.6.0:
+
+### Features
+
+- add online VPS repair and uninstall
+
 ## v0.6.0 — 2026-10-05
 
 Changes since v0.5.0:
