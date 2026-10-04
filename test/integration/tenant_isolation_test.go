@@ -111,6 +111,55 @@ func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	require.Equalf(t, http.StatusOK, status, "list users response: %s", body)
 	require.NotContains(t, string(body), username, "cross-tenant user must not appear in tenant listing")
 
+	// Every mutation must perform its lookup through the caller's tenant scope.
+	// Use valid payloads so these requests exercise authorization/isolation rather
+	// than failing request validation first.
+	mutationCases := []struct {
+		name   string
+		path   string
+		update []byte
+	}{
+		{"user", fmt.Sprintf("/api/v1/users/%d", user.ID), []byte(`{"realname":"Cross tenant overwrite"}`)},
+		{"profile", fmt.Sprintf("/api/v1/radius-profiles/%d", profile.ID), []byte(`{"name":"Cross tenant overwrite"}`)},
+		{"node", fmt.Sprintf("/api/v1/network/nodes/%d", node.ID), []byte(`{"name":"Cross tenant overwrite"}`)},
+		{"nas", fmt.Sprintf("/api/v1/network/nas/%d", nas.ID), []byte(`{"name":"Cross tenant overwrite"}`)},
+		{"operator", fmt.Sprintf("/api/v1/system/operators/%d", operator.ID), []byte(`{"realname":"Cross tenant overwrite"}`)},
+		{"customer", fmt.Sprintf("/api/v1/isp/customers/%d", customer.ID), []byte(`{"name":"Cross tenant overwrite"}`)},
+		{"package", fmt.Sprintf("/api/v1/isp/packages/%d", pkg.ID), []byte(fmt.Sprintf(`{"name":"Cross tenant overwrite","price":100000,"radius_profile_id":"%d"}`, defaultProfile.ID))},
+	}
+	for _, tc := range mutationCases {
+		t.Run(tc.name+"_update", func(t *testing.T) {
+			status, body := client.put(t, tc.path, tc.update)
+			require.Equalf(t, http.StatusNotFound, status, "cross-tenant update must be hidden: %s", body)
+		})
+		t.Run(tc.name+"_delete", func(t *testing.T) {
+			status, body := client.delete(t, tc.path)
+			require.Equalf(t, http.StatusNotFound, status, "cross-tenant delete must be hidden: %s", body)
+		})
+	}
+
+	var persistedUser domain.RadiusUser
+	require.NoError(t, tenantDB.First(&persistedUser, user.ID).Error)
+	assert.Equal(t, username, persistedUser.Username)
+	var persistedProfile domain.RadiusProfile
+	require.NoError(t, tenantDB.First(&persistedProfile, profile.ID).Error)
+	assert.Equal(t, profile.Name, persistedProfile.Name)
+	var persistedNode domain.NetNode
+	require.NoError(t, tenantDB.First(&persistedNode, node.ID).Error)
+	assert.Equal(t, node.Name, persistedNode.Name)
+	var persistedNAS domain.NetNas
+	require.NoError(t, tenantDB.First(&persistedNAS, nas.ID).Error)
+	assert.Equal(t, nas.Name, persistedNAS.Name)
+	var persistedOperator domain.SysOpr
+	require.NoError(t, tenantDB.First(&persistedOperator, operator.ID).Error)
+	assert.Equal(t, operator.Username, persistedOperator.Username)
+	var persistedCustomer domain.Customer
+	require.NoError(t, tenantDB.First(&persistedCustomer, customer.ID).Error)
+	assert.Equal(t, customer.Name, persistedCustomer.Name)
+	var persistedPackage domain.InternetPackage
+	require.NoError(t, tenantDB.First(&persistedPackage, pkg.ID).Error)
+	assert.Equal(t, pkg.Name, persistedPackage.Name)
+
 	request, err := json.Marshal(map[string]string{
 		"customer_id": fmt.Sprint(customer.ID), "package_id": fmt.Sprint(pkg.ID),
 		"username": "cross-tenant-attempt-" + suffix, "password": "not-a-real-secret",
