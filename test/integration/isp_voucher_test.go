@@ -96,6 +96,7 @@ func TestVoucherGenerationUsesPostgresSequenceAndActivatesAfterValidAuth(t *test
 	require.Len(t, created, batchCount)
 	seenBatchNumbers := make(map[string]struct{}, len(created))
 	for _, batch := range created {
+		assert.Equal(t, "it-admin", batch.CreatedBy)
 		if _, duplicate := seenBatchNumbers[batch.BatchNo]; duplicate {
 			t.Fatalf("duplicate concurrent batch number %q", batch.BatchNo)
 		}

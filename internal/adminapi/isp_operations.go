@@ -120,12 +120,16 @@ func generateVouchers(c echo.Context) error {
 	if in.PackageID <= 0 {
 		return fail(c, 400, "PACKAGE_REQUIRED", "Select an active package linked to a RADIUS profile", nil)
 	}
+	operator, err := resolveOperatorFromContext(c)
+	if err != nil || operator == nil || strings.TrimSpace(operator.Username) == "" {
+		return fail(c, http.StatusUnauthorized, "OPERATOR_REQUIRED", "Unable to resolve the authenticated operator", nil)
+	}
 
 	db := GetDB(c)
 	now := time.Now()
 	var batch domain.HotspotBatch
 	vouchers := make([]domain.HotspotVoucher, in.Quantity)
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		var pkg domain.InternetPackage
 		if err := tx.Where("status = ?", "active").First(&pkg, in.PackageID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -155,7 +159,7 @@ func generateVouchers(c echo.Context) error {
 			Name:    in.Name, PackageID: pkg.ID, Quantity: in.Quantity, Price: in.Price,
 			ValiditySeconds: in.ValiditySeconds, QuotaBytes: in.QuotaMB * 1024 * 1024,
 			Prefix: strings.ToUpper(strings.TrimSpace(in.Prefix)), CodeLength: in.CodeLength,
-			CreatedBy: "operator", CreatedAt: now,
+			CreatedBy: operator.Username, CreatedAt: now,
 		}
 		if err := tx.Create(&batch).Error; err != nil {
 			return err

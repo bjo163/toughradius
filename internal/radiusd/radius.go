@@ -291,8 +291,12 @@ func activateHotspotVoucher(db *gorm.DB, tenantID int64, user *domain.RadiusUser
 				return result.Error
 			}
 			if result.RowsAffected == 1 {
-				if err := tx.Model(&domain.RadiusUser{}).Where("id = ? AND username = ?", user.ID, user.Username).Update("expire_time", newExpiry).Error; err != nil {
-					return err
+				userUpdate := tx.Model(&domain.RadiusUser{}).Where("id = ? AND username = ?", user.ID, user.Username).Update("expire_time", newExpiry)
+				if userUpdate.Error != nil {
+					return userUpdate.Error
+				}
+				if userUpdate.RowsAffected != 1 {
+					return errors.New("voucher RADIUS user disappeared during activation")
 				}
 				expiry = newExpiry
 				return nil
