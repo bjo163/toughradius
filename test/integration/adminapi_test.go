@@ -78,6 +78,12 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.NoError(t, tenantDB.Create(&tenantCustomer).Error)
 	tenantPackage := domain.InternetPackage{ID: common.UUIDint64(), Code: "P-" + suffix, Name: "Tenant Backup Package", Price: 100000, RadiusProfileID: tenantProfile.ID, BillingCycle: "monthly", Status: "active"}
 	require.NoError(t, tenantDB.Create(&tenantPackage).Error)
+	tenantMonitor := domain.NetMonitorTarget{
+		ID: common.UUIDint64(), Name: "Tenant router " + suffix, Kind: "router", Address: "192.0.2.10",
+		ProbeType: "icmp", Enabled: true, SNMPCommunityEncrypted: []byte("community-ciphertext"),
+		SNMPAuthEncrypted: []byte("auth-ciphertext"), SNMPPrivacyEncrypted: []byte("privacy-ciphertext"),
+	}
+	require.NoError(t, tenantDB.Create(&tenantMonitor).Error)
 
 	// 1) Download a backup over HTTP and confirm the plaintext password is present.
 	// The endpoint streams the bare SystemBackup JSON (no {"data":...} envelope).
@@ -85,11 +91,17 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.Equalf(t, http.StatusOK, status, "backup body: %s", string(backupBytes))
 
 	var backup struct {
-		Version   string                      `json:"version"`
-		Tenants   []domain.Tenant             `json:"tenants"`
-		Users     []domain.RadiusUser         `json:"users"`
-		Customers []domain.Customer           `json:"customers"`
-		Packages  []domain.InternetPackage    `json:"packages"`
+		Version        string                   `json:"version"`
+		Tenants        []domain.Tenant          `json:"tenants"`
+		Users          []domain.RadiusUser      `json:"users"`
+		Customers      []domain.Customer        `json:"customers"`
+		Packages       []domain.InternetPackage `json:"packages"`
+		MonitorTargets []struct {
+			ID                     string `json:"id"`
+			SNMPCommunityEncrypted []byte `json:"snmp_community_encrypted"`
+			SNMPAuthEncrypted      []byte `json:"snmp_auth_encrypted"`
+			SNMPPrivacyEncrypted   []byte `json:"snmp_privacy_encrypted"`
+		} `json:"monitor_targets"`
 		TenantIDs map[string]map[string]int64 `json:"tenant_ids"`
 	}
 	require.NoErrorf(t, json.Unmarshal(backupBytes, &backup), "backup not JSON: %s", string(backupBytes))
@@ -123,6 +135,21 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.True(t, containsUserWithPassword(backup.Users, tenantUser.Username, tenantUser.Password))
 	require.Equal(t, tenant.ID, backup.TenantIDs["radius_user"][fmt.Sprint(tenantUser.ID)])
 	require.Equal(t, tenant.ID, backup.TenantIDs["isp_customer"][fmt.Sprint(tenantCustomer.ID)])
+	var backedUpMonitor *struct {
+		ID                     string `json:"id"`
+		SNMPCommunityEncrypted []byte `json:"snmp_community_encrypted"`
+		SNMPAuthEncrypted      []byte `json:"snmp_auth_encrypted"`
+		SNMPPrivacyEncrypted   []byte `json:"snmp_privacy_encrypted"`
+	}
+	for i := range backup.MonitorTargets {
+		if backup.MonitorTargets[i].ID == fmt.Sprint(tenantMonitor.ID) {
+			backedUpMonitor = &backup.MonitorTargets[i]
+			break
+		}
+	}
+	require.NotNil(t, backedUpMonitor)
+	require.Equal(t, tenant.ID, backup.TenantIDs["net_monitor_target"][fmt.Sprint(tenantMonitor.ID)])
+	require.Equal(t, tenantMonitor.SNMPCommunityEncrypted, backedUpMonitor.SNMPCommunityEncrypted)
 
 	// 2) Delete tenant-owned rows directly, simulating data loss.
 	require.NoError(t, h.appCtx.DB().Where("username = ?", username).Delete(&domain.RadiusUser{}).Error)
@@ -131,7 +158,8 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 		id    int64
 	}{
 		{&domain.RadiusUser{}, tenantUser.ID}, {&domain.RadiusProfile{}, tenantProfile.ID},
-		{&domain.Customer{}, tenantCustomer.ID}, {&domain.InternetPackage{}, tenantPackage.ID}, {&domain.Tenant{}, tenant.ID},
+		{&domain.Customer{}, tenantCustomer.ID}, {&domain.InternetPackage{}, tenantPackage.ID},
+		{&domain.NetMonitorTarget{}, tenantMonitor.ID}, {&domain.Tenant{}, tenant.ID},
 	} {
 		require.NoError(t, db.Delete(row.model, row.id).Error)
 	}
@@ -157,6 +185,12 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	var restoredTenantCustomer domain.Customer
 	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredTenantCustomer, tenantCustomer.ID).Error)
 	assert.Equal(t, tenant.ID, restoredTenantCustomer.TenantID)
+	var restoredMonitor domain.NetMonitorTarget
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredMonitor, tenantMonitor.ID).Error)
+	assert.Equal(t, tenant.ID, restoredMonitor.TenantID)
+	assert.Equal(t, tenantMonitor.SNMPCommunityEncrypted, restoredMonitor.SNMPCommunityEncrypted)
+	assert.Equal(t, tenantMonitor.SNMPAuthEncrypted, restoredMonitor.SNMPAuthEncrypted)
+	assert.Equal(t, tenantMonitor.SNMPPrivacyEncrypted, restoredMonitor.SNMPPrivacyEncrypted)
 	var platformAdmin domain.SysOpr
 	require.NoError(t, h.appCtx.DB().Where("username = ?", h.adminUser).First(&platformAdmin).Error)
 	assert.True(t, platformAdmin.PlatformAdmin, "restoring a backup must preserve the active platform administrator")
