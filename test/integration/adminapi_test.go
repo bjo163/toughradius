@@ -91,6 +91,9 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	var restored domain.RadiusUser
 	require.NoError(t, h.appCtx.DB().Where("username = ?", username).First(&restored).Error)
 	assert.Equal(t, password, restored.Password, "restore must preserve the plaintext password")
+	var platformAdmin domain.SysOpr
+	require.NoError(t, h.appCtx.DB().Where("username = ?", h.adminUser).First(&platformAdmin).Error)
+	assert.True(t, platformAdmin.PlatformAdmin, "restoring a backup must preserve the active platform administrator")
 }
 
 // TestSystemRestoreRejectsNonBackup ensures uploading a non-backup file (e.g. a

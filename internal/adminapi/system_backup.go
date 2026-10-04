@@ -226,6 +226,26 @@ func restoreSystem(c echo.Context) error {
 				"Only super operators may restore the operators table", nil)
 		}
 	}
+	// PlatformAdmin is intentionally omitted from exported operator JSON. Keep
+	// the existing platform authority of matching operator IDs during restore,
+	// and never grant that authority from an uploaded backup payload.
+	platformAdmins := make(map[int64]bool)
+	if len(backup.Operators) > 0 {
+		operatorIDs := make([]int64, 0, len(backup.Operators))
+		for _, operator := range backup.Operators {
+			operatorIDs = append(operatorIDs, operator.ID)
+		}
+		var existing []domain.SysOpr
+		if err := GetDB(c).Select("id", "platform_admin").Where("id IN ?", operatorIDs).Find(&existing).Error; err != nil {
+			return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to preserve platform administrator access", err.Error())
+		}
+		for _, operator := range existing {
+			platformAdmins[operator.ID] = operator.PlatformAdmin
+		}
+		for i := range backup.Operators {
+			backup.Operators[i].PlatformAdmin = platformAdmins[backup.Operators[i].ID]
+		}
+	}
 
 	result := SystemRestoreResult{}
 	upsert := clause.OnConflict{
@@ -265,6 +285,11 @@ func restoreSystem(c echo.Context) error {
 			result.Configs = len(backup.Configs)
 		}
 		if len(backup.Operators) > 0 {
+			// Use the API-hidden field only from the existing database snapshot;
+			// the backup file cannot grant platform administrator privileges.
+			for i := range backup.Operators {
+				backup.Operators[i].PlatformAdmin = platformAdmins[backup.Operators[i].ID]
+			}
 			if err := tx.Clauses(upsert).Create(&backup.Operators).Error; err != nil {
 				return err
 			}
