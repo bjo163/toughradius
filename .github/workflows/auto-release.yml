@@ -27,6 +27,7 @@ jobs:
       release: ${{ steps.prepare.outputs.release }}
       release_tag: ${{ steps.prepare.outputs.release_tag }}
       release_sha: ${{ steps.prepare.outputs.release_sha }}
+      make_latest: ${{ steps.prepare.outputs.make_latest }}
       tag_only: ${{ steps.prepare.outputs.tag_only }}
       previous_tag: ${{ steps.prepare.outputs.previous_tag }}
     steps:
@@ -53,8 +54,15 @@ jobs:
             fi
             latest_tag=$(git describe --tags --match 'v*' --abbrev=0)
             if [ "$REQUESTED_TAG" != "$latest_tag" ]; then
-              echo "Only the latest release tag can be republished ($latest_tag); refusing $REQUESTED_TAG to prevent a rollback." >&2
-              exit 1
+              if gh release view "$REQUESTED_TAG" >/dev/null 2>&1; then
+                echo "Only an unpublished historical tag may be backfilled; refusing to overwrite $REQUESTED_TAG because it is not the latest tag ($latest_tag)." >&2
+                exit 1
+              fi
+              # Backfill a tag that was created by an earlier run but never
+              # published. Do not move GitHub's latest-release pointer backward.
+              echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "make_latest=true" >> "$GITHUB_OUTPUT"
             fi
             echo "release=true" >> "$GITHUB_OUTPUT"
             echo "release_tag=$REQUESTED_TAG" >> "$GITHUB_OUTPUT"
@@ -63,6 +71,9 @@ jobs:
             echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
             echo "republish=true" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          if ! grep -q '^make_latest=' "$GITHUB_OUTPUT"; then
+            echo "make_latest=true" >> "$GITHUB_OUTPUT"
           fi
 
           python3 scripts/release_automation.py --github-output "$GITHUB_OUTPUT"
@@ -129,6 +140,7 @@ jobs:
     uses: ./.github/workflows/release-publish.yml
     with:
       release_tag: ${{ needs.prepare.outputs.release_tag }}
+      make_latest: ${{ needs.prepare.outputs.make_latest == 'true' }}
     secrets: inherit
     permissions:
       contents: write
