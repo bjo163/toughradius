@@ -37,16 +37,6 @@ func (a *Application) initJob() {
 	}
 
 	_, err = a.sched.AddFunc("@daily", func() {
-		a.gormDB.
-			Where("opt_time < ? ", time.Now().
-				Add(-time.Hour*24*365)).Delete(domain.SysOprLog{})
-	})
-
-	if err != nil {
-		zap.S().Errorf("init job error %s", err.Error())
-	}
-
-	_, err = a.sched.AddFunc("@daily", func() {
 		a.SchedClearExpireData()
 	})
 
@@ -261,9 +251,9 @@ func (a *Application) SchedProcessMonitorTask() {
 //     Active sessions carry a zero AcctStopTime (stamped only at Accounting-Stop)
 //     and are always excluded, so an online session never loses its billing row.
 //
-// Legacy sys_opr_log retention remains installation-wide because that older
-// table does not carry tenant ownership. Any panic is recovered and logged so
-// a cleanup failure never crashes the scheduler goroutine.
+// Operator audit history is retained per tenant with the same one-year window.
+// Any panic is recovered and logged so a cleanup failure never crashes the
+// scheduler goroutine.
 func (a *Application) SchedClearExpireData() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -291,6 +281,9 @@ func (a *Application) SchedClearExpireData() {
 	idays := a.ConfigMgr().GetInt("radius", "AccountingHistoryDays")
 	for _, tenant := range tenants {
 		db := a.gormDB.WithContext(tenancy.WithTenantID(context.Background(), tenant.ID))
+		if err := db.Where("opt_time < ?", time.Now().Add(-time.Hour*24*365)).Delete(&domain.SysOprLog{}).Error; err != nil {
+			zap.L().Error("prune tenant operator audit logs", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
 		if err := db.Where("last_update <= ?", time.Now().Add(-onlineStaleWindow)).Delete(&domain.RadiusOnline{}).Error; err != nil {
 			zap.L().Error("prune stale tenant sessions", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
 		}

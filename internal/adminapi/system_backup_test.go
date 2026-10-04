@@ -3,6 +3,7 @@ package adminapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -90,8 +91,8 @@ func TestBackupSystem(t *testing.T) {
 	assert.Len(t, backup.Profiles, 1)
 	assert.Len(t, backup.Users, 1)
 	assert.Equal(t, "backup_user", backup.Users[0].Username)
-	assert.Len(t, backup.OprLogs, 1, "legacy installation-wide operator logs remain in system backups")
-	assert.NotContains(t, backup.TenantIDs, "sys_opr_log", "legacy operator logs have no tenant ownership")
+	assert.Len(t, backup.OprLogs, 1, "tenant-scoped operator audit logs remain in system backups")
+	assert.Equal(t, domain.DefaultTenantID, backup.TenantIDs["sys_opr_log"][fmt.Sprint(backup.OprLogs[0].ID)])
 }
 
 func TestRestoreSystem(t *testing.T) {

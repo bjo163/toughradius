@@ -15,9 +15,49 @@ import (
 	"github.com/bjo163/mwx-isp/internal/radiusd"
 	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/common"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"layeh.com/radius"
 )
+
+func TestPostgresRetentionCleanupScopesEveryTenant(t *testing.T) {
+	db := h.appCtx.DB()
+	oldDays := h.appCtx.ConfigMgr().Get("radius", "AccountingHistoryDays")
+	require.NoError(t, h.appCtx.ConfigMgr().Set("radius", "AccountingHistoryDays", "30"))
+	t.Cleanup(func() {
+		_ = h.appCtx.ConfigMgr().Set("radius", "AccountingHistoryDays", oldDays)
+	})
+
+	tenantIDs := make([]int64, 0, 2)
+	for _, suffix := range []string{"a", "b"} {
+		tenant := domain.Tenant{Name: "Retention tenant", Slug: fmt.Sprintf("it-retention-%s-%d", suffix, common.UUIDint64()), Kind: "isp", Status: "active"}
+		require.NoError(t, db.Create(&tenant).Error)
+		tenantIDs = append(tenantIDs, tenant.ID)
+		tenantDB := db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID))
+		require.NoError(t, tenantDB.Create(&domain.RadiusOnline{Username: "same-user", AcctSessionId: "same-session", LastUpdate: time.Now().Add(-time.Hour)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusOnline{Username: "recent-user", AcctSessionId: "recent-session", LastUpdate: time.Now()}).Error)
+		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "same-user", AcctSessionId: "same-session", AcctStopTime: time.Now().AddDate(0, 0, -60)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.SysOprLog{OprName: "old-operator", OptTime: time.Now().AddDate(-2, 0, 0)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.SysOprLog{OprName: "recent-operator", OptTime: time.Now()}).Error)
+	}
+
+	h.appCtx.SchedClearExpireData()
+	for _, tenantID := range tenantIDs {
+		tenantDB := db.WithContext(tenancy.WithTenantID(t.Context(), tenantID))
+		for _, model := range []any{&domain.RadiusOnline{}, &domain.RadiusAccounting{}} {
+			var count int64
+			require.NoError(t, tenantDB.Model(model).Where("username = ?", "same-user").Count(&count).Error)
+			assert.Zero(t, count, "expired RADIUS records should be pruned for tenant %d", tenantID)
+		}
+		var recentSession, oldLog, recentLog int64
+		require.NoError(t, tenantDB.Model(&domain.RadiusOnline{}).Where("username = ?", "recent-user").Count(&recentSession).Error)
+		require.NoError(t, tenantDB.Model(&domain.SysOprLog{}).Where("opr_name = ?", "old-operator").Count(&oldLog).Error)
+		require.NoError(t, tenantDB.Model(&domain.SysOprLog{}).Where("opr_name = ?", "recent-operator").Count(&recentLog).Error)
+		assert.EqualValues(t, 1, recentSession, "live sessions must be preserved for tenant %d", tenantID)
+		assert.Zero(t, oldLog, "expired audit rows should be pruned for tenant %d", tenantID)
+		assert.EqualValues(t, 1, recentLog, "recent audit rows must be preserved for tenant %d", tenantID)
+	}
+}
 
 func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	db := h.appCtx.DB()

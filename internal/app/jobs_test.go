@@ -11,6 +11,7 @@ import (
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
@@ -80,7 +81,7 @@ func TestSchedClearExpireData(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, tenancy.RegisterCallbacks(db))
-	require.NoError(t, db.AutoMigrate(&domain.Tenant{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{}))
+	require.NoError(t, db.AutoMigrate(&domain.Tenant{}, &domain.SysOprLog{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{}))
 
 	now := time.Now()
 	for _, tenantID := range []int64{10, 20} {
@@ -95,6 +96,8 @@ func TestSchedClearExpireData(t *testing.T) {
 		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "old-stopped", AcctStopTime: now.AddDate(0, 0, -40)}).Error)
 		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "recent-stopped", AcctStopTime: now.AddDate(0, 0, -5)}).Error)
 		require.NoError(t, tenantDB.Create(&domain.RadiusAccounting{Username: "active", AcctStartTime: now.AddDate(0, 0, -40)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.SysOprLog{OprName: fmt.Sprintf("old-%d", tenantID), OptTime: now.AddDate(-2, 0, 0)}).Error)
+		require.NoError(t, tenantDB.Create(&domain.SysOprLog{OprName: fmt.Sprintf("recent-%d", tenantID), OptTime: now.AddDate(0, 0, -10)}).Error)
 	}
 
 	cm := &ConfigManager{
@@ -109,6 +112,11 @@ func TestSchedClearExpireData(t *testing.T) {
 		"stale sessions should be removed in every tenant; live sessions must remain")
 	require.ElementsMatch(t, []string{"recent-stopped", "active", "recent-stopped", "active"}, accountingUsernames(t, db),
 		"old accounting rows should be pruned in every tenant; recent and active rows must remain")
+	var auditLogs []domain.SysOprLog
+	require.NoError(t, db.Find(&auditLogs).Error)
+	require.Len(t, auditLogs, 2)
+	assert.ElementsMatch(t, []string{"recent-10", "recent-20"}, []string{auditLogs[0].OprName, auditLogs[1].OprName},
+		"old operator audit rows should be pruned independently in every tenant")
 }
 
 // TestSchedClearExpireData_DisabledRetention verifies that AccountingHistoryDays=0
@@ -119,7 +127,7 @@ func TestSchedClearExpireData_DisabledRetention(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, tenancy.RegisterCallbacks(db))
-	require.NoError(t, db.AutoMigrate(&domain.Tenant{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{}))
+	require.NoError(t, db.AutoMigrate(&domain.Tenant{}, &domain.SysOprLog{}, &domain.RadiusOnline{}, &domain.RadiusAccounting{}))
 
 	now := time.Now()
 	require.NoError(t, db.Create(&domain.RadiusAccounting{
@@ -172,13 +180,13 @@ func accountingUsernames(t *testing.T, db *gorm.DB) []string {
 
 // TestInitJobRegistersCleanup is the regression guard for M6.4: SchedClearExpireData
 // was defined but never registered with cron, so expired online/accounting data was
-// never auto-purged. initJob must now schedule it alongside the monitor and
-// operation-log and billing jobs (4 cron entries total).
+// never auto-purged. initJob schedules monitor, tenant-aware retention and
+// billing jobs (3 cron entries total).
 func TestInitJobRegistersCleanup(t *testing.T) {
 	a := &Application{appConfig: &config.AppConfig{}}
 	a.initJob()
 	defer a.sched.Stop()
 
-	require.Len(t, a.sched.Entries(), 4,
-		"expected monitor + operation-log cleanup + expire-data cleanup + billing cron entries")
+	require.Len(t, a.sched.Entries(), 3,
+		"expected monitor + tenant-aware retention + billing cron entries")
 }
