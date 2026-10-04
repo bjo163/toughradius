@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.2.4 — 2026-10-04
+
+Changes since v0.2.3:
+
+### Fixes and Improvements
+
+- install Docker prerequisites on VPS (#17)
+
 ## v0.2.3 — 2026-10-04
 
 Changes since v0.2.2:
