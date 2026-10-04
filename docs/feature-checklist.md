@@ -23,6 +23,7 @@
 | 部分实现 | 代码中已有入口或雏形，但不能默认视为完整生产能力。 |
 | 可扩展 | 属于允许扩展的方向，但扩展必须走现有架构和测试边界。 |
 | 非目标 | 当前不作为项目默认开发方向。 |
+| 计划中 | 范围已获批准并明确，但尚未完成实现。 |
 
 ## 功能清单表
 
@@ -76,12 +77,13 @@
 
 | 编号 | 功能域 | 功能项 | 标准范围 / 验收口径 | 现有入口 / 模块 | 状态 | 开发边界 |
 | --- | --- | --- | --- | --- | --- | --- |
-| TR-F027 | ISP 管理 | MWX-ISP 客户、套餐与订阅 | 为单 ISP operator 管理客户资料、独立于 RadiusUser 的 Customer、Internet Package（商业价格关联 RadiusProfile）和 Subscription（可关联或创建 RadiusUser）；支持列表、详情、CRUD 和生命周期操作。 | `internal/domain`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已实现（MVP） | 仅 operator/admin 使用；复用现有 RADIUS 用户、Profile、NAS、Accounting 和 Disconnect，不重写协议栈；新表采用增量迁移，保留既有 subscriber 数据。 |
-| TR-F028 | ISP Billing | MWX-ISP invoice、payment 与 enforcement | 为订阅生成月度 invoice/item，按整数 IDR 记录手动/部分/全额 payment，处理 due date、overdue、grace period，并按账单原因自动 suspend/disable/disconnect 和付款后 reactivate/enable。 | `internal/domain`, `internal/app`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已实现 (MVP) | 仅单 ISP、operator-facing MVP；每笔 payment 关联一个 invoice；不含 gateway、ERP、税务或多租户；唯一约束和事务保护重复发票及支付状态。 |
-| TR-F029 | MWX-ISP 运维 | 单实例可配置产品品牌、企业级视觉与账单仪表盘 | 每个 MWX-ISP 部署可统一配置产品名称、简称/标记、标语、Logo 和主强调色，并支持预览、保存及恢复 MWX 默认品牌；品牌应用于应用框架、登录页、浏览器标题/favicon 及相关页面。通过一致的设计令牌和组件呈现专业的漫画墨线视觉，同时在运营仪表盘展示客户、订阅、在线用户、本月发票/付款、未结余额和逾期金额。 | `web/src`, `internal/adminapi`, `internal/domain`, `docs` | 已实现（MVP） | 品牌在单个部署范围内全局生效，并与发票/公司身份分离。默认使用 MWX-ISP、深色主题和 MWX 绿色。保留语义化的运营状态颜色和数据可读性；不支持按客户/租户设置品牌、任意 CSS、主题/插件市场、通用 BI 或可观测平台。仅管理员可上传本地 PNG 标志，文件最大 1 MiB、尺寸最大 2048×2048。 |
+| TR-F027 | ISP 管理 | MWX-ISP 客户、套餐与订阅 | 为每个 ISP 或 RT/RW Net tenant 管理客户资料、独立于 RadiusUser 的 Customer、Internet Package（商业价格关联 RadiusProfile）和 Subscription（可关联或创建 RadiusUser）；支持列表、详情、CRUD 和生命周期操作。 | `internal/domain`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已实现（MVP） | 多租户隔离由 TR-F033 约束；复用现有 RADIUS 用户、Profile、NAS、Accounting 和 Disconnect，不重写协议栈；新表采用增量迁移，保留既有 subscriber 数据。 |
+| TR-F028 | ISP Billing | MWX-ISP invoice、payment 与 enforcement | 为订阅生成月度 invoice/item，按整数 IDR 记录手动/部分/全额 payment，处理 due date、overdue、grace period，并按账单原因自动 suspend/disable/disconnect 和付款后 reactivate/enable。 | `internal/domain`, `internal/app`, `internal/adminapi`, `web/src/resources`, `web/src/App.tsx` | 已实现 (MVP) | 现有闭环是单 ISP MVP；多租户隔离和每 tenant 序列由 TR-F033 约束。每笔 payment 关联一个 invoice；不含 gateway、ERP 或税务；唯一约束和事务保护重复发票及支付状态。 |
+| TR-F029 | MWX-ISP 运维 | 单实例可配置产品品牌、企业级视觉与账单仪表盘 | 每个 MWX-ISP 部署可统一配置产品名称、简称/标记、标语、Logo 和主强调色，并支持预览、保存及恢复 MWX 默认品牌；品牌应用于应用框架、登录页、浏览器标题/favicon 及相关页面。通过一致的设计令牌和组件呈现专业的漫画墨线视觉，同时在运营仪表盘展示客户、订阅、在线用户、本月发票/付款、未结余额和逾期金额。 | `web/src`, `internal/adminapi`, `internal/domain`, `docs` | 已实现（MVP） | MWX 产品品牌仍在部署范围内全局生效；tenant 企业/发票身份由 TR-F033 隔离。默认使用 MWX-ISP、深色主题和 MWX 绿色。保留语义化的运营状态颜色和数据可读性；不支持按 tenant 设置产品主题、任意 CSS、主题/插件市场、通用 BI 或可观测平台。仅管理员可上传本地 PNG 标志，文件最大 1 MiB、尺寸最大 2048×2048。 |
 | TR-F030 | MWX-ISP 运维通知 | WhatsApp operator alerts via whatsmeow | 通过可替换 notification provider 与持久化 outbox，为 allowlist operator 单向发送 target down/recovered、scheduler failure、billing suspend/reactivate 等事件；支持 QR pairing、连接状态、有限 retry/dedupe/logout 与 delivery audit。 | `internal/app`, `internal/adminapi/notifications.go`, `internal/domain/network_monitor.go`, `internal/notify`, `web/src/pages/OperationsPage.tsx` | 已实现（MVP；真实账号 pairing/send 待 operator 验证） | whatsmeow 是非官方 WhatsApp Web multi-device 实现，协议/API 可能变化，账号可用性与适用条款需运营者自行验证；默认关闭、只发给明确 allowlist/opt-in operator；设置变更会取消不再允许的队列项；不做群发、营销、聊天机器人或客户敏感数据。会话数据受部署数据库的访问控制保护；notification interface 需允许换成 WhatsApp Business Platform 或其他 provider。 |
 | TR-F031 | ISP 网络运维 | 已登记网络目标的健康度与只读指标 | 对 operator 明确登记且允许访问的 NAS/router/switch/host 展示 ICMP/TCP reachability、latency/loss、SNMP interface state/counters；支持 30–3600 秒 polling、30 天 sample retention、failure threshold、incident history 与 alert hooks。 | `internal/app`, `internal/domain/network_monitor.go`, `internal/networkmonitor`, `internal/adminapi/network_monitor.go`, `web/src/pages/OperationsPage.tsx` | 已实现（MVP；真实设备/SNMP agent 验证待部署） | 最多登记 500 个 unicast IP target，poll concurrency 最多 8；这是有限的 ISP network health monitoring，不是通用 NMS/BI；不做自动扫描、拓扑发现或设备配置写入；优先 SNMPv3 authPriv，SNMPv2c 仅兼容并加密保存 community。SNMP 密文依赖稳定的 web secret，轮换前需先规划迁移；测试 mock probe 不代替真实设备验收。 |
 | TR-F032 | ISP 管理 | 新安装时自动提供可重复的示例业务数据 | 当数据库完全为空时，自动为主要配置和业务列表创建 3–6 条清晰标记的合成示例：Node、NAS、Profile、RadiusUser、Customer、Package、Subscription、Invoice 和 Payment。仍保留 CLI 供运维显式维护；Invoice/Payment 复用正式序列服务。 | `internal/demoseed`, `internal/app`, `cmd/demo-seed`, `internal/billing`, `internal/domain`, `docs` | 已实现（MVP） | 仅当数据库中没有运营/业务记录时执行；包含任何现存数据的安装都不自动重建或修改示例。示例 NAS 和 RADIUS 用户默认禁用；监控目标使用文档保留地址并保持禁用。不创建虚假操作员、证书、WhatsApp 投递、在线会话、探测结果或生产凭据；清理只删除带有 demo 标记的数据。 |
+| TR-F033 | 平台租户与安全 | ISP 与 RT/RW Net 多租户运营 | 一个 MWX-ISP 部署可管理多个相互隔离的 ISP 或 RT/RW Net 组织。每个组织有独立 tenant operator、客户、套餐、订阅、RADIUS 用户/Profile、Node/NAS、账单、会话/Accounting、网络监控、通知及企业/发票身份；现有单租户数据须无损迁移到默认 tenant。 | `internal/domain`, `internal/adminapi`, `internal/radiusd`, `internal/app`, `internal/billing`, `internal/networkmonitor`, `internal/notify`, `web/src`, `docs` | 计划中 | 使用 PostgreSQL shared-schema、可信 tenant context、tenant-scoped 查询和复合唯一约束；不得信任客户端提交的 tenant ID。RADIUS 必须先唯一识别注册 NAS 再找用户，并隔离缓存、Accounting、会话和 CoA/Disconnect。平台 operator 可管理 tenant，tenant operator 只能访问本 tenant。现有数据以原子迁移归入一个默认 tenant，并验证备份/回滚。MWX 产品品牌仍为部署级；不含组织层级、转售市场、每 tenant 独立数据库或自定义产品主题。 |
 
 ## 当前非目标方向
 
@@ -90,6 +92,6 @@
 | TR-N001 | 计费支付 / 订单 / 财务系统 | 除已明确批准的 MWX-ISP 最小 operator-facing 订阅账单闭环（TR-F028）外，不扩展为通用收费系统、payment gateway、订单平台或财务 ERP。 |
 | TR-N002 | CRM / 工单 / 客户自助门户 | MWX-ISP 的基础 operator-facing Customer 与 Subscription 能力仅限 TR-F027；不扩展为 CRM、工单或客户自助门户。 |
 | TR-N003 | 通用可视化监控平台 | TR-F031 允许对已登记 ISP 网络设备做有限健康监控；仍不建设通用 NMS/BI/observability 平台，也不替代 Prometheus、Grafana 等系统。 |
-| TR-N004 | 多租户 SaaS 平台 | 当前模型以单实例管理为基线；多租户需要先完成权限、数据隔离和迁移设计。 |
+| TR-N004 | 无边界的多租户扩展 | 多租户现已限定为 TR-F033 的批准范围；不得超出其中的隔离、授权、RADIUS 租户识别和迁移边界实现 tenant 语义。 |
 | TR-N005 | 重写协议栈或替换管理框架 | 除非有明确缺陷和迁移方案，否则不以重写为开发方向。 |
 | TR-N006 | 托管式 Captive Portal / 访客门户产品 | MWX-ISP 只作为 RADIUS auth/accounting 后端，不提供、不托管、不运营 Portal 登录页、访客开户、券码、短信/微信/支付 onboarding 或厂商 Portal Server 状态机；这些属于其他产品。 |
