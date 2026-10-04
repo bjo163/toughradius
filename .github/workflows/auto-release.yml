@@ -57,6 +57,7 @@ jobs:
             fi
             echo "release=true" >> "$GITHUB_OUTPUT"
             echo "release_tag=$REQUESTED_TAG" >> "$GITHUB_OUTPUT"
+            echo "release_sha=$(git rev-parse "${REQUESTED_TAG}^{commit}")" >> "$GITHUB_OUTPUT"
             previous_tag=$(git describe --tags --match 'v*' --abbrev=0 "${REQUESTED_TAG}^")
             echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
             echo "republish=true" >> "$GITHUB_OUTPUT"
@@ -76,6 +77,7 @@ jobs:
           fi
 
       - name: Commit changelog and create release tag
+        id: release_commit
         if: steps.prepare.outputs.release == 'true' && steps.prepare.outputs.republish != 'true' && steps.prepare.outputs.tag_only != 'true'
         env:
           RELEASE_TAG: ${{ steps.prepare.outputs.release_tag }}
@@ -87,8 +89,8 @@ jobs:
           git commit -m "chore(release): ${RELEASE_TAG}"
           git tag -a "$RELEASE_TAG" -m "MWX-ISP ${RELEASE_TAG}"
           git push origin HEAD:main
-          git push origin HEAD:dev
           git push origin "$RELEASE_TAG"
+          echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Recover a release tag after a partial branch push
         if: steps.prepare.outputs.release == 'true' && steps.prepare.outputs.tag_only == 'true'
@@ -99,7 +101,13 @@ jobs:
         run: |
           git tag -a "$RELEASE_TAG" "$RELEASE_SHA" -m "MWX-ISP ${RELEASE_TAG}"
           git push origin "$RELEASE_TAG"
-          git push origin "${RELEASE_SHA}:refs/heads/dev"
+
+      - name: Sync release metadata onto the latest dev tip
+        if: steps.prepare.outputs.release == 'true'
+        continue-on-error: true
+        env:
+          RELEASE_COMMIT_SHA: ${{ steps.prepare.outputs.release_sha || steps.release_commit.outputs.release_sha }}
+        run: python3 scripts/sync_release_to_dev.py "$RELEASE_COMMIT_SHA"
 
   container:
     name: Publish GHCR image

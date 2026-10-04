@@ -9,6 +9,8 @@ on:
       - '.github/actionlint.yml'
       - 'scripts/release_automation.py'
       - 'scripts/test_release_automation.py'
+      - 'scripts/sync_release_to_dev.py'
+      - 'scripts/test_sync_release_to_dev.py'
   push:
     branches: [main, dev]
     paths:
@@ -17,6 +19,8 @@ on:
       - '.github/actionlint.yml'
       - 'scripts/release_automation.py'
       - 'scripts/test_release_automation.py'
+      - 'scripts/sync_release_to_dev.py'
+      - 'scripts/test_sync_release_to_dev.py'
   workflow_dispatch: {}
 
 permissions:
@@ -57,4 +61,4 @@ jobs:
         run: actionlint -color -shellcheck=
 
       - name: Simulate SemVer and changelog rules
-        run: python3 -m unittest discover -s scripts -p 'test_release_automation.py' -v
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
