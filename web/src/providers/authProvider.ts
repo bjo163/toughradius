@@ -125,10 +125,10 @@ const fetchIdentityFromApi = async (token: string): Promise<OperatorUser | null>
 
 export const authProvider: AuthProvider = {
   // 登录
-  login: async ({ username, password }) => {
+  login: async ({ username, password, tenantSlug }) => {
     const request = new Request('/api/v1/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, tenant_slug: tenantSlug || 'default' }),
       headers: new Headers({ 'Content-Type': 'application/json' }),
     });
 
@@ -156,6 +156,9 @@ export const authProvider: AuthProvider = {
         if (auth.user.username) {
           localStorage.setItem('username', auth.user.username);
         }
+      }
+      if (auth.tenant) {
+        localStorage.setItem('activeTenant', JSON.stringify(auth.tenant));
       }
 
       // Ensure localStorage writes are visible before navigation continues.

@@ -138,6 +138,7 @@ func (h *StartHandler) buildRadiusOnline(r *radius.Request, vr *vendorparserspkg
 
 	return domain.RadiusOnline{
 		ID:                  common.UUIDint64(),
+		TenantID:            nas.TenantID,
 		Username:            rfc2865.UserName_GetString(r.Packet),
 		NasId:               common.IfEmptyStr(rfc2865.NASIdentifier_GetString(r.Packet), common.NA),
 		NasAddr:             nas.Ipaddr,
@@ -173,6 +174,7 @@ func (h *StartHandler) buildRadiusOnline(r *radius.Request, vr *vendorparserspkg
 func (h *StartHandler) buildRadiusAccounting(online *domain.RadiusOnline, start bool) domain.RadiusAccounting {
 	accounting := domain.RadiusAccounting{
 		ID:                  common.UUIDint64(),
+		TenantID:            online.TenantID,
 		Username:            online.Username,
 		AcctSessionId:       online.AcctSessionId,
 		NasId:               online.NasId,

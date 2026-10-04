@@ -10,6 +10,30 @@ import (
 	"layeh.com/radius/rfc2865"
 )
 
+// tenantStateManager namespaces opaque RADIUS State values in the shared EAP
+// store. State is random but can be observed on the wire, so it must not grant
+// access to another tenant's in-flight handshake if replayed via another NAS.
+type tenantStateManager struct {
+	base     EAPStateManager
+	tenantID int64
+}
+
+func (m tenantStateManager) key(stateID string) string {
+	return fmt.Sprintf("tenant:%d:%s", m.tenantID, stateID)
+}
+
+func (m tenantStateManager) GetState(stateID string) (*EAPState, error) {
+	return m.base.GetState(m.key(stateID))
+}
+
+func (m tenantStateManager) SetState(stateID string, state *EAPState) error {
+	return m.base.SetState(m.key(stateID), state)
+}
+
+func (m tenantStateManager) DeleteState(stateID string) error {
+	return m.base.DeleteState(m.key(stateID))
+}
+
 // HandlerRegistry defines the EAP handler registry interface
 type HandlerRegistry interface {
 	GetHandler(eapType uint8) (EAPHandler, bool)
@@ -72,7 +96,11 @@ func (c *Coordinator) HandleEAPRequest(
 	// prevents the losing SetState write from being silently dropped. The
 	// identity phase has no State yet, so it needs no lock.
 	if stateID := rfc2865.State_GetString(r.Packet); stateID != "" {
-		unlock := c.stateLocks.lock(stateID)
+		lockKey := stateID
+		if nas != nil && nas.TenantID > 0 {
+			lockKey = fmt.Sprintf("tenant:%d:%s", nas.TenantID, stateID)
+		}
+		unlock := c.stateLocks.lock(lockKey)
 		defer unlock()
 	}
 
@@ -88,6 +116,9 @@ func (c *Coordinator) HandleEAPRequest(
 		IsMacAuth:      isMacAuth,
 		StateManager:   c.stateManager,
 		PwdProvider:    c.pwdProvider,
+	}
+	if nas != nil && nas.TenantID > 0 {
+		ctx.StateManager = tenantStateManager{base: c.stateManager, tenantID: nas.TenantID}
 	}
 	// A password provider that is also an external credential verifier (e.g. the
 	// LDAP backend) drives bind-based inner PAP verification; a plain provider
@@ -265,9 +296,13 @@ func safeReplyMessage(reason error) string {
 }
 
 // CleanupState Cleanup EAP Status
-func (c *Coordinator) CleanupState(r *radius.Request) {
+func (c *Coordinator) CleanupState(r *radius.Request, tenantID int64) {
 	stateID := rfc2865.State_GetString(r.Packet)
 	if stateID != "" {
-		_ = c.stateManager.DeleteState(stateID) //nolint:errcheck
+		manager := c.stateManager
+		if tenantID > 0 {
+			manager = tenantStateManager{base: c.stateManager, tenantID: tenantID}
+		}
+		_ = manager.DeleteState(stateID) //nolint:errcheck
 	}
 }

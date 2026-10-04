@@ -32,6 +32,7 @@ type eapTestClient struct {
 	username      string
 	nasIdentifier string
 	nasIP         net.IP
+	sourceIP      net.IP
 }
 
 // eapExchangeTimeout bounds each RADIUS round-trip so a missing response (e.g.
@@ -44,7 +45,8 @@ func (c *eapTestClient) exchange(t *testing.T, packet *radius.Packet) (*radius.P
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), eapExchangeTimeout)
 	defer cancel()
-	return radius.Exchange(ctx, packet, c.serverAddr)
+	client := &radius.Client{Dialer: net.Dialer{LocalAddr: &net.UDPAddr{IP: c.sourceIP}}}
+	return client.Exchange(ctx, packet, c.serverAddr)
 }
 
 // newAccessRequest builds a fresh Access-Request carrying the mandatory
@@ -295,6 +297,7 @@ func startEAPTestServer(t *testing.T) (*eapTestClient, *RadiusService) {
 		secret:        "secret",
 		nasIdentifier: "eap-nas",
 		nasIP:         net.ParseIP("10.0.0.1"),
+		sourceIP:      net.ParseIP("127.0.0.1"),
 	}
 
 	return client, radiusService
@@ -308,7 +311,7 @@ func seedEAPUser(t *testing.T, rs *RadiusService, username, password string) {
 
 	nas := &domain.NetNas{
 		Identifier: "eap-nas",
-		Ipaddr:     "10.0.0.1",
+		Ipaddr:     "127.0.0.1",
 		Secret:     "secret",
 		VendorCode: "0",
 		Status:     common.ENABLED,

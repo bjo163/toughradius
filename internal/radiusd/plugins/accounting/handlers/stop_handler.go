@@ -60,6 +60,7 @@ func (h *StopHandler) Handle(acctCtx *accounting.AccountingContext) error {
 
 	// Update accounting record stop time
 	acctRecord := domain.RadiusAccounting{
+		TenantID:          online.TenantID,
 		AcctInputTotal:    online.AcctInputTotal,
 		AcctOutputTotal:   online.AcctOutputTotal,
 		AcctInputPackets:  online.AcctInputPackets,

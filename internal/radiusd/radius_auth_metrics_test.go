@@ -4,12 +4,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/app"
 	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
 	"github.com/bjo163/mwx-isp/pkg/metrics"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"layeh.com/radius"
 )
 
@@ -57,7 +57,7 @@ func TestLogAndReject_CountsRejectByReason(t *testing.T) {
 			before := app.GetRadiusMetrics(tc.metric)
 			w := &captureResponseWriter{}
 
-			svc.logAndReject(w, req, tc.err)
+			svc.logAndReject(w, req, tc.err, 0)
 
 			assert.Equal(t, before+1, app.GetRadiusMetrics(tc.metric),
 				"reject must increment %s", tc.metric)
@@ -78,7 +78,7 @@ func TestLogAndReject_LdapRejectNotCountedAsPasswordError(t *testing.T) {
 
 	passwdBefore := app.GetRadiusMetrics(app.MetricsRadiusRejectPasswdError)
 	svc.logAndReject(&captureResponseWriter{},
-		req, radiuserrors.NewAuthError(app.MetricsRadiusRejectLdapError, "ldap unavailable"))
+		req, radiuserrors.NewAuthError(app.MetricsRadiusRejectLdapError, "ldap unavailable"), 0)
 
 	assert.Equal(t, int64(1), app.GetRadiusMetrics(app.MetricsRadiusRejectLdapError))
 	assert.Equal(t, passwdBefore, app.GetRadiusMetrics(app.MetricsRadiusRejectPasswdError),

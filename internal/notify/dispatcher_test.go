@@ -6,20 +6,49 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 
 type fakeSender struct {
 	calls int
 	err   error
+	to    []string
 }
 
-func (f *fakeSender) Send(_ context.Context, _, _ string) error {
+func (f *fakeSender) Send(_ context.Context, recipient, _ string) error {
 	f.calls++
+	f.to = append(f.to, recipient)
 	return f.err
+}
+
+func TestDispatcherIsolatesSettingsAndOutboxByTenant(t *testing.T) {
+	db := notificationTestDB(t)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	now := time.Now()
+	for tenantID, recipient := range map[int64]string{10: "6281000000010", 20: "6282000000020"} {
+		tenantDB := db.WithContext(tenancy.WithTenantID(context.Background(), tenantID))
+		settings := domain.NotificationSettings{WhatsAppEnabled: true, RiskAcknowledgedAt: &now,
+			RecipientsJSON: `[` + `"` + recipient + `"` + `]`, EventsJSON: `["network.down"]`}
+		require.NoError(t, tenantDB.Create(&settings).Error)
+	}
+	sender := &fakeSender{}
+	dispatcher := NewDispatcher(db, sender)
+	for tenantID := range map[int64]bool{10: true, 20: true} {
+		ctx := tenancy.WithTenantID(context.Background(), tenantID)
+		require.NoError(t, dispatcher.EnqueueContext(ctx, "network.down", "same-event", "target down"))
+	}
+
+	ctxA := tenancy.WithTenantID(context.Background(), 10)
+	require.NoError(t, dispatcher.ProcessOnce(ctxA, time.Now()))
+	require.Equal(t, []string{"6281000000010"}, sender.to,
+		"tenant 10 processing must not read, cancel, or deliver tenant 20 outbox rows")
+	ctxB := tenancy.WithTenantID(context.Background(), 20)
+	require.NoError(t, dispatcher.ProcessOnce(ctxB, time.Now()))
+	require.Equal(t, []string{"6281000000010", "6282000000020"}, sender.to)
 }
 
 func notificationTestDB(t *testing.T) *gorm.DB {

@@ -4,7 +4,7 @@
 
 [User Guide / GitHub Pages](https://bjo163.github.io/mwx-isp/) · [Repository documentation](docs/)
 
-MWX-ISP is an operator-facing application for a single ISP installation. It combines customer and service management, RADIUS network access, and a practical subscription billing lifecycle in one modular application. Existing RADIUS users, profiles, NAS devices, accounting records, sessions, and Disconnect support remain part of the product.
+MWX-ISP is an operator-facing ISP management and RADIUS platform. The multi-tenant foundation supports independent ISP and RT/RW Net organizations in one deployment; tenant administration and end-to-end isolation are being completed under `TR-F033` before this capability is considered production-ready. Existing RADIUS users, profiles, NAS devices, accounting records, sessions, and Disconnect support remain part of the product.
 
 The initial business flow is:
 
@@ -20,7 +20,7 @@ Customer → Internet Package → Subscription → RADIUS access
 - **Billing:** monthly invoices, due dates, grace periods, overdue handling, manual and partial payments, automatic suspension, and payment-based reactivation.
 - **Operations:** dashboard, operators, and system settings.
 
-Payment gateways, customer portal, WhatsApp, ticketing, fiber inventory, multi-tenancy, and accounting ERP are outside the initial release.
+Payment gateways, customer portal, ticketing, fiber inventory, reseller marketplace, and accounting ERP are outside the current scope. Multi-tenant operation is limited to the isolation, administration, and migration boundaries in `TR-F033`.
 
 > **Release target:** v0.1.0 is the first MWX-ISP MVP release. The repository is code-ready for an initial release, but production cutover still requires the real-NAS authentication/accounting/reactivation pilot listed in `docs/MWX-ISP-todo.md`.
 
@@ -43,6 +43,8 @@ sudo bash scripts/vps-install.sh
 ```
 
 The installer clones the `main` source, builds the app image, creates `/opt/mwx-isp/.env` with unique database, JWT, and admin credentials, then starts the stack. It enables a daily systemd update timer when systemd is available. **Save the generated admin password printed by the installer.** Keep `/opt/mwx-isp/.env` private; it contains secrets. To update manually, run `sudo /opt/mwx-isp/scripts/vps-update.sh`. The updater rebuilds only when `main` has changed, waits for the container health check, and restores the prior source and image if startup fails. A small VPS needs available memory, CPU, and disk space for a Go and frontend build during initial install and updates.
+
+For the platform tenant console, set `MWX_PLATFORM_ADMIN_USERNAME` and `MWX_PLATFORM_ADMIN_PASSWORD` in `/opt/mwx-isp/.env` (password at least 12 characters), then run `sudo docker compose -f /opt/mwx-isp/docker-compose.yml up -d`. The configured account must match an existing default-tenant operator password or a platform administrator is created; credentials are never silently reset. Leave both values empty to disable platform tenant administration.
 
 For a source checkout, copy `.env.vps.example` to `.env`, replace the `CHANGE_ME` values, and run `docker compose up -d --build`. The daily updater follows `main` and preserves both Docker volumes; keep regular off-host backups of the PostgreSQL volume before relying on upgrades.
 

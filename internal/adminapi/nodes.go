@@ -179,8 +179,12 @@ func deleteNode(c echo.Context) error {
 		return fail(c, http.StatusConflict, "NODE_IN_USE", "This node still has NAS devices and cannot be deleted", nil)
 	}
 
-	if err := GetDB(c).Where("id = ?", id).Delete(&domain.NetNode{}).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.NetNode{}, id)
+	if err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to delete network node", err.Error())
+	}
+	if !deleted {
+		return fail(c, http.StatusNotFound, "NODE_NOT_FOUND", "Node not found", nil)
 	}
 
 	return ok(c, map[string]interface{}{

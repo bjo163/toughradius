@@ -2,6 +2,7 @@
 package demoseed
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/bjo163/mwx-isp/internal/billing"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"gorm.io/gorm"
 )
 
@@ -49,7 +51,7 @@ func Seed(db *gorm.DB, now time.Time, historyDays int) (Counts, error) {
 	if historyDays < 1 || historyDays > 90 {
 		return Counts{}, fmt.Errorf("history days must be between 1 and 90")
 	}
-	seeder := &demoSeeder{db: db, now: now, historyDays: historyDays}
+	seeder := &demoSeeder{db: tenantScopedDB(db), now: now, historyDays: historyDays}
 	err := seeder.run()
 	return Counts{Nodes: len(seeder.ctx.nodes), NAS: len(seeder.ctx.nas), Profiles: len(seeder.ctx.profiles), Users: len(seeder.ctx.users), Customers: seeder.customerCount, Packages: seeder.packageCount, Subscriptions: seeder.subscriptionCount, Invoices: seeder.invoiceCount, Payments: seeder.paymentCount, MonitorTargets: seeder.monitorCount, AccountingRecords: seeder.accountingCount}, err
 }
@@ -59,7 +61,18 @@ func Clean(db *gorm.DB) error {
 	if db == nil {
 		return fmt.Errorf("database is required")
 	}
-	return (&demoSeeder{db: db}).clean()
+	return (&demoSeeder{db: tenantScopedDB(db)}).clean()
+}
+
+func tenantScopedDB(db *gorm.DB) *gorm.DB {
+	ctx := context.Background()
+	if db.Statement != nil && db.Statement.Context != nil {
+		ctx = db.Statement.Context
+	}
+	if _, ok := tenancy.TenantID(ctx); !ok {
+		ctx = tenancy.WithTenantID(ctx, domain.DefaultTenantID)
+	}
+	return db.WithContext(ctx)
 }
 func (s *demoSeeder) run() error {
 	s.ctx = seedContext{}

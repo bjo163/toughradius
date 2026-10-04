@@ -5,6 +5,8 @@ assets/buildver.txt
 /release/
 release
 web/node_modules/
+__pycache__/
+*.py[cod]
 web/dist/*
 !web/dist/.gitkeep
 web/.vite/

@@ -13,6 +13,7 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import { Box, Typography, useTheme } from '@mui/material';
 import { MenuItemLink, MenuProps, useGetIdentity, useTranslate } from 'react-admin';
 import BrushOutlinedIcon from '@mui/icons-material/BrushOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import { useBranding } from '../branding/BrandingContext';
 import { BrandMark } from './BrandMark';
 
@@ -30,10 +31,11 @@ const menuItems = [
   { to: '/network/nodes', labelKey: 'menu.network_nodes', sectionKey: 'menu.network', icon: <AccountTreeOutlinedIcon /> },
   { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
   { to: '/operations', labelKey: 'menu.operations', sectionKey: 'menu.network', icon: <SensorsOutlinedIcon />, permissions: ['super', 'admin'] },
-  { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
-  { to: '/system/branding', labelKey: 'menu.branding', icon: <BrushOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['platform_admin'] },
+  { to: '/system/branding', labelKey: 'menu.branding', icon: <BrushOutlinedIcon />, permissions: ['platform_admin'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
-  { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['platform_admin'] },
+  { to: '/platform/tenants', labelKey: 'menu.tenants', sectionKey: 'menu.platform', icon: <BusinessOutlinedIcon />, permissions: ['platform_admin'] },
 ];
 
 export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
@@ -43,11 +45,19 @@ export const CustomMenu = ({ dense, onMenuClick, logout }: MenuProps) => {
   const translate = useTranslate();
   const { branding } = useBranding();
 
+  const permissions = (() => {
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem('permissions') || '[]');
+      return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+    } catch {
+      return [];
+    }
+  })();
+
   // Filter menu items by user permissions
   const filteredMenuItems = menuItems.filter(item => {
     if (!item.permissions) return true; // No permissions restriction
-    if (!identity?.level) return false; // User is not signed in
-    return item.permissions.includes(identity.level); // Check user permissions
+    return item.permissions.some(permission => permission === identity?.level || permissions.includes(permission));
   });
 
   return (

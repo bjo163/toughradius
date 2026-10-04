@@ -16,6 +16,8 @@ import (
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/networkmonitor"
 	"github.com/bjo163/mwx-isp/internal/notify"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cast"
@@ -113,7 +115,8 @@ func (a *Application) initializeOperationalServices(cfg *config.AppConfig) {
 			message = fmt.Sprintf("MWX-ISP: network target %s (%s) has recovered.", target.Name, target.Address)
 		}
 		key := fmt.Sprintf("network:%d:%s:%d", target.ID, to, at.Unix())
-		if err := a.notificationOutbox.Enqueue(eventType, key, message); err != nil {
+		ctx := tenancy.WithTenantID(context.Background(), target.TenantID)
+		if err := a.notificationOutbox.EnqueueContext(ctx, eventType, key, message); err != nil {
 			zap.L().Warn("enqueue network alert failed", zap.Error(err))
 		}
 	})
@@ -226,6 +229,9 @@ func (a *Application) Init(cfg *config.AppConfig) {
 	// Create or rotate the bootstrap super-admin before the admin API listens
 	// so a well-known password is never reachable on a fresh or upgraded node.
 	a.checkSuper()
+	if err := a.bootstrapPlatformAdminFromEnvironment(); err != nil {
+		zap.L().Error("platform administrator bootstrap failed", zap.Error(err))
+	}
 
 	// wait for database initialization to complete
 	go func() {
@@ -372,8 +378,40 @@ func (a *Application) MigrateDB(track bool) (err error) {
 	if err := a.backfillDefaultTenantRows(); err != nil {
 		return err
 	}
+	if err := a.backfillTenantMemberships(); err != nil {
+		return err
+	}
 	if err := a.dropLegacyTenantUniqueIndices(); err != nil {
 		return err
+	}
+	return nil
+}
+
+// backfillTenantMemberships turns each existing tenant-local operator into an
+// active membership without changing operator IDs, passwords, or tenant scope.
+func (a *Application) backfillTenantMemberships() error {
+	var operators []domain.SysOpr
+	if err := a.gormDB.Find(&operators).Error; err != nil {
+		return fmt.Errorf("load operators for tenant membership migration: %w", err)
+	}
+	now := time.Now()
+	for _, operator := range operators {
+		membership := domain.TenantMembership{
+			TenantID: operator.TenantID, OperatorID: operator.ID,
+			Level: operator.Level, Status: operator.Status, CreatedAt: now, UpdatedAt: now,
+		}
+		if membership.TenantID <= 0 {
+			membership.TenantID = domain.DefaultTenantID
+		}
+		if membership.Status == "" {
+			membership.Status = common.ENABLED
+		}
+		if membership.Level == "" {
+			membership.Level = "operator"
+		}
+		if err := a.gormDB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "tenant_id"}, {Name: "operator_id"}}, DoNothing: true}).Create(&membership).Error; err != nil {
+			return fmt.Errorf("backfill membership for operator %d: %w", operator.ID, err)
+		}
 	}
 	return nil
 }
@@ -417,7 +455,7 @@ func (a *Application) backfillDefaultTenantRows() error {
 }
 
 var tenantOwnedModels = []interface{}{
-	&domain.SysOpr{}, &domain.SysOprLog{}, &domain.NetNode{}, &domain.NetNas{},
+	&domain.SysOpr{}, &domain.TenantMembership{}, &domain.SysOprLog{}, &domain.NetNode{}, &domain.NetNas{},
 	&domain.NetMonitorTarget{}, &domain.NetMonitorSample{}, &domain.NetMonitorIncident{},
 	&domain.NotificationSettings{}, &domain.NotificationOutbox{}, &domain.RadiusAccounting{},
 	&domain.RadiusOnline{}, &domain.RadiusSessionActionAudit{}, &domain.RadiusProfile{}, &domain.RadiusUser{},
@@ -430,6 +468,8 @@ func (a *Application) dropLegacyTenantUniqueIndices() error {
 		model interface{}
 		name  string
 	}{
+		{&domain.SysOpr{}, "idx_sys_opr_username"},
+		{&domain.SysOpr{}, "sys_opr_username_key"},
 		{&domain.RadiusUser{}, "idx_radius_user_username"},
 		{&domain.RadiusOnline{}, "udx_radius_online_acct_session_id"},
 		{&domain.Customer{}, "idx_isp_customer_customer_no"},

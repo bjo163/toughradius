@@ -3,22 +3,92 @@ package adminapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
+	"gorm.io/gorm"
 )
 
-func TestBackupSystem(t *testing.T) {
+func setupBackupTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
 	db := setupTestDB(t)
+	require.NoError(t, db.AutoMigrate(domain.Tables...))
+	return db
+}
+
+func TestApplyTenantIDsRestoresHiddenTenantOwnership(t *testing.T) {
+	backup := SystemBackup{
+		Version: backupVersion,
+		Tenants: []domain.Tenant{{ID: 7, Name: "Tenant Seven", Slug: "tenant-seven"}},
+		Users:   []domain.RadiusUser{{ID: 42, Username: "subscriber"}},
+		TenantIDs: map[string]map[string]int64{
+			"radius_user": {"42": 7},
+		},
+	}
+	require.NoError(t, applyTenantIDs(&backup))
+	require.Equal(t, int64(7), backup.Users[0].TenantID)
+
+	backup.TenantIDs["radius_user"]["42"] = 9
+	require.Error(t, applyTenantIDs(&backup), "records cannot reference a tenant omitted from the backup")
+
+	legacy := SystemBackup{Version: "9.0", Users: []domain.RadiusUser{{ID: 43, Username: "legacy"}}}
+	require.NoError(t, applyTenantIDs(&legacy))
+	require.Equal(t, domain.DefaultTenantID, legacy.Users[0].TenantID)
+}
+
+func TestBackupMonitorTargetPreservesHiddenTenantAndEncryptedSecrets(t *testing.T) {
+	target := domain.NetMonitorTarget{
+		ID: 101, TenantID: 7, Name: "router", SNMPCommunityEncrypted: []byte("community-cipher"),
+		SNMPAuthEncrypted: []byte("auth-cipher"), SNMPPrivacyEncrypted: []byte("privacy-cipher"),
+	}
+	backup := SystemBackup{
+		Version:        backupVersion,
+		Tenants:        []domain.Tenant{{ID: 7, Name: "Tenant Seven", Slug: "tenant-seven"}},
+		MonitorTargets: []SystemBackupMonitorTarget{newSystemBackupMonitorTarget(target)},
+	}
+	require.NoError(t, captureTenantIDs(&backup))
+
+	serialized, err := json.Marshal(backup)
+	require.NoError(t, err)
+	var restored SystemBackup
+	require.NoError(t, json.Unmarshal(serialized, &restored))
+	require.NoError(t, applyTenantIDs(&restored))
+
+	require.Len(t, restored.MonitorTargets, 1)
+	actual := restored.MonitorTargets[0].toMonitorTarget()
+	assert.Equal(t, int64(7), actual.TenantID)
+	assert.Equal(t, target.SNMPCommunityEncrypted, actual.SNMPCommunityEncrypted)
+	assert.Equal(t, target.SNMPAuthEncrypted, actual.SNMPAuthEncrypted)
+	assert.Equal(t, target.SNMPPrivacyEncrypted, actual.SNMPPrivacyEncrypted)
+}
+
+func TestValidateBackupRequiresVersionedTenantMembership(t *testing.T) {
+	backup := SystemBackup{
+		Version:     backupVersion,
+		Tenants:     []domain.Tenant{{ID: 1, Name: "Default", Slug: "default"}},
+		Operators:   []domain.SysOpr{{ID: 2, TenantID: 1, Username: "operator", Level: "admin", Status: "enabled"}},
+		Memberships: []domain.TenantMembership{{TenantID: 1, OperatorID: 2, Level: "admin", Status: "enabled"}},
+	}
+	require.ErrorContains(t, validateBackup(&backup), "token version")
+	backup.Memberships[0].TokenVersion = 1
+	require.NoError(t, validateBackup(&backup))
+	backup.Memberships[0].TenantID = 3
+	require.ErrorContains(t, validateBackup(&backup), "tenant and operator IDs")
+}
+
+func TestBackupSystem(t *testing.T) {
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	profile := createTestProfile(db, "backup-profile")
 	createTestUser(db, "backup_user", profile.ID)
+	require.NoError(t, db.Create(&domain.SysOprLog{OprName: "admin", OptAction: "test", OptDesc: "legacy global audit row"}).Error)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/backup", nil)
 	rec := httptest.NewRecorder()
@@ -35,11 +105,13 @@ func TestBackupSystem(t *testing.T) {
 	assert.Len(t, backup.Profiles, 1)
 	assert.Len(t, backup.Users, 1)
 	assert.Equal(t, "backup_user", backup.Users[0].Username)
+	assert.Len(t, backup.OprLogs, 1, "tenant-scoped operator audit logs remain in system backups")
+	assert.Equal(t, domain.DefaultTenantID, backup.TenantIDs["sys_opr_log"][fmt.Sprint(backup.OprLogs[0].ID)])
 }
 
 func TestRestoreSystem(t *testing.T) {
 	// Build a backup payload from a source database.
-	srcDB := setupTestDB(t)
+	srcDB := setupBackupTestDB(t)
 	srcAppCtx := setupTestApp(t, srcDB)
 	profile := createTestProfile(srcDB, "restore-profile")
 	createTestUser(srcDB, "restore_user", profile.ID)
@@ -52,7 +124,7 @@ func TestRestoreSystem(t *testing.T) {
 	payload := rec.Body.Bytes()
 
 	// Restore into a fresh, empty database.
-	dstDB := setupTestDB(t)
+	dstDB := setupBackupTestDB(t)
 	dstAppCtx := setupTestApp(t, dstDB)
 
 	body := &bytes.Buffer{}
@@ -96,7 +168,7 @@ func TestRestoreSystem(t *testing.T) {
 // certificate-based EAP (EAP-TLS/PEAP/TTLS) keeps working on the restored
 // instance.
 func TestBackupRestoreSystem_CertRoundTrip(t *testing.T) {
-	srcDB := setupTestDB(t)
+	srcDB := setupBackupTestDB(t)
 	srcAppCtx := setupTestApp(t, srcDB)
 
 	certPEM, keyPEM := genSelfSignedPEM(t, "backup-eap-server")
@@ -131,7 +203,7 @@ func TestBackupRestoreSystem_CertRoundTrip(t *testing.T) {
 	assert.NotContains(t, lrec.Body.String(), "PRIVATE KEY")
 
 	// Restore into a fresh, empty database and verify the key round-trips.
-	dstDB := setupTestDB(t)
+	dstDB := setupBackupTestDB(t)
 	dstAppCtx := setupTestApp(t, dstDB)
 	rreq, rrec := restoreRequest(t, payload)
 	rc := CreateTestContext(setupTestEcho(), dstDB, rreq, rrec, dstAppCtx)
@@ -150,7 +222,7 @@ func TestBackupRestoreSystem_CertRoundTrip(t *testing.T) {
 }
 
 func TestRestoreSystem_InvalidCertType(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	backup := SystemBackup{
@@ -169,7 +241,7 @@ func TestRestoreSystem_InvalidCertType(t *testing.T) {
 }
 
 func TestRestoreSystem_InvalidFile(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	body := &bytes.Buffer{}
@@ -188,7 +260,7 @@ func TestRestoreSystem_InvalidFile(t *testing.T) {
 }
 
 func TestRestoreSystem_MissingVersion(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	// Valid JSON but without a version stamp should be rejected.
@@ -224,7 +296,7 @@ func restoreRequest(t *testing.T, payload []byte) (*http.Request, *httptest.Resp
 }
 
 func TestRestoreSystem_IncompatibleVersion(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	req, rec := restoreRequest(t, []byte(`{"version":"8.5"}`))
@@ -239,7 +311,7 @@ func TestRestoreSystem_IncompatibleVersion(t *testing.T) {
 }
 
 func TestRestoreSystem_InvalidOperatorLevel(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	// Operator with an unrecognized privilege level must be rejected outright.
@@ -256,7 +328,7 @@ func TestRestoreSystem_InvalidOperatorLevel(t *testing.T) {
 }
 
 func TestRestoreSystem_OperatorsRequireSuper(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)
 
 	// A well-formed operator payload, but the caller is only an admin (not super):

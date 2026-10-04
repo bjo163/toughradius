@@ -2,11 +2,12 @@ package radiusd
 
 import (
 	"context"
-	"strings"
+	"net"
 
 	"github.com/bjo163/mwx-isp/internal/app"
 	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
 	vendorparserspkg "github.com/bjo163/mwx-isp/internal/radiusd/plugins/vendorparsers"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"go.uber.org/zap"
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
@@ -55,7 +56,11 @@ func (s *AcctService) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 
 	// NAS Access check
 	raddrstr := r.RemoteAddr.String()
-	nasrip := raddrstr[:strings.Index(raddrstr, ":")]
+	nasrip, _, splitErr := net.SplitHostPort(raddrstr)
+	if splitErr != nil {
+		s.logAcctError("nas_lookup", raddrstr, "", splitErr)
+		return
+	}
 	var identifier = rfc2865.NASIdentifier_GetString(r.Packet)
 
 	nas, err := s.GetNas(nasrip, identifier)
@@ -81,7 +86,7 @@ func (s *AcctService) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 		}
 	}
 
-	defer s.ReleaseAuthRateLimit(username)
+	defer s.ReleaseAuthRateLimitForTenant(nas.TenantID, username)
 
 	// Validate the Accounting-Request authenticator against the NAS shared secret.
 	// Unlike Access-Request (which carries a random authenticator), accounting
@@ -113,7 +118,7 @@ func (s *AcctService) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 			Vlanid2: vendorReq.Vlanid2,
 		}
 
-		ctx := context.Background()
+		ctx := tenancy.WithTenantID(context.Background(), nas.TenantID)
 		err := s.HandleAccountingWithPlugins(ctx, r, vendorReqForPlugin, username, nas, nasrip)
 		if err != nil {
 			zap.L().Error("accounting plugin processing error",

@@ -6,7 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
+	cachepkg "github.com/bjo163/mwx-isp/internal/radiusd/cache"
 	radiuserrors "github.com/bjo163/mwx-isp/internal/radiusd/errors"
+	"github.com/bjo163/mwx-isp/internal/radiusd/repository"
+	repogorm "github.com/bjo163/mwx-isp/internal/radiusd/repository/gorm"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 // Testpure logic functions without database dependency
@@ -35,6 +43,59 @@ func TestCheckAuthRateLimitBasic(t *testing.T) {
 	} else if authErr.MetricsType != "radus_reject_limit" {
 		t.Errorf("expected reject limit error, got %s", authErr.MetricsType)
 	}
+}
+
+func TestRadiusAuthenticationCachesAreTenantScoped(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:radius-tenant-users?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.RadiusUser{}))
+	validUntil := time.Now().Add(time.Hour)
+	require.NoError(t, db.Create(&domain.RadiusUser{ID: 101, TenantID: 1, Username: "shared", Password: "a", Status: "enabled", ExpireTime: validUntil}).Error)
+	require.NoError(t, db.Create(&domain.RadiusUser{ID: 202, TenantID: 2, Username: "shared", Password: "b", Status: "enabled", ExpireTime: validUntil}).Error)
+
+	service := &RadiusService{
+		UserRepo:  repogorm.NewGormUserRepository(db),
+		userCache: cachepkg.NewTTLCache[*domain.RadiusUser](time.Minute, 16),
+		authRate:  newAuthRateLimiter(defaultAuthRateShards),
+	}
+	userA, err := service.GetValidUserForTenant(1, "shared", false)
+	require.NoError(t, err)
+	userB, err := service.GetValidUserForTenant(2, "shared", false)
+	require.NoError(t, err)
+	require.Equal(t, int64(101), userA.ID)
+	require.Equal(t, int64(202), userB.ID)
+
+	require.NoError(t, service.CheckAuthRateLimitForTenant(1, "shared"))
+	require.NoError(t, service.CheckAuthRateLimitForTenant(2, "shared"))
+	require.Error(t, service.CheckAuthRateLimitForTenant(1, "shared"))
+}
+
+func TestRadiusNASLookupAndCacheAreTenantScoped(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:radius-tenant-nas?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(&domain.NetNas{}))
+	require.NoError(t, db.Create(&domain.NetNas{ID: 101, TenantID: 1, Name: "tenant-a", Ipaddr: "10.0.0.1", Secret: "a"}).Error)
+	require.NoError(t, db.Create(&domain.NetNas{ID: 202, TenantID: 2, Name: "tenant-b", Ipaddr: "10.0.0.1", Secret: "b"}).Error)
+
+	service := &RadiusService{
+		NasRepo:  repogorm.NewGormNasRepository(db),
+		nasCache: cachepkg.NewTTLCache[*domain.NetNas](time.Minute, 16),
+	}
+	nasA, err := service.GetNasForTenant(1, "10.0.0.1", "")
+	require.NoError(t, err)
+	nasB, err := service.GetNasForTenant(2, "10.0.0.1", "")
+	require.NoError(t, err)
+	require.Equal(t, int64(101), nasA.ID)
+	require.Equal(t, "a", nasA.Secret)
+	require.Equal(t, int64(202), nasB.ID)
+	require.Equal(t, "b", nasB.Secret)
+
+	// Incoming RADIUS packet resolution has no authenticated tenant context;
+	// duplicate source IPs must therefore fail closed instead of picking either tenant.
+	_, err = service.GetNas("10.0.0.1", "")
+	require.ErrorIs(t, err, repository.ErrAmbiguousNASIP)
 }
 
 func TestCheckAuthRateLimitAfterWait(t *testing.T) {

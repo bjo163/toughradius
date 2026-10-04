@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/billing"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
-	"github.com/bjo163/mwx-isp/internal/billing"
-	"github.com/bjo163/mwx-isp/internal/domain"
-	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"go.uber.org/zap"
 )
 
@@ -31,16 +32,6 @@ func (a *Application) initJob() {
 		go a.SchedNetworkMonitorTask()
 		go a.SchedNotificationOutboxTask()
 	})
-	if err != nil {
-		zap.S().Errorf("init job error %s", err.Error())
-	}
-
-	_, err = a.sched.AddFunc("@daily", func() {
-		a.gormDB.
-			Where("opt_time < ? ", time.Now().
-				Add(-time.Hour*24*365)).Delete(domain.SysOprLog{})
-	})
-
 	if err != nil {
 		zap.S().Errorf("init job error %s", err.Error())
 	}
@@ -80,52 +71,65 @@ func (a *Application) SchedISPBillingTask() {
 	if dueDays < 0 || dueDays > 90 {
 		dueDays = 10
 	}
-	if _, err := billing.GenerateMonthlyInvoices(a.gormDB, now, dueDays); err != nil {
-		zap.S().Error("monthly invoice generation failed", zap.Error(err))
-		a.enqueueSchedulerFailure("isp-billing-invoice", "monthly invoice generation failed")
+	// Settings are installation-wide today; each active tenant gets the same
+	// billing policy while all database reads/writes remain tenant scoped.
+	autoSuspend := a.GetSettingsBoolValue("isp", "AutoSuspend")
+	var tenants []domain.Tenant
+	if err := a.gormDB.Where("status = ?", "active").Order("id ASC").Find(&tenants).Error; err != nil {
+		zap.S().Error("active tenant query failed for ISP billing", zap.Error(err))
+		a.enqueueSchedulerFailure("isp-billing-tenants", "active tenant query failed")
 		return
 	}
-	if err := a.NotifyBillingEvents(context.Background(), now.Add(-2*time.Minute)); err != nil {
-		zap.S().Warn("billing notification enqueue failed", zap.Error(err))
+	for _, tenant := range tenants {
+		if err := a.runBillingForTenant(tenant.ID, now, dueDays, autoSuspend); err != nil {
+			zap.S().Error("tenant ISP billing run failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			a.enqueueSchedulerFailure("isp-billing", fmt.Sprintf("billing failed for tenant %d", tenant.ID))
+		}
 	}
-	if !a.GetSettingsBoolValue("isp", "AutoSuspend") {
-		return
+}
+
+func (a *Application) runBillingForTenant(tenantID int64, now time.Time, dueDays int, autoSuspend bool) error {
+	if tenantID <= 0 {
+		return fmt.Errorf("invalid tenant ID %d", tenantID)
 	}
-	if err := billing.ProcessOverdueInvoices(a.gormDB, now); err != nil {
-		zap.S().Error("overdue invoice processing failed", zap.Error(err))
-		a.enqueueSchedulerFailure("isp-billing-overdue", "overdue invoice processing failed")
-		return
+	ctx := tenancy.WithTenantID(context.Background(), tenantID)
+	db := a.gormDB.WithContext(ctx)
+	if _, err := billing.GenerateMonthlyInvoices(db, now, dueDays); err != nil {
+		return fmt.Errorf("generate monthly invoices: %w", err)
 	}
-	if err := billing.SuspendOverdueSubscriptions(a.gormDB, now); err != nil {
-		zap.S().Error("overdue subscription suspension failed", zap.Error(err))
-		a.enqueueSchedulerFailure("isp-billing-suspension", "overdue subscription suspension failed")
-		return
+	if !autoSuspend {
+		return nil
+	}
+	if err := billing.ProcessOverdueInvoices(db, now); err != nil {
+		return fmt.Errorf("process overdue invoices: %w", err)
+	}
+	if err := billing.SuspendOverdueSubscriptions(db, now); err != nil {
+		return fmt.Errorf("suspend overdue subscriptions: %w", err)
 	}
 	handler := a.sessionDisconnectHandler()
 	if handler == nil {
-		return
+		return nil
 	}
 	var subs []domain.Subscription
-	if err := a.gormDB.Where("status = ? AND suspension_reason = ?", domain.SubscriptionSuspended, domain.SuspensionBillingOverdue).Find(&subs).Error; err != nil {
-		zap.S().Error("billing-suspended subscription query failed", zap.Error(err))
-		return
+	if err := db.Where("status = ? AND suspension_reason = ?", domain.SubscriptionSuspended, domain.SuspensionBillingOverdue).Find(&subs).Error; err != nil {
+		return fmt.Errorf("load billing-suspended subscriptions: %w", err)
 	}
 	for _, sub := range subs {
 		var user domain.RadiusUser
-		if sub.RadiusUserID == 0 || a.gormDB.First(&user, sub.RadiusUserID).Error != nil {
+		if sub.RadiusUserID == 0 || db.First(&user, sub.RadiusUserID).Error != nil {
 			continue
 		}
 		var sessions []domain.RadiusOnline
-		if err := a.gormDB.Where("username = ?", user.Username).Find(&sessions).Error; err != nil {
-			zap.S().Warn("could not load online sessions for billing suspension", zap.Error(err))
-			continue
+		if err := db.Where("username = ?", user.Username).Find(&sessions).Error; err != nil {
+			return fmt.Errorf("load online sessions for %q: %w", user.Username, err)
 		}
 		for _, session := range sessions {
-			if err := handler(context.Background(), session); err != nil {
-				zap.S().Warn("billing suspension disconnect failed", zap.String("username", user.Username), zap.Error(err))
+			if err := handler(ctx, session); err != nil {
+				zap.S().Warn("billing suspension disconnect failed", zap.Int64("tenant_id", tenantID), zap.String("username", user.Username), zap.Error(err))
 			}
 		}
 	}
+	return nil
 }
 
 func (a *Application) enqueueSchedulerFailure(job, summary string) {
@@ -146,9 +150,18 @@ func (a *Application) SchedNetworkMonitorTask() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	if err := a.networkMonitor.PollDue(ctx, time.Now()); err != nil {
-		zap.L().Warn("network monitor poll failed", zap.Error(err))
-		a.enqueueSchedulerFailure("network-monitor", "network monitor polling failed")
+	var tenants []domain.Tenant
+	if err := a.gormDB.WithContext(ctx).Where("status = ?", "active").Order("id ASC").Find(&tenants).Error; err != nil {
+		zap.L().Warn("active tenant query failed for network monitor", zap.Error(err))
+		a.enqueueSchedulerFailure("network-monitor-tenants", "active tenant query failed")
+		return
+	}
+	for _, tenant := range tenants {
+		tenantCtx := tenancy.WithTenantID(ctx, tenant.ID)
+		if err := a.networkMonitor.PollDue(tenantCtx, time.Now()); err != nil {
+			zap.L().Warn("tenant network monitor poll failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			a.enqueueSchedulerFailure("network-monitor", fmt.Sprintf("network monitor polling failed for tenant %d", tenant.ID))
+		}
 	}
 }
 
@@ -160,11 +173,19 @@ func (a *Application) SchedNotificationOutboxTask() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	if err := a.NotifyBillingEvents(ctx, time.Now().Add(-2*time.Minute)); err != nil {
-		zap.L().Warn("billing notification enqueue failed", zap.Error(err))
+	var tenants []domain.Tenant
+	if err := a.gormDB.WithContext(ctx).Where("status = ?", "active").Order("id ASC").Find(&tenants).Error; err != nil {
+		zap.L().Warn("active tenant query failed for notification dispatcher", zap.Error(err))
+		return
 	}
-	if err := a.notificationOutbox.ProcessOnce(ctx, time.Now()); err != nil {
-		zap.L().Warn("notification outbox processing failed", zap.Error(err))
+	for _, tenant := range tenants {
+		tenantCtx := tenancy.WithTenantID(ctx, tenant.ID)
+		if err := a.NotifyBillingEvents(tenantCtx, time.Now().Add(-2*time.Minute)); err != nil {
+			zap.L().Warn("tenant billing notification enqueue failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
+		if err := a.notificationOutbox.ProcessOnce(tenantCtx, time.Now()); err != nil {
+			zap.L().Warn("tenant notification outbox processing failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
 	}
 }
 
@@ -218,7 +239,7 @@ func (a *Application) SchedProcessMonitorTask() {
 // SchedClearExpireData purges stale operational data and is registered as a
 // @daily cron job by initJob.
 //
-// It performs two independent cleanups:
+// It performs tenant-scoped cleanup for every organization:
 //   - radius_online: deletes rows that have not refreshed for at least three
 //     radius.AcctInterimInterval periods, reclaiming sessions left dangling by a
 //     missed Accounting-Stop. A live session updates every interim interval, so
@@ -230,6 +251,7 @@ func (a *Application) SchedProcessMonitorTask() {
 //     Active sessions carry a zero AcctStopTime (stamped only at Accounting-Stop)
 //     and are always excluded, so an online session never loses its billing row.
 //
+// Operator audit history is retained per tenant with the same one-year window.
 // Any panic is recovered and logged so a cleanup failure never crashes the
 // scheduler goroutine.
 func (a *Application) SchedClearExpireData() {
@@ -239,29 +261,39 @@ func (a *Application) SchedClearExpireData() {
 		}
 	}()
 
-	// Reclaim dangling online sessions. A healthy session refreshes every
-	// AcctInterimInterval, so only delete rows that have missed several updates
-	// to avoid dropping live sessions.
+	var tenants []domain.Tenant
+	if err := a.gormDB.Find(&tenants).Error; err != nil {
+		zap.L().Error("load tenants for session retention", zap.Error(err))
+		return
+	}
+	if len(tenants) == 0 {
+		// Keep cleanup working on legacy/test installations before tenant rows
+		// have been initialized; the migration assigns their data to tenant 1.
+		tenants = []domain.Tenant{{ID: domain.DefaultTenantID}}
+	}
+
+	// Reclaim dangling sessions and accounting history within each tenant.
 	interim := a.ConfigMgr().GetInt("radius", "AcctInterimInterval")
 	if interim <= 0 {
 		interim = 300
 	}
 	onlineStaleWindow := time.Duration(interim*3) * time.Second
-	a.gormDB.Where("last_update <= ?",
-		time.Now().Add(-onlineStaleWindow)).
-		Delete(&domain.RadiusOnline{})
-
-	// Clean up accounting history. radius.AccountingHistoryDays is the retention
-	// window in days; 0 disables accounting cleanup (matching the config schema's
-	// "0=disabled" semantics), so a missing or zero value never silently purges
-	// data. The acct_stop_time > epoch guard excludes active sessions, whose
-	// AcctStopTime is the zero value (0001-01-01) until Accounting-Stop and would
-	// otherwise sort before every cutoff and be deleted immediately.
 	idays := a.ConfigMgr().GetInt("radius", "AccountingHistoryDays")
-	if idays > 0 {
-		cutoff := time.Now().Add(-time.Hour * 24 * time.Duration(idays))
-		a.gormDB.
-			Where("acct_stop_time > ? AND acct_stop_time < ?", time.Unix(0, 0), cutoff).
-			Delete(domain.RadiusAccounting{})
+	for _, tenant := range tenants {
+		db := a.gormDB.WithContext(tenancy.WithTenantID(context.Background(), tenant.ID))
+		if err := db.Where("opt_time < ?", time.Now().Add(-time.Hour*24*365)).Delete(&domain.SysOprLog{}).Error; err != nil {
+			zap.L().Error("prune tenant operator audit logs", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
+		if err := db.Where("last_update <= ?", time.Now().Add(-onlineStaleWindow)).Delete(&domain.RadiusOnline{}).Error; err != nil {
+			zap.L().Error("prune stale tenant sessions", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+		}
+		// A zero retention setting disables accounting cleanup. The epoch guard
+		// excludes active sessions with a zero AcctStopTime.
+		if idays > 0 {
+			cutoff := time.Now().Add(-time.Hour * 24 * time.Duration(idays))
+			if err := db.Where("acct_stop_time > ? AND acct_stop_time < ?", time.Unix(0, 0), cutoff).Delete(&domain.RadiusAccounting{}).Error; err != nil {
+				zap.L().Error("prune tenant accounting history", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			}
+		}
 	}
 }

@@ -294,7 +294,7 @@ func listRadiusUsers(c echo.Context) error {
 
 	base := GetDB(c).Model(&domain.RadiusUser{}).
 		Select("radius_user.*, COALESCE(ro.count, 0) AS online_count").
-		Joins("LEFT JOIN (SELECT username, COUNT(1) AS count FROM radius_online GROUP BY username) ro ON radius_user.username = ro.username")
+		Joins("LEFT JOIN (SELECT tenant_id, username, COUNT(1) AS count FROM radius_online GROUP BY tenant_id, username) ro ON radius_user.username = ro.username AND radius_user.tenant_id = ro.tenant_id")
 
 	base = applyUserFilters(base, c)
 
@@ -621,8 +621,12 @@ func deleteRadiusUser(c echo.Context) error {
 	if subscriptionCount > 0 {
 		return fail(c, http.StatusConflict, "RADIUS_USER_LINKED", "RADIUS user is linked to an ISP subscription", map[string]int64{"subscription_count": subscriptionCount})
 	}
-	if err := GetDB(c).Where("id = ?", id).Delete(&domain.RadiusUser{}).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.RadiusUser{}, id)
+	if err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to delete user", err.Error())
+	}
+	if !deleted {
+		return fail(c, http.StatusNotFound, "USER_NOT_FOUND", "User not found", nil)
 	}
 	return ok(c, map[string]interface{}{
 		"id": id,

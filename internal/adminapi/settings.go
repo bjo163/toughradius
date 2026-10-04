@@ -30,13 +30,13 @@ type settingsPayload struct {
 
 // registerSettingsRoutes registers system setting routes
 func registerSettingsRoutes() {
-	webserver.ApiGET("/system/settings", listSettings)
-	webserver.ApiGET("/system/settings/:id", getSettings)
-	webserver.ApiGET("/system/config/schemas", getConfigSchemas)
-	webserver.ApiPOST("/system/settings", createSettings, requireAdmin())
-	webserver.ApiPUT("/system/settings/:id", updateSettings, requireAdmin())
-	webserver.ApiDELETE("/system/settings/:id", deleteSettings, requireAdmin())
-	webserver.ApiPOST("/system/config/reload", reloadConfig, requireAdmin())
+	webserver.ApiGET("/system/settings", listSettings, requirePlatformAdmin())
+	webserver.ApiGET("/system/settings/:id", getSettings, requirePlatformAdmin())
+	webserver.ApiGET("/system/config/schemas", getConfigSchemas, requirePlatformAdmin())
+	webserver.ApiPOST("/system/settings", createSettings, requirePlatformAdmin())
+	webserver.ApiPUT("/system/settings/:id", updateSettings, requirePlatformAdmin())
+	webserver.ApiDELETE("/system/settings/:id", deleteSettings, requirePlatformAdmin())
+	webserver.ApiPOST("/system/config/reload", reloadConfig, requirePlatformAdmin())
 }
 
 // listSettings retrieves the system settings list

@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLogin, useNotify, useTranslate } from 'react-admin';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Card,
   CardContent,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   Button,
   Typography,
@@ -20,6 +24,10 @@ import { BrandMark } from '../components/BrandMark';
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [tenantSlug, setTenantSlug] = useState('default');
+  const [tenants, setTenants] = useState<Array<{ name: string; slug: string; kind: string }>>([
+    { name: 'Default ISP', slug: 'default', kind: 'isp' },
+  ]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const login = useLogin();
@@ -28,6 +36,31 @@ export const LoginPage = () => {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const { branding } = useBranding();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/v1/auth/tenants', { headers: { Accept: 'application/json' } })
+      .then(async response => {
+        if (!response.ok) throw new Error('Unable to load organizations');
+        const result = await response.json();
+        const rows = Array.isArray(result?.data) ? result.data : [];
+        const available: Array<{ name: string; slug: string; kind: string }> = rows.filter((row: unknown): row is { name: string; slug: string; kind: string } =>
+          typeof row === 'object' && row !== null &&
+          typeof (row as { name?: unknown }).name === 'string' &&
+          typeof (row as { slug?: unknown }).slug === 'string' &&
+          typeof (row as { kind?: unknown }).kind === 'string',
+        );
+        if (cancelled || available.length === 0) return;
+        setTenants(available);
+        setTenantSlug(current => available.some(tenant => tenant.slug === current)
+          ? current
+          : (available.find(tenant => tenant.slug === 'default') ?? available[0]).slug);
+      })
+      .catch(() => {
+        if (!cancelled) notify(translate('auth.organizations_unavailable'), { type: 'warning' });
+      });
+    return () => { cancelled = true; };
+  }, [notify, translate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +72,7 @@ export const LoginPage = () => {
 
     setLoading(true);
     try {
-      await login({ username, password });
+      await login({ username, password, tenantSlug });
       // Ensure AppBar UserMenu picks up the newly stored identity.
       await queryClient.invalidateQueries({ queryKey: ['auth', 'getIdentity'] });
       await queryClient.invalidateQueries({ queryKey: ['auth', 'getPermissions'] });
@@ -78,6 +111,22 @@ export const LoginPage = () => {
           </Box>
 
           <form onSubmit={handleSubmit}>
+            <Box sx={{ mb: 3 }}>
+              <FormControl fullWidth>
+                <InputLabel id="tenant-label">{translate('auth.organization')}</InputLabel>
+                <Select
+                  labelId="tenant-label"
+                  label={translate('auth.organization')}
+                  value={tenantSlug}
+                  onChange={event => setTenantSlug(event.target.value)}
+                  disabled={loading || tenants.length < 2}
+                >
+                  {tenants.map(tenant => (
+                    <MenuItem key={tenant.slug} value={tenant.slug}>{tenant.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
             <Box sx={{ mb: 3 }}>
               <TextField
                 fullWidth

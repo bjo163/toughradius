@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -497,7 +497,8 @@ func TestDeleteNode(t *testing.T) {
 		{
 			name:           "Node not found",
 			nodeID:         "999",
-			expectedStatus: http.StatusOK, // GORM Delete does not return error
+			expectedStatus: http.StatusNotFound,
+			expectedError:  "NODE_NOT_FOUND",
 			checkDeleted:   false,
 		},
 		{

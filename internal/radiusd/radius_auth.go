@@ -59,7 +59,7 @@ func (s *AuthService) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 			// (sendAcceptResponse) counters; the request is answered with a
 			// Reject below but never reached the normal reject chokepoint.
 			app.IncRadiusMetric(app.MetricsRadiusAuthDrop)
-			s.SendReject(w, r, err)
+			s.SendReject(w, r, err, 0)
 		}
 	}()
 
@@ -74,8 +74,8 @@ func (s *AuthService) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 	s.ensurePipeline()
 	pipelineCtx := NewAuthPipelineContext(s, w, r)
 	defer func() {
-		if pipelineCtx != nil && pipelineCtx.RateLimitChecked && pipelineCtx.Username != "" {
-			s.ReleaseAuthRateLimit(pipelineCtx.Username)
+		if pipelineCtx != nil && pipelineCtx.RateLimitChecked && pipelineCtx.Username != "" && pipelineCtx.NAS != nil {
+			s.ReleaseAuthRateLimitForTenant(pipelineCtx.NAS.TenantID, pipelineCtx.Username)
 		}
 	}()
 
@@ -85,7 +85,11 @@ func (s *AuthService) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 			pipelineCtx.VendorRequestForPlugin, pipelineCtx.IsMacAuth,
 			pipelineCtx.Username, pipelineCtx.RemoteIP, err)
 		if finalErr != nil {
-			s.logAndReject(w, r, finalErr)
+			tenantID := int64(0)
+			if pipelineCtx.NAS != nil {
+				tenantID = pipelineCtx.NAS.TenantID
+			}
+			s.logAndReject(w, r, finalErr, tenantID)
 		}
 	}
 }
@@ -96,7 +100,7 @@ func (s *AuthService) Pipeline() *AuthPipeline {
 	return s.authPipeline
 }
 
-func (s *AuthService) SendAccept(w radius.ResponseWriter, r *radius.Request, resp *radius.Packet) {
+func (s *AuthService) SendAccept(w radius.ResponseWriter, r *radius.Request, resp *radius.Packet, tenantID int64) {
 	if err := w.Write(resp); err != nil {
 		zap.L().Error("radius write accept error",
 			zap.String("namespace", "radius"),
@@ -107,7 +111,7 @@ func (s *AuthService) SendAccept(w radius.ResponseWriter, r *radius.Request, res
 	}
 
 	if s.eapHelper != nil {
-		s.eapHelper.CleanupState(r)
+		s.eapHelper.CleanupState(r, tenantID)
 	}
 
 	if s.Config().Radiusd.Debug {
@@ -115,7 +119,7 @@ func (s *AuthService) SendAccept(w radius.ResponseWriter, r *radius.Request, res
 	}
 }
 
-func (s *AuthService) SendReject(w radius.ResponseWriter, r *radius.Request, err error) {
+func (s *AuthService) SendReject(w radius.ResponseWriter, r *radius.Request, err error, tenantID int64) {
 	var code = radius.CodeAccessReject
 	var resp = r.Response(code)
 	if err != nil {
@@ -141,7 +145,7 @@ func (s *AuthService) SendReject(w radius.ResponseWriter, r *radius.Request, err
 	}
 
 	if s.eapHelper != nil {
-		s.eapHelper.CleanupState(r)
+		s.eapHelper.CleanupState(r, tenantID)
 	}
 
 	// debug message
@@ -151,7 +155,7 @@ func (s *AuthService) SendReject(w radius.ResponseWriter, r *radius.Request, err
 }
 
 // logAndReject logs the error with appropriate metrics and sends reject response.
-func (s *AuthService) logAndReject(w radius.ResponseWriter, r *radius.Request, err error) {
+func (s *AuthService) logAndReject(w radius.ResponseWriter, r *radius.Request, err error, tenantID int64) {
 	metricsKey := app.MetricsRadiusAuthDrop
 	if radiusErr, ok := radiuserrors.GetRadiusError(err); ok {
 		metricsKey = radiusErr.MetricsKey()
@@ -170,7 +174,7 @@ func (s *AuthService) logAndReject(w radius.ResponseWriter, r *radius.Request, e
 		zap.String("metrics", metricsKey),
 	)
 
-	s.SendReject(w, r, err)
+	s.SendReject(w, r, err, tenantID)
 }
 
 // processAuthError processes authentication errors through registered guards.

@@ -20,6 +20,7 @@ package adminapi
 
 import (
 	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/webserver"
 )
 
 // Init registers every admin API route group on the shared web server. It wires
@@ -32,6 +33,7 @@ import (
 // functions; handlers resolve the live application context per request from the
 // echo context (see [GetAppContext]) rather than capturing it here.
 func Init(appCtx app.AppContext) {
+	webserver.ApiUse(tenantContextMiddleware())
 	registerAuthRoutes()
 	registerUserRoutes()
 	registerDashboardRoutes()
@@ -49,4 +51,5 @@ func Init(appCtx app.AppContext) {
 	registerNetworkMonitorRoutes()
 	registerNotificationRoutes()
 	registerBrandingRoutes()
+	registerPlatformTenantRoutes()
 }

@@ -3,9 +3,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/bjo163/mwx-isp/internal/domain"
 )
+
+// ErrAmbiguousNASIP means more than one tenant configured the same RADIUS
+// client source address, so the server cannot safely select a shared secret.
+var ErrAmbiguousNASIP = errors.New("ambiguous NAS source IP")
 
 // UserRepository defines user data access operations
 type UserRepository interface {

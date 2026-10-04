@@ -3,8 +3,10 @@ import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined
 import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { Box, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
-import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, useTranslate, useSidebarState } from 'react-admin';
+import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import { Box, Chip, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
+import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, usePermissions, useTranslate, useSidebarState } from 'react-admin';
+import { useEffect, useState } from 'react';
 import { useBranding } from '../branding/BrandingContext';
 import { BrandMark } from './BrandMark';
 
@@ -12,9 +14,27 @@ export const CustomAppBar = (props: AppBarProps) => {
   const redirect = useRedirect();
   const theme = useTheme();
   const { data: identity } = useGetIdentity();
+  const { permissions = [] } = usePermissions();
   const translate = useTranslate();
   const [sidebarOpen, setSidebarOpen] = useSidebarState();
   const { branding } = useBranding();
+  const [activeTenant, setActiveTenant] = useState<{ name?: string; slug?: string; kind?: string } | null>(() => {
+    try {
+      const value: unknown = JSON.parse(localStorage.getItem('activeTenant') || 'null');
+      return value && typeof value === 'object' ? value as { name?: string; slug?: string; kind?: string } : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const value: unknown = JSON.parse(localStorage.getItem('activeTenant') || 'null');
+      setActiveTenant(value && typeof value === 'object' ? value as { name?: string; slug?: string; kind?: string } : null);
+    } catch {
+      setActiveTenant(null);
+    }
+  }, [identity?.id]);
 
   const handleToggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -94,6 +114,16 @@ export const CustomAppBar = (props: AppBarProps) => {
         </Stack>
 
         <Stack direction="row" spacing={{ xs: 0.25, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
+          {activeTenant?.name && <Tooltip title={`${activeTenant.name}${activeTenant.slug ? ` · ${activeTenant.slug}` : ''}`}>
+            <Chip
+              size="small"
+              icon={<ApartmentOutlinedIcon />}
+              label={activeTenant.name}
+              color="success"
+              variant="outlined"
+              sx={{ maxWidth: { xs: 120, sm: 220 }, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+            />
+          </Tooltip>}
           <Typography aria-label="Interface language" variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 800, letterSpacing: '0.12em', px: 1 }}>
             EN
           </Typography>
@@ -126,7 +156,7 @@ export const CustomAppBar = (props: AppBarProps) => {
           </Tooltip>
           
           {/* 只对Super admin和Admin显示系统设置button */}
-          {identity?.level === 'super' || identity?.level === 'admin' ? (
+          {permissions.includes('platform_admin') ? (
             <Tooltip title={translate('appbar.system_settings')}>
               <IconButton 
                 size="large" 

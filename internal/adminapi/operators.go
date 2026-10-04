@@ -469,7 +469,12 @@ func deleteOperator(c echo.Context) error {
 		return fail(c, http.StatusForbidden, "PERMISSION_DENIED", "Only super admins can delete another super admin account", nil)
 	}
 
-	if err := GetDB(c).Where("id = ?", id).Delete(&domain.SysOpr{}).Error; err != nil {
+	if err := GetDB(c).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("tenant_id = ? AND operator_id = ?", targetOpr.TenantID, id).Delete(&domain.TenantMembership{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", id).Delete(&domain.SysOpr{}).Error
+	}); err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to delete operator", err.Error())
 	}
 

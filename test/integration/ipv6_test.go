@@ -43,7 +43,7 @@ import (
 func TestRadiusIPv6ProvisioningEndToEnd(t *testing.T) {
 	const secret = "it-ipv6-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.203.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-ipv6-nas-" + suffix
 
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -91,7 +91,7 @@ func TestRadiusIPv6ProvisioningEndToEnd(t *testing.T) {
 	// Step 1+2: authenticate and assert the Access-Accept carries every IPv6
 	// attribute with the provisioned values.
 	resp := exchange(t, authAddr, secret, username, password, nasID, nasIP)
-	h.radiusSvc.ReleaseAuthRateLimit(username)
+	releaseIntegrationAuthRateLimit(username)
 	require.Equalf(t, radius.CodeAccessAccept, resp.Code, "expected Access-Accept, got %v", resp.Code)
 
 	framedPrefix := rfc3162.FramedIPv6Prefix_Get(resp)
@@ -139,7 +139,7 @@ func TestRadiusIPv6ProvisioningEndToEnd(t *testing.T) {
 func TestRadiusIPv6PoolInheritanceEndToEnd(t *testing.T) {
 	const secret = "it-ipv6-inherit-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.203.0.2"
+	nasIP := uniqueNASIP()
 	nasID := "it-ipv6-inh-nas-" + suffix
 
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -185,7 +185,7 @@ func TestRadiusIPv6PoolInheritanceEndToEnd(t *testing.T) {
 
 	authAddr := fmt.Sprintf("127.0.0.1:%d", h.cfg.Radiusd.AuthPort)
 	resp := exchange(t, authAddr, secret, username, password, nasID, nasIP)
-	h.radiusSvc.ReleaseAuthRateLimit(username)
+	releaseIntegrationAuthRateLimit(username)
 	require.Equalf(t, radius.CodeAccessAccept, resp.Code, "expected Access-Accept, got %v", resp.Code)
 
 	assert.Equal(t, profileSlaacPool, rfc3162.FramedIPv6Pool_GetString(resp),
@@ -219,7 +219,7 @@ func acctStartIPv6(t *testing.T, serverAddr, secret, username, nasID, nasIP, ses
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }

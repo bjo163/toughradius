@@ -50,9 +50,9 @@ type brandingDTO struct {
 func registerBrandingRoutes() {
 	webserver.ApiGET("/public/branding", getPublicBranding)
 	webserver.ApiGET("/public/branding/logo", getPublicBrandLogo)
-	webserver.ApiGET("/system/branding", getPublicBranding, requireAdmin())
-	webserver.ApiPUT("/system/branding", saveBranding, requireAdmin())
-	webserver.ApiPOST("/system/branding/reset", resetBranding, requireAdmin())
+	webserver.ApiGET("/system/branding", getPublicBranding, requirePlatformAdmin())
+	webserver.ApiPUT("/system/branding", saveBranding, requirePlatformAdmin())
+	webserver.ApiPOST("/system/branding/reset", resetBranding, requirePlatformAdmin())
 }
 
 func defaultBranding() domain.ProductBranding {

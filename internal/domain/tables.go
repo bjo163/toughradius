@@ -8,6 +8,7 @@ var Tables = []interface{}{
 	// System
 	&SysConfig{},
 	&SysOpr{},
+	&TenantMembership{},
 	&SysOprLog{},
 	&SysCert{},
 	&ProductBranding{},

@@ -21,7 +21,7 @@ import (
 func TestRadiusClassInAccessAccept(t *testing.T) {
 	const secret = "it-radius-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.200.0.21"
+	nasIP := uniqueNASIP()
 	nasID := "it-class-nas-" + suffix
 
 	nas := &domain.NetNas{
@@ -70,13 +70,13 @@ func TestRadiusClassInAccessAccept(t *testing.T) {
 		resp := exchange(t, serverAddr, secret, username, password, nasID, nasIP)
 		assert.Equalf(t, radius.CodeAccessAccept, resp.Code, "expected Access-Accept, got %v", resp.Code)
 		assert.Equal(t, wantClass, rfc2865.Class_GetString(resp))
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 	})
 
 	t.Run("accept omits empty class", func(t *testing.T) {
 		resp := exchange(t, serverAddr, secret, plainUser, password, nasID, nasIP)
 		assert.Equalf(t, radius.CodeAccessAccept, resp.Code, "expected Access-Accept, got %v", resp.Code)
 		assert.Empty(t, rfc2865.Class_GetString(resp))
-		h.radiusSvc.ReleaseAuthRateLimit(plainUser)
+		releaseIntegrationAuthRateLimit(plainUser)
 	})
 }

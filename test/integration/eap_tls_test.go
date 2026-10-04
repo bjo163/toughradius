@@ -55,7 +55,7 @@ import (
 func TestEAPTLSEndToEnd(t *testing.T) {
 	const secret = "it-eaptls-secret"
 	suffix := uniqueSuffix()
-	nasIP := net.ParseIP("10.201.0.1")
+	nasIP := net.ParseIP(uniqueNASIP())
 	nasID := "it-eaptls-nas-" + suffix
 
 	nas := &domain.NetNas{
@@ -694,7 +694,7 @@ func (s *eapTLSSupplicant) exchange(packet *radius.Packet) (*radius.Packet, erro
 	s.lastReqAuth = packet.Authenticator
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return radius.Exchange(ctx, packet, s.serverAddr)
+	return exchangeFromNAS(ctx, packet, s.serverAddr, s.nasIP.String())
 }
 
 // startClient launches the crypto/tls client bound to in-memory duplex streams

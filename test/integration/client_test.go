@@ -52,6 +52,16 @@ func sharedAdminToken(t *testing.T) string {
 	return adminTokenVal
 }
 
+// refreshSharedAdminToken refreshes the serial integration suite's cached token
+// after a restore deliberately invalidates all membership-version claims.
+func refreshSharedAdminToken(t *testing.T) {
+	t.Helper()
+	token, err := loginToken(h.webBaseURL, h.adminUser, h.adminPass)
+	require.NoError(t, err, "platform administrator should be able to sign in after restore")
+	adminTokenVal = token
+	adminTokenErr = nil
+}
+
 // loginToken performs the real /auth/login round-trip and returns the bearer
 // token, so authenticated requests still flow through the production JWT
 // middleware chain.
@@ -124,6 +134,19 @@ func (c *apiClient) put(t *testing.T, path string, body []byte) (int, []byte) {
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return resp.StatusCode, data
+}
+
+func (c *apiClient) delete(t *testing.T, path string) (int, []byte) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodDelete, c.base+path, nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+c.token)
 	resp, err := c.http.Do(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()

@@ -108,7 +108,10 @@ func (s *AuthService) stageRateLimit(ctx *AuthPipelineContext) error {
 	if ctx.IsEAP {
 		return nil
 	}
-	if err := s.CheckAuthRateLimit(ctx.Username); err != nil {
+	if ctx.NAS == nil {
+		return fmt.Errorf("NAS must be resolved before rate limiting")
+	}
+	if err := s.CheckAuthRateLimitForTenant(ctx.NAS.TenantID, ctx.Username); err != nil {
 		return err
 	}
 	ctx.RateLimitChecked = true
@@ -133,7 +136,10 @@ func (s *AuthService) stageVendorParsing(ctx *AuthPipelineContext) error {
 }
 
 func (s *AuthService) stageLoadUser(ctx *AuthPipelineContext) error {
-	user, err := s.GetValidUser(ctx.Username, ctx.IsMacAuth)
+	if ctx.NAS == nil {
+		return fmt.Errorf("NAS must be resolved before user lookup")
+	}
+	user, err := s.GetValidUserForTenant(ctx.NAS.TenantID, ctx.Username, ctx.IsMacAuth)
 	if err != nil {
 		return err
 	}
@@ -160,7 +166,7 @@ func (s *AuthService) stageEAPDispatch(ctx *AuthPipelineContext) error {
 		rejectErr := mapEAPDispatchError(eapErr)
 		s.logEAPFailure(ctx, rejectErr)
 		_ = s.eapHelper.SendEAPFailure(ctx.Writer, ctx.Request, ctx.NAS.Secret, rejectErr)
-		s.eapHelper.CleanupState(ctx.Request)
+		s.eapHelper.CleanupState(ctx.Request, ctx.NAS.TenantID)
 		ctx.Stop()
 		return nil
 	}
@@ -172,7 +178,7 @@ func (s *AuthService) stageEAPDispatch(ctx *AuthPipelineContext) error {
 				rejectErr := mapEAPDispatchError(err)
 				s.logEAPFailure(ctx, rejectErr)
 				_ = s.eapHelper.SendEAPFailure(ctx.Writer, ctx.Request, ctx.NAS.Secret, rejectErr)
-				s.eapHelper.CleanupState(ctx.Request)
+				s.eapHelper.CleanupState(ctx.Request, ctx.NAS.TenantID)
 				ctx.Stop()
 				return nil
 			}
@@ -307,10 +313,10 @@ func (s *AuthService) sendAcceptResponse(ctx *AuthPipelineContext, isEapFlow boo
 				zap.Error(err),
 			)
 		}
-		s.eapHelper.CleanupState(ctx.Request)
+		s.eapHelper.CleanupState(ctx.Request, ctx.NAS.TenantID)
 	} else {
 		s.addResponseMessageAuthenticator(ctx.Response, ctx.NAS.Secret)
-		s.SendAccept(ctx.Writer, ctx.Request, ctx.Response)
+		s.SendAccept(ctx.Writer, ctx.Request, ctx.Response, ctx.NAS.TenantID)
 	}
 
 	vendorReq := ctx.VendorRequest
@@ -320,7 +326,7 @@ func (s *AuthService) sendAcceptResponse(ctx *AuthPipelineContext, isEapFlow boo
 
 	if ctx.User != nil {
 		s.UpdateBind(ctx.User, vendorReq)
-		s.UpdateUserLastOnline(ctx.User.Username)
+		s.updateUserLastOnlineForTenant(ctx.User.TenantID, ctx.User.Username)
 	}
 
 	// sendAcceptResponse is the single Access-Accept chokepoint: the EAP-success

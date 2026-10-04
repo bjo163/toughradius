@@ -76,7 +76,7 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	assert.Equal(t, "enabled", linkedUser.Status)
 	assert.Equal(t, profileID, linkedUser.ProfileId)
 
-	const nasIP = "10.200.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-isp-nas-" + suffix
 	secret := "it-isp-secret-" + suffix
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -86,19 +86,19 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	serverAddr := fmt.Sprintf("127.0.0.1:%d", h.cfg.Radiusd.AuthPort)
 	acctAddr := fmt.Sprintf("127.0.0.1:%d", h.cfg.Radiusd.AcctPort)
 	assert.Equal(t, radius.CodeAccessAccept, exchangeISP(t, serverAddr, secret, username, password, nasID, nasIP).Code)
-	h.radiusSvc.ReleaseAuthRateLimit(username)
+	releaseIntegrationAuthRateLimit(username)
 
 	// Exercise the production accounting listener with the session the simulated
 	// NAS would create after Access-Accept, then close it cleanly before billing.
 	sessionID := "it-isp-session-" + suffix
 	acctStart := accountingRequestISP(t, rfc2866.AcctStatusType_Value_Start, secret, username, nasID, nasIP, sessionID)
-	acctResp, err := radius.Exchange(context.Background(), acctStart, acctAddr)
+	acctResp, err := exchangeFromNAS(context.Background(), acctStart, acctAddr, nasIP)
 	require.NoError(t, err)
 	require.Equal(t, radius.CodeAccountingResponse, acctResp.Code)
 	online := waitForOnline(t, sessionID)
 	require.Equal(t, username, online.Username)
 	acctStop := accountingRequestISP(t, rfc2866.AcctStatusType_Value_Stop, secret, username, nasID, nasIP, sessionID)
-	acctResp, err = radius.Exchange(context.Background(), acctStop, acctAddr)
+	acctResp, err = exchangeFromNAS(context.Background(), acctStop, acctAddr, nasIP)
 	require.NoError(t, err)
 	require.Equal(t, radius.CodeAccountingResponse, acctResp.Code)
 	accounting := waitForAccountingStopISP(t, sessionID)
@@ -130,10 +130,10 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	// authorization entry to expire before asserting the suspended account is
 	// rejected, so the check covers the persisted status transition.
 	require.Eventually(t, func() bool {
-		h.radiusSvc.ReleaseAuthRateLimit(username)
+		releaseIntegrationAuthRateLimit(username)
 		return exchangeISP(t, serverAddr, secret, username, password, nasID, nasIP).Code == radius.CodeAccessReject
 	}, 12*time.Second, 100*time.Millisecond, "suspended subscriber should be rejected after the user cache expires")
-	h.radiusSvc.ReleaseAuthRateLimit(username)
+	releaseIntegrationAuthRateLimit(username)
 
 	// Enable the existing setting through the admin API. Pay through the same
 	// endpoint operators use, then verify both persisted state and RADIUS access.
@@ -165,7 +165,7 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	assert.Empty(t, sub.SuspensionReason)
 	assert.Equal(t, "enabled", linkedUser.Status)
 	assert.Equal(t, radius.CodeAccessAccept, exchangeISP(t, serverAddr, secret, username, password, nasID, nasIP).Code)
-	h.radiusSvc.ReleaseAuthRateLimit(username)
+	releaseIntegrationAuthRateLimit(username)
 }
 
 func mustJSON(t *testing.T, v interface{}) []byte {
@@ -184,7 +184,7 @@ func exchangeISP(t *testing.T, serverAddr, secret, username, password, nasID, na
 	require.NoError(t, rfc2865.NASIPAddress_Set(packet, net.ParseIP(nasIP)))
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }

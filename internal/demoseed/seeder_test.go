@@ -1,13 +1,15 @@
 package demoseed
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/glebarez/sqlite"
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/internal/billing"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -84,6 +86,26 @@ func TestDemoSeederCreatesRepeatableBusinessSamplesWithoutLiveData(t *testing.T)
 	require.EqualValues(t, 1, retainedPackages)
 	require.NoError(t, db.First(&preserved, user.ID).Error)
 	require.Equal(t, "keep me", preserved.Notes)
+}
+
+func TestCleanRemovesDemoRowsOnlyInsideTenantContext(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(domain.Tables...))
+	for _, tenantID := range []int64{10, 20} {
+		tenantDB := db.WithContext(tenancy.WithTenantID(context.Background(), tenantID))
+		customer := domain.Customer{Name: "Sample seeded customer", Notes: demoMarker, Status: domain.CustomerActive}
+		require.NoError(t, tenantDB.Create(&customer).Error)
+	}
+
+	ctxA := tenancy.WithTenantID(context.Background(), 10)
+	require.NoError(t, Clean(db.WithContext(ctxA)))
+	var remainingA, remainingB []domain.Customer
+	require.NoError(t, db.WithContext(ctxA).Find(&remainingA).Error)
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(context.Background(), 20)).Find(&remainingB).Error)
+	require.Empty(t, remainingA)
+	require.Len(t, remainingB, 1, "tenant A demo cleanup must preserve tenant B samples")
 }
 
 func assertSampleCounts(t *testing.T, db *gorm.DB) {

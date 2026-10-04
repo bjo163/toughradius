@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labstack/echo/v4"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/labstack/echo/v4"
 )
 
 // nasPayload represents the NAS device request structure
@@ -320,15 +320,23 @@ func DeleteNAS(c echo.Context) error {
 
 	// Check whether there are active online sessions
 	var onlineCount int64
-	GetDB(c).Model(&domain.RadiusOnline{}).Joins("JOIN net_vpe ON radius_online.nas_addr = net_vpe.ipaddr").Where("net_vpe.id = ?", id).Count(&onlineCount)
+	if err := GetDB(c).Model(&domain.RadiusOnline{}).
+		Joins("JOIN net_nas ON radius_online.nas_addr = net_nas.ipaddr AND radius_online.tenant_id = net_nas.tenant_id").
+		Where("net_nas.id = ?", id).Count(&onlineCount).Error; err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to check active sessions", err.Error())
+	}
 	if onlineCount > 0 {
 		return fail(c, http.StatusConflict, "HAS_ONLINE_SESSIONS", "Device has active sessions and cannot be deleted", map[string]interface{}{
 			"online_count": onlineCount,
 		})
 	}
 
-	if err := GetDB(c).Delete(&domain.NetNas{}, id).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.NetNas{}, id)
+	if err != nil {
 		return fail(c, http.StatusInternalServerError, "DELETE_FAILED", "Failed to delete NAS device", err.Error())
+	}
+	if !deleted {
+		return fail(c, http.StatusNotFound, "NOT_FOUND", "NAS device not found", nil)
 	}
 
 	return ok(c, map[string]interface{}{

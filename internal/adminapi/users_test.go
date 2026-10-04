@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
-	"github.com/bjo163/mwx-isp/pkg/common"
 	"gorm.io/gorm"
 )
 
@@ -799,7 +799,8 @@ func TestDeleteUser(t *testing.T) {
 		{
 			name:           "User not found",
 			userID:         "999",
-			expectedStatus: http.StatusOK, // GORM Delete does not return error
+			expectedStatus: http.StatusNotFound,
+			expectedError:  "USER_NOT_FOUND",
 			checkDeleted:   false,
 		},
 		{

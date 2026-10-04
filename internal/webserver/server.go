@@ -13,16 +13,16 @@ import (
 	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
-	"github.com/gocarina/gocsv"
-	"github.com/golang-jwt/jwt/v5"
-	echojwt "github.com/labstack/echo-jwt/v4"
-	"github.com/spf13/cast"
 	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/bjo163/mwx-isp/pkg/excel"
 	customValidator "github.com/bjo163/mwx-isp/pkg/validator"
 	"github.com/bjo163/mwx-isp/pkg/web"
 	webui "github.com/bjo163/mwx-isp/web"
+	"github.com/gocarina/gocsv"
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/spf13/cast"
 	"go.uber.org/zap"
 
 	"github.com/labstack/echo/v4"
@@ -76,6 +76,7 @@ var JwtSkipPrefix = []string{
 	"/ready",
 	"/realip",
 	apiBasePath + "/auth/login",
+	apiBasePath + "/auth/tenants",
 	apiBasePath + "/auth/refresh",
 	apiBasePath + "/public/branding",
 }
@@ -534,6 +535,12 @@ func DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Rou
 func ApiGET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route {
 	zap.S().Debugf("Add API GET Router %s%s", apiBasePath, path)
 	return server.api.GET(path, h, m...)
+}
+
+// ApiUse adds middleware to the /api/v1 group. Call it before registering API
+// routes so the middleware wraps every route created afterward.
+func ApiUse(m echo.MiddlewareFunc) {
+	server.api.Use(m)
 }
 
 func ApiDELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route {

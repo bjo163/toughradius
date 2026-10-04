@@ -190,7 +190,7 @@ func TestEAPAuthHelperCleanupState(t *testing.T) {
 	}
 
 	// Test CleanupState - should not panic
-	helper.CleanupState(req)
+	helper.CleanupState(req, 0)
 }
 
 func TestEAPAuthHelperMacAuth(t *testing.T) {
