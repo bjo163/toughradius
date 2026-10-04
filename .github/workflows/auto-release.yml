@@ -117,6 +117,7 @@ jobs:
     uses: ./.github/workflows/docker-publish.yml
     with:
       release_tag: ${{ needs.prepare.outputs.release_tag }}
+    secrets: inherit
     permissions:
       contents: read
       packages: write
@@ -128,5 +129,7 @@ jobs:
     uses: ./.github/workflows/release-publish.yml
     with:
       release_tag: ${{ needs.prepare.outputs.release_tag }}
+    secrets: inherit
     permissions:
       contents: write
+      issues: read
