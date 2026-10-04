@@ -140,6 +140,13 @@ func loginHandler(c echo.Context) error {
 	if strings.EqualFold(operator.Status, common.DISABLED) {
 		return fail(c, http.StatusForbidden, "ACCOUNT_DISABLED", "Account has been disabled", nil)
 	}
+	var membership domain.TenantMembership
+	if err := GetDB(c).Where("tenant_id = ? AND operator_id = ? AND status = ?", tenant.ID, operator.ID, common.ENABLED).First(&membership).Error; err != nil {
+		return fail(c, http.StatusUnauthorized, "MEMBERSHIP_REVOKED", "This account is not an active member of the organization", nil)
+	}
+	operator.Level = membership.Level
+	operator.Status = membership.Status
+	operator.MembershipVersion = membership.TokenVersion
 
 	token, err := issueToken(c, operator)
 	if err != nil {
@@ -168,14 +175,15 @@ func loginHandler(c echo.Context) error {
 func issueToken(c echo.Context, op domain.SysOpr) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub":       fmt.Sprintf("%d", op.ID),
-		"tenant_id": fmt.Sprintf("%d", op.TenantID),
-		"username":  op.Username,
-		"role":      op.Level,
-		"exp":       now.Add(tokenTTL).Unix(),
-		"iat":       now.Unix(),
-		"nbf":       now.Add(-1 * time.Minute).Unix(),
-		"iss":       "toughradius",
+		"sub":                fmt.Sprintf("%d", op.ID),
+		"tenant_id":          fmt.Sprintf("%d", op.TenantID),
+		"membership_version": membershipVersion(op.MembershipVersion),
+		"username":           op.Username,
+		"role":               op.Level,
+		"exp":                now.Add(tokenTTL).Unix(),
+		"iat":                now.Unix(),
+		"nbf":                now.Add(-1 * time.Minute).Unix(),
+		"iss":                "toughradius",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(GetAppContext(c).Config().Web.Secret))
@@ -186,10 +194,14 @@ func currentUserHandler(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusUnauthorized, "UNAUTHORIZED", err.Error(), nil)
 	}
+	permissions := []string{}
+	if operator.PlatformAdmin {
+		permissions = append(permissions, "platform_admin")
+	}
 	return ok(c, map[string]interface{}{
 		"user":        operator,
 		"tenant":      c.Get("tenant"),
-		"permissions": []string{},
+		"permissions": permissions,
 	})
 }
 
@@ -251,9 +263,27 @@ func resolveOperatorFromContext(c echo.Context) (*domain.SysOpr, error) {
 	if strings.EqualFold(operator.Status, common.DISABLED) {
 		return nil, errors.New("account disabled")
 	}
+	var membership domain.TenantMembership
+	if err := GetDB(c).Where("tenant_id = ? AND operator_id = ? AND status = ?", tenantID, operator.ID, common.ENABLED).First(&membership).Error; err != nil {
+		return nil, errors.New("tenant membership unavailable")
+	}
+	operator.Level = membership.Level
+	operator.Status = membership.Status
+	operator.MembershipVersion = membership.TokenVersion
+	version, ok := claims["membership_version"].(float64)
+	if !ok || int64(version) != membership.TokenVersion {
+		return nil, errors.New("tenant membership changed")
+	}
 	c.Set("tenant_id", tenantID)
 	c.Set("tenant", tenant)
 	c.SetRequest(c.Request().WithContext(tenancy.WithTenantID(c.Request().Context(), tenantID)))
 	operator.Password = ""
 	return &operator, nil
+}
+
+func membershipVersion(version int64) int64 {
+	if version <= 0 {
+		return 1
+	}
+	return version
 }

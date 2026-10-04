@@ -3,9 +3,11 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -127,6 +129,97 @@ func TestTenantAdminAPIRejectsCrossTenantIDsAndReferences(t *testing.T) {
 	var created []domain.RadiusUser
 	require.NoError(t, db.Where("username = ?", "cross-tenant-attempt-"+suffix).Find(&created).Error)
 	require.Empty(t, created, "cross-tenant references must not create a subscriber in the caller tenant")
+}
+
+func TestPostgresPlatformTenantMembershipGrantAndRevocation(t *testing.T) {
+	db := h.appCtx.DB()
+	admin := newAPIClient(t)
+	tenant := domain.Tenant{Name: "Membership acceptance", Slug: "it-membership-" + uniqueSuffix(), Kind: "rtrw", Status: "active"}
+	require.NoError(t, db.Create(&tenant).Error)
+	path := "/api/v1/platform/tenants/" + fmt.Sprint(tenant.ID) + "/operators"
+	payload, err := json.Marshal(map[string]string{
+		"username": "member-" + uniqueSuffix(), "password": "Strong-membership-2026", "level": "admin",
+	})
+	require.NoError(t, err)
+	status, body := admin.post(t, path, payload)
+	require.Equalf(t, http.StatusCreated, status, "membership grant response: %s", body)
+	var operator domain.SysOpr
+	unwrapData(t, body, &operator)
+	require.NotZero(t, operator.ID)
+
+	var membership domain.TenantMembership
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", tenant.ID, operator.ID).First(&membership).Error)
+	require.Equal(t, "admin", membership.Level)
+	require.Equal(t, common.ENABLED, membership.Status)
+
+	loginBody, err := json.Marshal(map[string]string{
+		"tenant_slug": tenant.Slug, "username": operator.Username, "password": "Strong-membership-2026",
+	})
+	require.NoError(t, err)
+	loginResponse, err := http.Post(h.webBaseURL+"/api/v1/auth/login", "application/json", bytes.NewReader(loginBody))
+	require.NoError(t, err)
+	loginData, err := io.ReadAll(loginResponse.Body)
+	_ = loginResponse.Body.Close()
+	require.NoError(t, err)
+	require.Equalf(t, http.StatusOK, loginResponse.StatusCode, "tenant login: %s", loginData)
+	var loginEnvelope struct {
+		Data struct {
+			Token string `json:"token"`
+			User  struct {
+				Level string `json:"level"`
+			} `json:"user"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(loginData, &loginEnvelope))
+	require.NotEmpty(t, loginEnvelope.Data.Token)
+	require.Equal(t, "admin", loginEnvelope.Data.User.Level, "role must come from this tenant membership")
+	tenantClient := &apiClient{base: h.webBaseURL, http: &http.Client{}, token: loginEnvelope.Data.Token}
+
+	status, body = admin.delete(t, path+"/"+fmt.Sprint(operator.ID))
+	require.Equalf(t, http.StatusOK, status, "membership revocation response: %s", body)
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", tenant.ID, operator.ID).First(&membership).Error)
+	require.Equal(t, common.DISABLED, membership.Status)
+	status, body = tenantClient.get(t, "/api/v1/users")
+	require.Equalf(t, http.StatusUnauthorized, status, "revoked active token must stop working: %s", body)
+	status, body = admin.post(t, path+"/"+fmt.Sprint(operator.ID)+"/activate", nil)
+	require.Equalf(t, http.StatusOK, status, "membership reactivation response: %s", body)
+	status, body = tenantClient.get(t, "/api/v1/users")
+	require.Equalf(t, http.StatusUnauthorized, status, "reactivation must not revive a previously revoked token: %s", body)
+	newToken, err := loginTenantToken(h.webBaseURL, tenant.Slug, operator.Username, "Strong-membership-2026")
+	require.NoError(t, err)
+	status, body = (&apiClient{base: h.webBaseURL, http: &http.Client{}, token: newToken}).get(t, "/api/v1/users")
+	require.Equalf(t, http.StatusOK, status, "fresh login after membership reactivation: %s", body)
+}
+
+func loginTenantToken(base, tenantSlug, username, password string) (string, error) {
+	body, err := json.Marshal(map[string]string{"tenant_slug": tenantSlug, "username": username, "password": password})
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.Post(base+"/api/v1/auth/login", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("login status %d: %s", resp.StatusCode, string(data))
+	}
+	var envelope struct {
+		Data struct {
+			Token string `json:"token"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return "", err
+	}
+	if envelope.Data.Token == "" {
+		return "", fmt.Errorf("login returned an empty token")
+	}
+	return envelope.Data.Token, nil
 }
 
 func TestPostgresTenantBillingAndSequencesAreIsolated(t *testing.T) {

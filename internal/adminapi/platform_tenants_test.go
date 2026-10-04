@@ -115,3 +115,58 @@ func TestPlatformTenantUpdateCompanyIdentity(t *testing.T) {
 	require.Equal(t, "ops@example.test", updated.ContactEmail)
 	require.Equal(t, "081234567890", updated.ContactPhone)
 }
+
+func TestPlatformTenantMembershipGrantAndRevocation(t *testing.T) {
+	db := setupTestDB(t)
+	appCtx := setupTestApp(t, db)
+	tenant := domain.Tenant{Name: "Membership ISP", Slug: "membership-isp", Kind: "isp", Status: "active"}
+	require.NoError(t, db.Create(&tenant).Error)
+	actor := &domain.SysOpr{ID: 9001, TenantID: domain.DefaultTenantID, Username: "platform", Level: LevelSuper, Status: common.ENABLED, PlatformAdmin: true}
+	makeContext := func(method, path, body string) echo.Context {
+		e := setupTestEcho()
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		if body != "" {
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		}
+		rec := httptest.NewRecorder()
+		ctx := CreateTestContext(e, db, req, rec, appCtx)
+		ctx.Set("current_operator", actor)
+		ctx.SetParamNames("id")
+		ctx.SetParamValues(strconv.FormatInt(tenant.ID, 10))
+		return ctx
+	}
+
+	created := makeContext(http.MethodPost, "/platform/tenants/"+strconv.FormatInt(tenant.ID, 10)+"/operators", `{"username":"isp-operator","password":"Strong-password-2026","level":"admin"}`)
+	require.NoError(t, requirePlatformAdmin()(createPlatformTenantOperator)(created))
+	require.Equal(t, http.StatusCreated, created.Response().Status)
+	var operator domain.SysOpr
+	require.NoError(t, db.Where("tenant_id = ? AND username = ?", tenant.ID, "isp-operator").First(&operator).Error)
+	var membership domain.TenantMembership
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", tenant.ID, operator.ID).First(&membership).Error)
+	require.Equal(t, LevelAdmin, membership.Level)
+	require.Equal(t, common.ENABLED, membership.Status)
+
+	loginBody, err := json.Marshal(map[string]string{"tenant_slug": tenant.Slug, "username": operator.Username, "password": "Strong-password-2026"})
+	require.NoError(t, err)
+	loginReq := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(string(loginBody)))
+	loginReq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	loginRec := httptest.NewRecorder()
+	loginCtx := CreateTestContext(setupTestEcho(), db, loginReq, loginRec, appCtx)
+	require.NoError(t, loginHandler(loginCtx))
+	require.Equal(t, http.StatusOK, loginRec.Code, loginRec.Body.String())
+
+	revoke := makeContext(http.MethodDelete, "/platform/tenants/"+strconv.FormatInt(tenant.ID, 10)+"/operators/"+strconv.FormatInt(operator.ID, 10), "")
+	revoke.SetParamNames("id", "operator_id")
+	revoke.SetParamValues(strconv.FormatInt(tenant.ID, 10), strconv.FormatInt(operator.ID, 10))
+	require.NoError(t, requirePlatformAdmin()(revokePlatformTenantOperator)(revoke))
+	require.Equal(t, http.StatusOK, revoke.Response().Status)
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", tenant.ID, operator.ID).First(&membership).Error)
+	require.Equal(t, common.DISABLED, membership.Status)
+
+	loginRec = httptest.NewRecorder()
+	loginReq = httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(string(loginBody)))
+	loginReq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	loginCtx = CreateTestContext(setupTestEcho(), db, loginReq, loginRec, appCtx)
+	require.NoError(t, loginHandler(loginCtx))
+	require.Equal(t, http.StatusForbidden, loginRec.Code, "a revoked membership must reject future logins")
+}

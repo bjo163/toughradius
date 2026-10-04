@@ -213,11 +213,12 @@ process exit as the failure signal (the process model is fail-fast).
 ## Backup and restore
 
 **System Config → Backup** is restricted to a platform administrator and
-downloads an installation-wide JSON snapshot (schema version 9.1). It includes
+downloads an installation-wide JSON snapshot (schema version 9.2). It includes
 all organizations and hidden tenant-ownership metadata, plus nodes, NAS,
 profiles, subscribers, accounting history, operator audit logs, ISP customers,
 packages, subscriptions, invoices, payments, document sequences, monitor
-targets/history, notification settings/outbox, system settings, operators, and
+targets/history, notification settings/outbox, tenant operator memberships,
+system settings, operators, and
 managed certificates. Certificate private keys and encrypted SNMP credentials
 are preserved so EAP and monitoring continue after recovery. Online sessions
 are intentionally omitted because restored session state would be stale; NAS
@@ -244,6 +245,12 @@ for the operator authorized to administer the installation. From
 **Platform → Organizations**, create an ISP or RT/RW Net organization and its
 first tenant administrator. Tenant operators sign in with the organization
 slug, username, and password; tenant IDs sent by a client do not grant access.
+From the same organization row, platform administrators can provision
+tenant-local operator memberships with an `admin` or `operator` role and revoke
+them. Revocation disables the membership and rejects existing tokens on their
+next request. Operator credentials remain tenant-local; use the same username
+and password in another organization only when you intentionally provision a
+separate account there.
 
 RADIUS resolves the organization from the registered NAS before looking up a
 subscriber. A shared listener requires each NAS source IP to be unique across

@@ -68,6 +68,20 @@ func TestBackupMonitorTargetPreservesHiddenTenantAndEncryptedSecrets(t *testing.
 	assert.Equal(t, target.SNMPPrivacyEncrypted, actual.SNMPPrivacyEncrypted)
 }
 
+func TestValidateBackupRequiresVersionedTenantMembership(t *testing.T) {
+	backup := SystemBackup{
+		Version:     backupVersion,
+		Tenants:     []domain.Tenant{{ID: 1, Name: "Default", Slug: "default"}},
+		Operators:   []domain.SysOpr{{ID: 2, TenantID: 1, Username: "operator", Level: "admin", Status: "enabled"}},
+		Memberships: []domain.TenantMembership{{TenantID: 1, OperatorID: 2, Level: "admin", Status: "enabled"}},
+	}
+	require.ErrorContains(t, validateBackup(&backup), "token version")
+	backup.Memberships[0].TokenVersion = 1
+	require.NoError(t, validateBackup(&backup))
+	backup.Memberships[0].TenantID = 3
+	require.ErrorContains(t, validateBackup(&backup), "tenant and operator IDs")
+}
+
 func TestBackupSystem(t *testing.T) {
 	db := setupBackupTestDB(t)
 	appCtx := setupTestApp(t, db)

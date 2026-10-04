@@ -95,6 +95,7 @@ func TestTableNameUniqueness(t *testing.T) {
 		"tenant":                      true,
 		"sys_config":                  true,
 		"sys_opr":                     true,
+		"tenant_membership":           true,
 		"sys_opr_log":                 true,
 		"sys_cert":                    true,
 		"sys_product_branding":        true,

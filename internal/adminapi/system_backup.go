@@ -22,7 +22,7 @@ import (
 )
 
 // backupVersion identifies the backup payload schema.
-const backupVersion = "9.1"
+const backupVersion = "9.2"
 
 // supportedBackupMajor is the only schema major version restoreSystem accepts.
 const supportedBackupMajor = "9"
@@ -67,6 +67,8 @@ type SystemBackup struct {
 	Configs []domain.SysConfig `json:"configs"`
 	// Operators stores exported admin operator accounts.
 	Operators []domain.SysOpr `json:"operators"`
+	// Memberships stores tenant-specific operator authorization grants.
+	Memberships []domain.TenantMembership `json:"tenant_memberships,omitempty"`
 	// Certs stores exported managed certificates (sys_cert), including their
 	// PEM private keys, so certificate-based EAP (EAP-TLS/PEAP/TTLS) keeps
 	// working after a restore. Restores older backups without this field
@@ -278,6 +280,9 @@ func backupSystem(c echo.Context) error {
 	}
 	if err := db.Find(&backup.Operators).Error; err != nil {
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export operators", err.Error())
+	}
+	if err := db.Find(&backup.Memberships).Error; err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export tenant memberships", err.Error())
 	}
 	loads := []struct {
 		name string
@@ -612,6 +617,43 @@ func restoreSystem(c echo.Context) error {
 			}
 			result.Operators = len(backup.Operators)
 		}
+		if len(backup.Memberships) > 0 {
+			for i := range backup.Memberships {
+				membership := &backup.Memberships[i]
+				var current domain.TenantMembership
+				lookupErr := tx.Where("tenant_id = ? AND operator_id = ?", membership.TenantID, membership.OperatorID).First(&current).Error
+				if lookupErr != nil && lookupErr != gorm.ErrRecordNotFound {
+					return lookupErr
+				}
+				if current.TokenVersion > membership.TokenVersion {
+					membership.TokenVersion = current.TokenVersion
+				}
+				// A restore must invalidate tokens from both the current database
+				// and the snapshot, including after a later membership reactivation.
+				membership.TokenVersion++
+			}
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "tenant_id"}, {Name: "operator_id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"level", "status", "token_version", "updated_at"}),
+			}).Create(&backup.Memberships).Error; err != nil {
+				return err
+			}
+		} else {
+			// Backups created before schema 9.2 do not contain explicit grants.
+			// Recreate the pre-membership behavior from their tenant-local accounts.
+			legacyMemberships := make([]domain.TenantMembership, 0, len(backup.Operators))
+			for _, operator := range backup.Operators {
+				legacyMemberships = append(legacyMemberships, domain.TenantMembership{
+					TenantID: operator.TenantID, OperatorID: operator.ID, Level: operator.Level, Status: operator.Status,
+					CreatedAt: operator.CreatedAt, UpdatedAt: operator.UpdatedAt,
+				})
+			}
+			if len(legacyMemberships) > 0 {
+				if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&legacyMemberships).Error; err != nil {
+					return err
+				}
+			}
+		}
 		if len(backup.Certs) > 0 {
 			certs := make([]domain.SysCert, 0, len(backup.Certs))
 			for _, bc := range backup.Certs {
@@ -657,7 +699,7 @@ func validateBackup(b *SystemBackup) error {
 		"billing_events": len(b.BillingEvents), "document_sequences": len(b.Sequences),
 		"monitor_targets": len(b.MonitorTargets), "monitor_samples": len(b.MonitorSamples),
 		"monitor_incidents": len(b.MonitorIncidents), "notification_settings": len(b.NotificationSettings),
-		"notification_outbox": len(b.NotificationOutbox),
+		"notification_outbox": len(b.NotificationOutbox), "tenant_memberships": len(b.Memberships),
 	} {
 		if n > maxRestoreRecords {
 			return fmt.Errorf("table %q has %d records, exceeding the limit of %d", name, n, maxRestoreRecords)
@@ -709,6 +751,25 @@ func validateBackup(b *SystemBackup) error {
 		}
 		if !isValidStatus(b.Operators[i].Status) {
 			return fmt.Errorf("operators[%d]: invalid status %q", i, b.Operators[i].Status)
+		}
+	}
+	operatorTenants := make(map[int64]int64, len(b.Operators))
+	for _, operator := range b.Operators {
+		operatorTenants[operator.ID] = operator.TenantID
+	}
+	knownTenantIDs := make(map[int64]bool, len(b.Tenants))
+	for _, tenant := range b.Tenants {
+		knownTenantIDs[tenant.ID] = true
+	}
+	for i, membership := range b.Memberships {
+		if membership.TenantID <= 0 || membership.OperatorID <= 0 || !knownTenantIDs[membership.TenantID] {
+			return fmt.Errorf("tenant_memberships[%d]: tenant and operator IDs must be valid", i)
+		}
+		if ownerTenant, ok := operatorTenants[membership.OperatorID]; !ok || ownerTenant != membership.TenantID {
+			return fmt.Errorf("tenant_memberships[%d]: operator does not belong to the specified tenant", i)
+		}
+		if !isValidLevel(membership.Level) || !isValidStatus(membership.Status) || membership.TokenVersion < 1 {
+			return fmt.Errorf("tenant_memberships[%d]: invalid role, status, or token version", i)
 		}
 	}
 	for i := range b.Certs {

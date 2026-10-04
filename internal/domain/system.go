@@ -2,6 +2,9 @@ package domain
 
 import (
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // ProductBranding stores one installation-wide product identity. It is
@@ -36,25 +39,67 @@ func (SysConfig) TableName() string {
 }
 
 type SysOpr struct {
-	ID            int64     `json:"id,string" form:"id"`
-	TenantID      int64     `json:"-" form:"-" gorm:"not null;default:1;index;uniqueIndex:udx_sys_opr_tenant_username,priority:1"`
-	PlatformAdmin bool      `json:"-" form:"-" gorm:"not null;default:false;index"`
-	Realname      string    `json:"realname" form:"realname"`
-	Mobile        string    `json:"mobile" form:"mobile"`
-	Email         string    `json:"email" form:"email"`
-	Username      string    `json:"username" form:"username" gorm:"uniqueIndex:udx_sys_opr_tenant_username,priority:2"`
-	Password      string    `json:"password" form:"password"`
-	Level         string    `json:"level" form:"level"`
-	Status        string    `json:"status" form:"status"`
-	Remark        string    `json:"remark" form:"remark"`
-	LastLogin     time.Time `json:"last_login" form:"last_login"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID                int64     `json:"id,string" form:"id"`
+	TenantID          int64     `json:"-" form:"-" gorm:"not null;default:1;index;uniqueIndex:udx_sys_opr_tenant_username,priority:1"`
+	PlatformAdmin     bool      `json:"-" form:"-" gorm:"not null;default:false;index"`
+	MembershipVersion int64     `json:"-" form:"-" gorm:"-"`
+	Realname          string    `json:"realname" form:"realname"`
+	Mobile            string    `json:"mobile" form:"mobile"`
+	Email             string    `json:"email" form:"email"`
+	Username          string    `json:"username" form:"username" gorm:"uniqueIndex:udx_sys_opr_tenant_username,priority:2"`
+	Password          string    `json:"password" form:"password"`
+	Level             string    `json:"level" form:"level"`
+	Status            string    `json:"status" form:"status"`
+	Remark            string    `json:"remark" form:"remark"`
+	LastLogin         time.Time `json:"last_login" form:"last_login"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
+
+// TenantMembership records whether an operator account is active in an
+// organization and the role it has there. SysOpr remains the tenant-local
+// account/profile record for backwards compatibility; this row is the
+// authoritative tenant authorization grant and can be revoked immediately.
+type TenantMembership struct {
+	TenantID     int64     `json:"tenant_id,string" gorm:"primaryKey;not null;index"`
+	OperatorID   int64     `json:"operator_id,string" gorm:"primaryKey;not null;index"`
+	Level        string    `json:"level" gorm:"size:16;not null;default:operator"`
+	Status       string    `json:"status" gorm:"size:16;not null;default:enabled;index"`
+	TokenVersion int64     `json:"token_version" gorm:"not null;default:1"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// TableName returns the storage table for tenant operator grants.
+func (TenantMembership) TableName() string { return "tenant_membership" }
 
 // TableName Specify table name
 func (SysOpr) TableName() string {
 	return "sys_opr"
+}
+
+// AfterCreate creates the initial tenant authorization grant when the tenancy
+// schema is available. The startup migration backfills legacy rows separately.
+func (operator *SysOpr) AfterCreate(tx *gorm.DB) error {
+	if operator == nil || !tx.Migrator().HasTable(&TenantMembership{}) {
+		return nil
+	}
+	membership := TenantMembership{
+		TenantID: operator.TenantID, OperatorID: operator.ID,
+		Level: operator.Level, Status: operator.Status,
+	}
+	return tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&membership).Error
+}
+
+// AfterUpdate keeps account-wide disablement and tenant-local role changes in
+// sync with the authorization record. A deleted membership remains revoked.
+func (operator *SysOpr) AfterUpdate(tx *gorm.DB) error {
+	if operator == nil || !tx.Migrator().HasTable(&TenantMembership{}) {
+		return nil
+	}
+	return tx.Model(&TenantMembership{}).
+		Where("tenant_id = ? AND operator_id = ?", operator.TenantID, operator.ID).
+		Updates(map[string]any{"level": operator.Level, "status": operator.Status, "token_version": gorm.Expr("token_version + 1"), "updated_at": time.Now()}).Error
 }
 
 // SysCert is a locally managed X.509 certificate. It stores a PEM-encoded

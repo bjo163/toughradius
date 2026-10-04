@@ -20,6 +20,9 @@ func TestMigrateDBBackfillsDefaultTenantAndReplacesLegacyUniqueKeys(t *testing.T
 	require.NoError(t, db.Exec(`CREATE TABLE radius_online (id INTEGER PRIMARY KEY, acct_session_id TEXT NOT NULL)`).Error)
 	require.NoError(t, db.Exec(`CREATE UNIQUE INDEX udx_radius_online_acct_session_id ON radius_online(acct_session_id)`).Error)
 	require.NoError(t, db.Exec(`INSERT INTO radius_online (id, acct_session_id) VALUES (201, 'session-1')`).Error)
+	require.NoError(t, db.Exec(`CREATE TABLE sys_opr (id INTEGER PRIMARY KEY, username TEXT NOT NULL, level TEXT, status TEXT)`).Error)
+	require.NoError(t, db.Exec(`CREATE UNIQUE INDEX idx_sys_opr_username ON sys_opr(username)`).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_opr (id, username, level, status) VALUES (501, 'legacy-admin', 'super', 'enabled')`).Error)
 
 	a := &Application{gormDB: db}
 	require.NoError(t, a.MigrateDB(false))
@@ -29,6 +32,14 @@ func TestMigrateDBBackfillsDefaultTenantAndReplacesLegacyUniqueKeys(t *testing.T
 	require.Equal(t, domain.DefaultTenantID, migratedUser.TenantID)
 	require.True(t, db.Migrator().HasIndex(&domain.RadiusUser{}, "udx_radius_user_tenant_username"))
 	require.False(t, db.Migrator().HasIndex(&domain.RadiusUser{}, "idx_radius_user_username"))
+	var migratedOperator domain.SysOpr
+	// A legacy operator keeps its identity and receives an active membership in
+	// the tenant assigned by the migration.
+	require.NoError(t, db.Where("id = ?", 501).First(&migratedOperator).Error)
+	var membership domain.TenantMembership
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", domain.DefaultTenantID, migratedOperator.ID).First(&membership).Error)
+	require.Equal(t, "super", membership.Level)
+	require.Equal(t, common.ENABLED, membership.Status)
 	require.True(t, db.Migrator().HasIndex(&domain.RadiusOnline{}, "udx_radius_online_tenant_session"))
 	require.False(t, db.Migrator().HasIndex(&domain.RadiusOnline{}, "udx_radius_online_acct_session_id"))
 

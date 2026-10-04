@@ -491,6 +491,27 @@ func TestTenantContextMiddlewareRejectsInactiveTenant(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, response.Code)
 }
 
+func TestTenantContextMiddlewareRejectsRevokedMembership(t *testing.T) {
+	db, e, appCtx, operator, cleanup := setupAuthTest(t)
+	defer cleanup()
+	savedResolver := testOperatorResolver
+	testOperatorResolver = nil
+	t.Cleanup(func() { testOperatorResolver = savedResolver })
+
+	require.NoError(t, db.Model(&domain.TenantMembership{}).
+		Where("tenant_id = ? AND operator_id = ?", operator.TenantID, operator.ID).
+		Update("status", common.DISABLED).Error)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/users", nil)
+	response := httptest.NewRecorder()
+	ctx := CreateTestContext(e, db, request, response, appCtx)
+	ctx.Set("current_operator", nil)
+	setJWTUser(t, ctx, operator)
+	require.NoError(t, tenantContextMiddleware()(func(c echo.Context) error {
+		return c.NoContent(http.StatusNoContent)
+	})(ctx))
+	assert.Equal(t, http.StatusUnauthorized, response.Code, "revoking a tenant membership must invalidate existing JWTs immediately")
+}
+
 // TestResolveOperatorFromContext_IgnoresInjectedOperatorInProduction proves the
 // FIX-022 hardening: with the test-only seam disabled (as in production builds),
 // an operator placed directly into the request context is NOT trusted, and

@@ -57,6 +57,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		&domain.RadiusOnline{},
 		&domain.RadiusSessionActionAudit{},
 		&domain.SysOpr{},
+		&domain.TenantMembership{},
 		&domain.SysConfig{},
 		&domain.SysCert{},
 	)

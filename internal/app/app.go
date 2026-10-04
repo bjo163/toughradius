@@ -17,6 +17,7 @@ import (
 	"github.com/bjo163/mwx-isp/internal/networkmonitor"
 	"github.com/bjo163/mwx-isp/internal/notify"
 	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cast"
@@ -377,8 +378,40 @@ func (a *Application) MigrateDB(track bool) (err error) {
 	if err := a.backfillDefaultTenantRows(); err != nil {
 		return err
 	}
+	if err := a.backfillTenantMemberships(); err != nil {
+		return err
+	}
 	if err := a.dropLegacyTenantUniqueIndices(); err != nil {
 		return err
+	}
+	return nil
+}
+
+// backfillTenantMemberships turns each existing tenant-local operator into an
+// active membership without changing operator IDs, passwords, or tenant scope.
+func (a *Application) backfillTenantMemberships() error {
+	var operators []domain.SysOpr
+	if err := a.gormDB.Find(&operators).Error; err != nil {
+		return fmt.Errorf("load operators for tenant membership migration: %w", err)
+	}
+	now := time.Now()
+	for _, operator := range operators {
+		membership := domain.TenantMembership{
+			TenantID: operator.TenantID, OperatorID: operator.ID,
+			Level: operator.Level, Status: operator.Status, CreatedAt: now, UpdatedAt: now,
+		}
+		if membership.TenantID <= 0 {
+			membership.TenantID = domain.DefaultTenantID
+		}
+		if membership.Status == "" {
+			membership.Status = common.ENABLED
+		}
+		if membership.Level == "" {
+			membership.Level = "operator"
+		}
+		if err := a.gormDB.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "tenant_id"}, {Name: "operator_id"}}, DoNothing: true}).Create(&membership).Error; err != nil {
+			return fmt.Errorf("backfill membership for operator %d: %w", operator.ID, err)
+		}
 	}
 	return nil
 }
@@ -422,7 +455,7 @@ func (a *Application) backfillDefaultTenantRows() error {
 }
 
 var tenantOwnedModels = []interface{}{
-	&domain.SysOpr{}, &domain.SysOprLog{}, &domain.NetNode{}, &domain.NetNas{},
+	&domain.SysOpr{}, &domain.TenantMembership{}, &domain.SysOprLog{}, &domain.NetNode{}, &domain.NetNas{},
 	&domain.NetMonitorTarget{}, &domain.NetMonitorSample{}, &domain.NetMonitorIncident{},
 	&domain.NotificationSettings{}, &domain.NotificationOutbox{}, &domain.RadiusAccounting{},
 	&domain.RadiusOnline{}, &domain.RadiusSessionActionAudit{}, &domain.RadiusProfile{}, &domain.RadiusUser{},

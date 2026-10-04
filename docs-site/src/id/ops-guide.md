@@ -22,6 +22,11 @@ organisasi dan administrator tenant pertamanya. Operator tenant masuk memakai
 slug organisasi, username, dan password. Tenant ID dari request tidak memberi
 akses. Data lama dimigrasikan ke organisasi `default` tanpa mengganti ID atau
 kredensial pelanggan.
+Pada baris organisasi yang sama, administrator platform dapat membuat akses
+operator tenant dengan peran `admin` atau `operator`, lalu mencabutnya. Pencabutan
+menonaktifkan membership dan token yang sudah terbit ditolak pada request
+berikutnya. Kredensial operator tetap lokal per tenant; username dan password
+yang sama di organisasi lain adalah akun terpisah yang harus dibuat secara sadar.
 
 RADIUS menentukan tenant dari NAS yang terdaftar sebelum mencari pelanggan.
 Pada listener bersama, alamat IP sumber setiap NAS harus unik di seluruh
@@ -43,11 +48,12 @@ NAS dan port yang benar-benar digunakan.
 ## Backup dan pemulihan
 
 **System Config → Backup** hanya tersedia bagi administrator platform dan
-mengunduh snapshot JSON installation-wide skema 9.1. Snapshot berisi semua
+mengunduh snapshot JSON installation-wide skema 9.2. Snapshot berisi semua
 organisasi beserta metadata kepemilikan tenant tersembunyi, konfigurasi node
 dan NAS, profil/pelanggan RADIUS, accounting dan audit operator, customer,
 paket, subscription, invoice, pembayaran, sequence dokumen, target/sampel/
-insiden monitoring, pengaturan dan outbox notifikasi, operator, sertifikat
+insiden monitoring, pengaturan dan outbox notifikasi, membership operator,
+operator, sertifikat
 beserta private key, serta kredensial SNMP terenkripsi. Sesi online sengaja
 tidak disalin karena statusnya menjadi usang; NAS membangunnya kembali saat
 tersambung.

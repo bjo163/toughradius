@@ -70,6 +70,8 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	tenant := domain.Tenant{Name: "Backup Tenant " + suffix, Slug: "it-backup-" + suffix, Kind: "rtrw", Status: "active"}
 	require.NoError(t, db.Create(&tenant).Error)
 	tenantDB := db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID))
+	tenantOperator := domain.SysOpr{ID: common.UUIDint64(), TenantID: tenant.ID, Username: "backup-operator-" + suffix, Password: "stored-hash", Level: "admin", Status: common.ENABLED}
+	require.NoError(t, tenantDB.Create(&tenantOperator).Error)
 	tenantProfile := domain.RadiusProfile{ID: common.UUIDint64(), Name: "Tenant backup profile " + suffix, Status: common.ENABLED}
 	require.NoError(t, tenantDB.Create(&tenantProfile).Error)
 	tenantUser := domain.RadiusUser{ID: common.UUIDint64(), ProfileId: tenantProfile.ID, Username: "it-tenant-backup-" + suffix, Password: "tenant-secret", Status: common.ENABLED, ExpireTime: time.Now().AddDate(1, 0, 0)}
@@ -91,11 +93,12 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.Equalf(t, http.StatusOK, status, "backup body: %s", string(backupBytes))
 
 	var backup struct {
-		Version        string                   `json:"version"`
-		Tenants        []domain.Tenant          `json:"tenants"`
-		Users          []domain.RadiusUser      `json:"users"`
-		Customers      []domain.Customer        `json:"customers"`
-		Packages       []domain.InternetPackage `json:"packages"`
+		Version        string                    `json:"version"`
+		Tenants        []domain.Tenant           `json:"tenants"`
+		Users          []domain.RadiusUser       `json:"users"`
+		Customers      []domain.Customer         `json:"customers"`
+		Packages       []domain.InternetPackage  `json:"packages"`
+		Memberships    []domain.TenantMembership `json:"tenant_memberships"`
 		MonitorTargets []struct {
 			ID                     string `json:"id"`
 			SNMPCommunityEncrypted []byte `json:"snmp_community_encrypted"`
@@ -105,7 +108,7 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 		TenantIDs map[string]map[string]int64 `json:"tenant_ids"`
 	}
 	require.NoErrorf(t, json.Unmarshal(backupBytes, &backup), "backup not JSON: %s", string(backupBytes))
-	require.Equal(t, "9.1", backup.Version)
+	require.Equal(t, "9.2", backup.Version)
 	require.True(t, containsUserWithPassword(backup.Users, username, password),
 		"backup must contain %s with its plaintext password", username)
 	var backedUpTenant *domain.Tenant
@@ -135,6 +138,15 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.True(t, containsUserWithPassword(backup.Users, tenantUser.Username, tenantUser.Password))
 	require.Equal(t, tenant.ID, backup.TenantIDs["radius_user"][fmt.Sprint(tenantUser.ID)])
 	require.Equal(t, tenant.ID, backup.TenantIDs["isp_customer"][fmt.Sprint(tenantCustomer.ID)])
+	var backedUpMembership *domain.TenantMembership
+	for i := range backup.Memberships {
+		if backup.Memberships[i].OperatorID == tenantOperator.ID && backup.Memberships[i].TenantID == tenant.ID {
+			backedUpMembership = &backup.Memberships[i]
+			break
+		}
+	}
+	require.NotNil(t, backedUpMembership)
+	require.Equal(t, "admin", backedUpMembership.Level)
 	var backedUpMonitor *struct {
 		ID                     string `json:"id"`
 		SNMPCommunityEncrypted []byte `json:"snmp_community_encrypted"`
@@ -163,6 +175,7 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	} {
 		require.NoError(t, db.Delete(row.model, row.id).Error)
 	}
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", tenant.ID, tenantOperator.ID).Delete(&domain.TenantMembership{}).Error)
 	var count int64
 	require.NoError(t, h.appCtx.DB().Model(&domain.RadiusUser{}).Where("username = ?", username).Count(&count).Error)
 	require.Equal(t, int64(0), count)
@@ -191,9 +204,14 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	assert.Equal(t, tenantMonitor.SNMPCommunityEncrypted, restoredMonitor.SNMPCommunityEncrypted)
 	assert.Equal(t, tenantMonitor.SNMPAuthEncrypted, restoredMonitor.SNMPAuthEncrypted)
 	assert.Equal(t, tenantMonitor.SNMPPrivacyEncrypted, restoredMonitor.SNMPPrivacyEncrypted)
+	var restoredMembership domain.TenantMembership
+	require.NoError(t, db.Where("tenant_id = ? AND operator_id = ?", tenant.ID, tenantOperator.ID).First(&restoredMembership).Error)
+	assert.Equal(t, "admin", restoredMembership.Level)
+	assert.Equal(t, common.ENABLED, restoredMembership.Status)
 	var platformAdmin domain.SysOpr
 	require.NoError(t, h.appCtx.DB().Where("username = ?", h.adminUser).First(&platformAdmin).Error)
 	assert.True(t, platformAdmin.PlatformAdmin, "restoring a backup must preserve the active platform administrator")
+	refreshSharedAdminToken(t)
 }
 
 // TestSystemRestoreRejectsNonBackup ensures uploading a non-backup file (e.g. a
