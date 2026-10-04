@@ -4,7 +4,9 @@ Weekly EAP acceptance runs validate MWX-ISP with an external `eapol_test` suppli
 
 **Latest verdict:** PARTIAL
 
-Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped and tracked by [#495](https://github.com/talkincode/toughradius/issues/495), so this report is partial external coverage rather than complete PEAP acceptance.
+Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped
+and tracked by the [historical upstream issue #495](https://github.com/talkincode/toughradius/issues/495),
+so this report is partial external coverage rather than complete PEAP acceptance.
 
 ## Latest Scenario Summary
 
@@ -20,7 +22,7 @@ Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped a
 
 ## Retained Reports
 
-- [2026-08-10](https://github.com/talkincode/toughradius/blob/main/docs/reports/eap/2026-08-10.md)
-- [2026-07-27](https://github.com/talkincode/toughradius/blob/main/docs/reports/eap/2026-07-27.md)
-- [2026-07-20](https://github.com/talkincode/toughradius/blob/main/docs/reports/eap/2026-07-20.md)
-- [2026-07-13](https://github.com/talkincode/toughradius/blob/main/docs/reports/eap/2026-07-13.md)
+- [2026-08-10](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/eap/2026-08-10.md)
+- [2026-07-27](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/eap/2026-07-27.md)
+- [2026-07-20](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/eap/2026-07-20.md)
+- [2026-07-13](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/eap/2026-07-13.md)

@@ -20,7 +20,7 @@
 | [Feature checklist](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md) | Cakupan dan status fitur |
 | [Roadmap](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.md) | Milestone pengembangan |
 | [Blueprint produk](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-blueprint.md) | Aturan bisnis dan batas produk |
-| [Checklist implementasi](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-todo.md) | Catatan penyelesaian implementasi |
+| [Checklist implementasi historis](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-todo.md) | Arsip checklist dari prompt awal; gunakan roadmap dan feature checklist untuk status saat ini |
 | [Panduan agent](https://github.com/bjo163/mwx-isp/blob/main/AGENT.md) | Aturan kontribusi dan kualitas |
 | [Security policy](https://github.com/bjo163/mwx-isp/blob/main/SECURITY.md) | Pelaporan isu keamanan |
 

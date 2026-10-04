@@ -34,7 +34,7 @@ the repository, so readers can reach both from one place.
 | Feature checklist   | Feature scope baseline (`TR-F` IDs)                    | [docs/feature-checklist.md](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md) |
 | Roadmap             | Long-term roadmap and milestones                       | [docs/roadmap.md](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.md) |
 | Product blueprint   | Current product scope, business rules, and architecture boundaries | [docs/MWX-ISP-blueprint.md](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-blueprint.md) |
-| Implementation todo | Original implementation checklist and completion record | [docs/MWX-ISP-todo.md](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-todo.md) |
+| Historical implementation checklist | Detailed record derived from the original project prompt; use the roadmap and feature checklist for current status | [docs/MWX-ISP-todo.md](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-todo.md) |
 | RFC index           | Protocol standards index used by the project           | [Protocol & RFC Reference](./rfc-index.md) (canonical) · [docs/rfcs/README.md](https://github.com/bjo163/mwx-isp/blob/main/docs/rfcs/README.md) (raw catalog) |
 
 > **Migration plan.** The handbook now covers the README's user-facing content

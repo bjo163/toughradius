@@ -32,13 +32,15 @@ Yes — every port is configurable (`radiusd.auth_port`, `radiusd.acct_port`,
 `web.port`, …) via YAML or environment variables. See the
 [Operations Guide](./ops-guide.md#ports).
 
-### The HTTPS admin port (1817) doesn't work
+### The built-in HTTPS admin port (1817) doesn't work
 
 The web TLS listener needs `{workdir}/private/toughradius.tls.crt` and `.key`.
 If they are missing or invalid the failure is logged and **only** the HTTPS
 listener stops — plain HTTP on 1816 keeps serving. Generate certificates with
 `cmd/certgen` or provide your own. If you do not need the built-in HTTPS
 listener, set `web.tls_enabled: false` or `TOUGHRADIUS_WEB_TLS_ENABLED=false`.
+The Docker VPS deployment serves the admin UI through Caddy; its built-in
+listener on port 1817 is not used by that deployment.
 
 ### Is `-initdb` safe to run again?
 
@@ -229,7 +231,8 @@ Backup) and a database backup first.
 
 ### Where are logs / data / certificates stored?
 
-Everything lives under `system.workdir` (default `/var/toughradius`):
-`data/` (SQLite DB), `logs/`, `private/` (TLS material), `backup/`
-(config snapshots). See the
+Application files live under `system.workdir` (default `/var/toughradius`):
+`data/` (SQLite data when selected, plus metrics), `logs/`, `private/` (TLS
+material), and `backup/` (configuration snapshots). PostgreSQL data is stored
+in its database volume, outside this application directory. See the
 [Operations Guide](./ops-guide.md#working-directory-layout).

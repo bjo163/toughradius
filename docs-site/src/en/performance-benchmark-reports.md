@@ -15,6 +15,6 @@ Weekly benchmark runs record MWX-ISP performance signals from existing Go `Bench
 
 ## Retained Reports
 
-- [2026-08-10](https://github.com/talkincode/toughradius/blob/main/docs/reports/performance/2026-08-10.md)
-- [2026-07-20](https://github.com/talkincode/toughradius/blob/main/docs/reports/performance/2026-07-20.md)
-- [2026-07-13](https://github.com/talkincode/toughradius/blob/main/docs/reports/performance/2026-07-13.md)
+- [2026-08-10](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/performance/2026-08-10.md)
+- [2026-07-20](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/performance/2026-07-20.md)
+- [2026-07-13](https://github.com/bjo163/mwx-isp/blob/main/docs/reports/performance/2026-07-13.md)
