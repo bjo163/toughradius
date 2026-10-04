@@ -182,6 +182,14 @@ func (s *AuthService) stageEAPDispatch(ctx *AuthPipelineContext) error {
 				ctx.Stop()
 				return nil
 			}
+			if err := s.activateVoucherAfterAuthentication(ctx.User, ctx.NAS); err != nil {
+				rejectErr := mapEAPDispatchError(err)
+				s.logEAPFailure(ctx, rejectErr)
+				_ = s.eapHelper.SendEAPFailure(ctx.Writer, ctx.Request, ctx.NAS.Secret, rejectErr)
+				s.eapHelper.CleanupState(ctx.Request, ctx.NAS.TenantID)
+				ctx.Stop()
+				return nil
+			}
 			s.sendAcceptResponse(ctx, true)
 		}
 		ctx.Stop()
@@ -282,6 +290,9 @@ func (s *AuthService) stagePluginAuth(ctx *AuthPipelineContext) error {
 
 	err := s.AuthenticateUserWithPlugins(ctx.Context, ctx.Request, ctx.Response, ctx.User, ctx.NAS, ctx.VendorRequestForPlugin, ctx.IsMacAuth)
 	if err != nil {
+		return err
+	}
+	if err := s.activateVoucherAfterAuthentication(ctx.User, ctx.NAS); err != nil {
 		return err
 	}
 

@@ -404,6 +404,24 @@ else
       if docker volume inspect "${volume}" >/dev/null 2>&1; then existing_data=1; fi
     done
   ensure_existing_services_ready_for_backup() {
+    if [[ -z "${any_app_container}" && -z "${any_db_container}" ]]; then
+      local volume driver mountpoint contents
+      local -a orphaned_empty_volumes=()
+      for volume in mwx-isp_postgres_data mwx-isp_mwx_isp_data; do
+        if docker volume inspect "${volume}" >/dev/null 2>&1; then
+          driver="$(docker volume inspect --format '{{.Driver}}' "${volume}")"
+          mountpoint="$(docker volume inspect --format '{{.Mountpoint}}' "${volume}")"
+          [[ "${driver}" == local && -d "${mountpoint}" ]] || fail "MWX-ISP volume '${volume}' exists without its containers and cannot be inspected safely. It was left untouched; restore the original services or a verified backup."
+          contents="$(find "${mountpoint}" -mindepth 1 -maxdepth 1 -print -quit)"
+          [[ -z "${contents}" ]] || fail "MWX-ISP volume '${volume}' contains files but its containers are missing. It was left untouched; restore the original services or a verified backup before retrying."
+          orphaned_empty_volumes+=("${volume}")
+        fi
+      done
+      ((${#orphaned_empty_volumes[@]} > 0)) || fail "MWX-ISP state was detected but no original app/db containers or inspectable data volumes are available. No data was changed."
+      echo "No original containers exist; only empty MWX-ISP data volumes were found. Removing those empty volumes to continue as a clean install."
+      docker volume rm "${orphaned_empty_volumes[@]}" >/dev/null
+      return 1
+    fi
     if [[ -z "${any_app_container}" || -z "${any_db_container}" ]]; then
       fail "Existing MWX-ISP data was found, but both existing app and db containers are not available. No new containers were created and no data was changed; restore the matching .env and recover the original services before retrying."
     fi
@@ -418,14 +436,20 @@ else
   }
   if [[ -n "${any_app_container}" || -n "${any_db_container}" || -n "${existing_data}" ]]; then
       if [[ "${INSTALL_IN_PROGRESS}" == true ]]; then
-        ensure_existing_services_ready_for_backup
-        step "4/6" "Creating a safety backup before resuming the interrupted installation"
-        git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
-        echo "Resuming an interrupted install with its existing configuration and volumes."
+        if ensure_existing_services_ready_for_backup; then
+          step "4/6" "Creating a safety backup before resuming the interrupted installation"
+          git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
+          echo "Resuming an interrupted install with its existing configuration and volumes."
+        else
+          echo "Continuing the interrupted first installation after clearing only empty data volumes."
+        fi
       else
-        ensure_existing_services_ready_for_backup
-        step "4/6" "Creating a safety backup before updating an existing installation"
-        git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
+        if ensure_existing_services_ready_for_backup; then
+          step "4/6" "Creating a safety backup before updating an existing installation"
+          git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
+        else
+          echo "Proceeding as a clean installation after clearing only empty data volumes."
+        fi
       fi
     fi
   fi

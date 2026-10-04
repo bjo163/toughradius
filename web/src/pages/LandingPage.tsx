@@ -59,7 +59,8 @@ type VoucherLookupResult = {
   validity_seconds: number;
   quota_bytes: number;
   used_bytes: number;
-  remaining_bytes: number;
+  quota_enforced: boolean;
+  usage_available: boolean;
   expires_at?: string;
 };
 
@@ -1471,32 +1472,11 @@ export const LandingPage: React.FC = () => {
 
                       <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.08)' }} />
 
-                      <Grid container spacing={2}>
-                        <Grid item xs={6} sm={4}>
-                          <Box sx={{ p: 1.5, bgcolor: '#0D131F', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            <Typography variant="caption" sx={{ color: '#94A3B8' }}>TOTAL KUOTA</Typography>
-                            <Typography variant="body1" sx={{ fontWeight: 800, color: '#FFF' }}>
-                              {voucherResult.quota_bytes > 0 ? formatBytes(voucherResult.quota_bytes) : 'UNLIMITED'}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          <Box sx={{ p: 1.5, bgcolor: '#0D131F', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            <Typography variant="caption" sx={{ color: '#94A3B8' }}>KUOTA TERPAKAI</Typography>
-                            <Typography variant="body1" sx={{ fontWeight: 800, color: '#F59E0B' }}>
-                              {formatBytes(voucherResult.used_bytes)}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <Box sx={{ p: 1.5, bgcolor: '#0D131F', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            <Typography variant="caption" sx={{ color: '#94A3B8' }}>SISA KUOTA</Typography>
-                            <Typography variant="body1" sx={{ fontWeight: 800, color: accentColor }}>
-                              {voucherResult.quota_bytes > 0 ? formatBytes(voucherResult.remaining_bytes) : 'UNLIMITED'}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      </Grid>
+                      <Alert severity="info" sx={{ mt: 2 }}>
+                        {voucherResult.quota_enforced && voucherResult.usage_available
+                          ? `Data usage: ${formatBytes(voucherResult.used_bytes)} of ${formatBytes(voucherResult.quota_bytes)}`
+                          : 'Data quota is not enforced or measured. Any stored quota value is informational only.'}
+                      </Alert>
                     </Paper>
                   )}
                 </Box>

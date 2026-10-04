@@ -129,10 +129,7 @@ Entry point di bawah adalah path relatif repository dan nama simbol untuk pencar
 
 **Kriteria selesai / skenario pembuktian:** Request anonim maupun operator biasa tidak mengubah invoice/payment/subscription; UI tidak menjanjikan pembayaran nyata; pembayaran manual yang sah tetap bekerja.
 
-- [ ] A01.1 Reproduksi/inventory dan bukti dicatat; scope/dependensi dipenuhi.
-- [ ] A01.2 Perubahan minimal backend/UI/data yang diperlukan selesai.
-- [ ] A01.3 Acceptance di atas dan skenario tenant/role relevan lulus.
-- [ ] A01.4 Docs, migrasi/rollback bila perlu, dan bukti delivery diperbarui.
+- [x] A01.1–A01.4 Selesai: simulasi dinonaktifkan (410), CTA/QRIS simulasi dihapus, regresi membuktikan invoice/payment tidak berubah, PR #31 `3168bbd`.
 
 <a id="a02"></a>
 
@@ -149,10 +146,7 @@ Entry point di bawah adalah path relatif repository dan nama simbol untuk pencar
 
 **Kriteria selesai / skenario pembuktian:** Unsigned/expired/replayed callback ditolak; amount nol/negatif/berlebih tidak mencatat uang; tidak ada response paid untuk pembayaran parsial; integrasi provider merupakan usulan F03.
 
-- [ ] A02.1 Reproduksi/inventory dan bukti dicatat; scope/dependensi dipenuhi.
-- [ ] A02.2 Perubahan minimal backend/UI/data yang diperlukan selesai.
-- [ ] A02.3 Acceptance di atas dan skenario tenant/role relevan lulus.
-- [ ] A02.4 Docs, migrasi/rollback bila perlu, dan bukti delivery diperbarui.
+- [x] A02.1–A02.4 Selesai: callback fail-closed (503) sampai provider terverifikasi tersedia; regression no-mutation; PR #31 `3168bbd`.
 
 <a id="a03"></a>
 
@@ -169,10 +163,7 @@ Entry point di bawah adalah path relatif repository dan nama simbol untuk pencar
 
 **Kriteria selesai / skenario pembuktian:** Dua tenant dengan kode/telepon sama tidak saling terlihat; host/slug tidak dikenal dan tenant disabled ditolak; registrasi tersimpan di tenant yang benar.
 
-- [ ] A03.1 Reproduksi/inventory dan bukti dicatat; scope/dependensi dipenuhi.
-- [ ] A03.2 Perubahan minimal backend/UI/data yang diperlukan selesai.
-- [ ] A03.3 Acceptance di atas dan skenario tenant/role relevan lulus.
-- [ ] A03.4 Docs, migrasi/rollback bila perlu, dan bukti delivery diperbarui.
+- [x] A03.1–A03.4 Selesai: hanya branding publik yang bebas JWT; route bisnis memakai JWT/operator tenant; route-skip regression; PR #31 `3168bbd`.
 
 <a id="a04"></a>
 
@@ -189,10 +180,7 @@ Entry point di bawah adalah path relatif repository dan nama simbol untuk pencar
 
 **Kriteria selesai / skenario pembuktian:** Mengetahui nomor telepon saja tidak membuka tagihan; percobaan berulang dibatasi; token pelanggan A tidak membuka B; respons tidak memudahkan enumerasi.
 
-- [ ] A04.1 Reproduksi/inventory dan bukti dicatat; scope/dependensi dipenuhi.
-- [ ] A04.2 Perubahan minimal backend/UI/data yang diperlukan selesai.
-- [ ] A04.3 Acceptance di atas dan skenario tenant/role relevan lulus.
-- [ ] A04.4 Docs, migrasi/rollback bila perlu, dan bukti delivery diperbarui.
+- [x] A04.1–A04.4 Selesai: customer lookup tidak lagi anonim, UI memakai authenticated operator request; PR #31 `3168bbd`.
 
 <a id="a05"></a>
 
