@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"runtime"
 	"sort"
 	"strconv"
@@ -277,6 +278,46 @@ func (systemProbe) Check(ctx context.Context, target domain.NetMonitorTarget, ke
 		}
 		_ = conn.Close()
 		return ProbeResult{Reachable: true, LatencyMilliseconds: time.Since(started).Milliseconds()}
+	case "http":
+		port := target.Port
+		if port == 0 {
+			port = 80
+		}
+		scheme := "http"
+		if port == 443 {
+			scheme = "https"
+		}
+		targetURL := fmt.Sprintf("%s://%s", scheme, net.JoinHostPort(target.Address, strconv.Itoa(port)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+		if err != nil {
+			return ProbeResult{Error: "Invalid HTTP request", PacketLossPercent: 100}
+		}
+		req.Header.Set("User-Agent", "MWX-ISP-Monitor/1.0")
+		started := time.Now()
+		client := &http.Client{
+			Timeout: timeout,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 5 {
+					return errors.New("stopped after 5 redirects")
+				}
+				return nil
+			},
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return ProbeResult{Error: "HTTP connection failed", PacketLossPercent: 100}
+		}
+		_ = resp.Body.Close()
+		latency := time.Since(started).Milliseconds()
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			return ProbeResult{Reachable: true, LatencyMilliseconds: latency}
+		}
+		return ProbeResult{
+			Reachable:           false,
+			LatencyMilliseconds: latency,
+			PacketLossPercent:   100,
+			Error:               fmt.Sprintf("HTTP status %d", resp.StatusCode),
+		}
 	case "snmp":
 		return checkSNMP(ctx, target, key, timeout)
 	default:

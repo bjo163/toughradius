@@ -25,7 +25,7 @@ const (
 	MSCHAPChallengeSize = 16
 	MSCHAPResponseSize  = 49 // PeerChallenge(16) + Reserved(8) + NTResponse(24) + Flags(1)
 	EAPMethodMSCHAPv2   = "eap-mschapv2"
-	ServerName          = "toughradius"
+	ServerName          = "mwx-isp"
 )
 
 // MSCHAPv2Handler EAP-MSCHAPv2 authenticationhandler

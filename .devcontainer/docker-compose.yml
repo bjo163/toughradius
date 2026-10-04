@@ -11,8 +11,8 @@ services:
     environment:
       TEST_DATABASE_HOST: db
       TEST_DATABASE_PORT: "5432"
-      TEST_DATABASE_USER: toughradius
-      TEST_DATABASE_PASSWORD: toughradius
+      TEST_DATABASE_USER: mwxisp
+      TEST_DATABASE_PASSWORD: mwxisp
       TEST_DATABASE_NAME: postgres
     depends_on:
       db:
@@ -22,11 +22,11 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: toughradius
-      POSTGRES_PASSWORD: toughradius
+      POSTGRES_USER: mwxisp
+      POSTGRES_PASSWORD: mwxisp
       POSTGRES_DB: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U toughradius -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U mwxisp -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 10

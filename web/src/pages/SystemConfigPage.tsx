@@ -40,6 +40,7 @@ import {
 import { useDataProvider, useNotify, useTranslate, useGetList } from 'react-admin';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { API_BASE } from '../utils/apiClient';
+import { PageHeader } from '../components/Enterprise';
 
 // Configuration schema type definitions
 interface ConfigSchema {
@@ -523,20 +524,13 @@ export const SystemConfigPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Page title */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          {translate('pages.system_config.title')}
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          {translate('pages.system_config.subtitle')}
-        </Typography>
-      </Box>
-
-      {/* Action buttons */}
-      <Box sx={{ mb: 3 }}>
-        <Button
+    <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3 }, maxWidth: 1400, mx: 'auto' }}>
+      <PageHeader
+        title={translate('pages.system_config.title')}
+        subtitle={translate('pages.system_config.subtitle')}
+        actions={
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+<Button
           variant="contained"
           startIcon={<SaveIcon />}
           onClick={handleSave}
@@ -586,7 +580,9 @@ export const SystemConfigPage: React.FC = () => {
           style={{ display: 'none' }}
           onChange={handleRestoreSelect}
         />
-      </Box>
+          </Box>
+        }
+      />
 
       {/* Configuration groups */}
       {!isLoading && (schemaQuery.data?.length ?? 0) > 0 && (

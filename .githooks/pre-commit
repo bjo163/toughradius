@@ -1,5 +1,5 @@
 #!/bin/bash
-# ToughRADIUS Pre-push Hook
+# MWX-ISP Pre-commit Hook
 # 在推送前运行完整测试，确保绝不推送有问题的代码
 
 set -e
@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}       ToughRADIUS Pre-push Quality Gate${NC}"
+echo -e "${BLUE}       MWX-ISP Quality Gate${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 # 记录开始时间

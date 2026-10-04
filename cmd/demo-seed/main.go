@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	cfgPath := flag.String("c", "toughradius.yml", "path to config file")
+	cfgPath := flag.String("c", "mwx-isp.yml", "path to config file")
 	days := flag.Int("days", 7, "number of days of accounting history to generate")
 	clean := flag.Bool("clean", false, "remove only records marked by this demo seeder")
 	flag.Parse()

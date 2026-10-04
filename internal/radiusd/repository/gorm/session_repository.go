@@ -53,13 +53,43 @@ func (r *GormSessionRepository) Create(ctx context.Context, session *domain.Radi
 }
 
 func (r *GormSessionRepository) Update(ctx context.Context, session *domain.RadiusOnline) error {
+	now := time.Now()
+	// Fetch previous session snapshot to calculate delta rate
+	var existing domain.RadiusOnline
+	if err := r.db.WithContext(ctx).Select("tenant_id, username, nas_addr, acct_input_total, acct_output_total, last_update").
+		Where("acct_session_id = ?", session.AcctSessionId).First(&existing).Error; err == nil {
+		deltaSec := now.Sub(existing.LastUpdate).Seconds()
+		if deltaSec > 0 {
+			var inRate, outRate int64
+			inDiff := session.AcctInputTotal - existing.AcctInputTotal
+			outDiff := session.AcctOutputTotal - existing.AcctOutputTotal
+			if inDiff > 0 {
+				inRate = int64(float64(inDiff*8) / deltaSec)
+			}
+			if outDiff > 0 {
+				outRate = int64(float64(outDiff*8) / deltaSec)
+			}
+			_ = r.db.WithContext(ctx).Create(&domain.RadiusTrafficSample{
+				TenantID:      existing.TenantID,
+				Username:      existing.Username,
+				AcctSessionID: session.AcctSessionId,
+				NasAddr:       existing.NasAddr,
+				InOctets:      session.AcctInputTotal,
+				OutOctets:     session.AcctOutputTotal,
+				InRateBps:     inRate,
+				OutRateBps:    outRate,
+				RecordedAt:    now,
+			})
+		}
+	}
+
 	param := map[string]interface{}{
 		"acct_input_total":    session.AcctInputTotal,
 		"acct_output_total":   session.AcctOutputTotal,
 		"acct_input_packets":  session.AcctInputPackets,
 		"acct_output_packets": session.AcctOutputPackets,
 		"acct_session_time":   session.AcctSessionTime,
-		"last_update":         time.Now(),
+		"last_update":         now,
 	}
 	return r.db.WithContext(ctx).
 		Model(&domain.RadiusOnline{}).

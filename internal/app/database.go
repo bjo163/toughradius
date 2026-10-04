@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -24,7 +25,15 @@ func getDatabase(dbConfig config.DBConfig, workdir string) *gorm.DB {
 	case "sqlite":
 		return getSqliteDatabase(dbConfig, workdir)
 	case "postgres", "postgresql":
-		return getPgDatabase(dbConfig)
+		pool, err := getPgDatabase(dbConfig)
+		if err != nil {
+			zap.S().Warnf("⚠️  PostgreSQL connection failed (%v). Falling back to standalone embedded SQLite...", err)
+			sqliteConfig := dbConfig
+			sqliteConfig.Type = "sqlite"
+			sqliteConfig.Name = "mwx-isp.db"
+			return getSqliteDatabase(sqliteConfig, workdir)
+		}
+		return pool
 	default:
 		zap.S().Fatalf("Unsupported database type: %s, supported types: postgres, sqlite", dbConfig.Type)
 		return nil
@@ -35,8 +44,23 @@ func getDatabase(dbConfig config.DBConfig, workdir string) *gorm.DB {
 func getSqliteDatabase(config config.DBConfig, workdir string) *gorm.DB {
 	// e.g., if the name is not an absolute path and not an in-memory DB, store it under workdir/data
 	dbPath := config.Name
-	if dbPath != ":memory:" && !filepath.IsAbs(dbPath) {
-		dbPath = filepath.Join(workdir, "data", dbPath)
+	if dbPath == "" {
+		dbPath = "mwx-isp.db"
+	}
+	if dbPath != ":memory:" {
+		if !filepath.IsAbs(dbPath) {
+			// If user specified just filename or relative path, prefix with workdir/data
+			// unless it already starts with data or workdir
+			cleaned := filepath.Clean(dbPath)
+			if strings.HasPrefix(cleaned, "data"+string(filepath.Separator)) || cleaned == "data" {
+				dbPath = filepath.Join(workdir, cleaned)
+			} else {
+				dbPath = filepath.Join(workdir, "data", cleaned)
+			}
+		}
+		if err := os.MkdirAll(filepath.Dir(dbPath), 0700); err != nil {
+			zap.S().Warnf("failed to create directory for SQLite DB: %v", err)
+		}
 	}
 
 	zap.S().Infof("SQLite database path: %s", dbPath)
@@ -71,8 +95,8 @@ func getSqliteDatabase(config config.DBConfig, workdir string) *gorm.DB {
 	return pool
 }
 
-// getPgDatabase returns a PostgreSQL database connection
-func getPgDatabase(config config.DBConfig) *gorm.DB {
+// getPgDatabase returns a PostgreSQL database connection or error if connection fails
+func getPgDatabase(config config.DBConfig) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Jakarta",
 		config.Host,
 		config.User,
@@ -99,12 +123,19 @@ func getPgDatabase(config config.DBConfig) *gorm.DB {
 	common.Must(err)
 	common.Must(tenancy.RegisterCallbacks(pool))
 	sqlDB, err := pool.DB()
-	common.Must(err)
+	if err != nil {
+		return nil, err
+	}
+	// Test the actual ping to ensure credentials and connectivity are valid
+	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
+		return nil, err
+	}
 	// SetMaxIdleConns sets the maximum number of idle connections in the pool
 	sqlDB.SetMaxIdleConns(config.IdleConn)
 	// SetMaxOpenConns sets the maximum number of open database connections
 	sqlDB.SetMaxOpenConns(config.MaxConn)
 	// SetConnMaxLifetime sets the maximum lifetime a connection can be reused
 	// sqlDB.SetConnMaxLifetime(time.Hour * 8)
-	return pool
+	return pool, nil
 }

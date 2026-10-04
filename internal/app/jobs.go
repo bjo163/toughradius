@@ -51,6 +51,13 @@ func (a *Application) initJob() {
 		zap.S().Errorf("init ISP billing job error %s", err.Error())
 	}
 
+	_, err = a.sched.AddFunc("@every 15m", func() {
+		a.SchedFUPCheckTask()
+	})
+	if err != nil {
+		zap.S().Errorf("init FUP check job error %s", err.Error())
+	}
+
 	a.sched.Start()
 }
 
@@ -226,13 +233,13 @@ func (a *Application) SchedProcessMonitorTask() {
 	// Collect process CPU usage
 	cpuuse, err := p.CPUPercent()
 	if err == nil {
-		metrics.SetGauge("toughradius_cpuuse", int64(cpuuse*100)) // Store as percentage * 100
+		metrics.SetGauge("mwx_isp_cpuuse", int64(cpuuse*100)) // Store as percentage * 100
 	}
 
 	// Collect process memory usage
 	meminfo, err := p.MemoryInfo()
 	if err == nil {
-		metrics.SetGauge("toughradius_memuse", int64(meminfo.RSS/1024/1024)) //nolint:gosec // G115: memory MB value fits in int64
+		metrics.SetGauge("mwx_isp_memuse", int64(meminfo.RSS/1024/1024)) //nolint:gosec // G115: memory MB value fits in int64
 	}
 }
 
@@ -293,6 +300,123 @@ func (a *Application) SchedClearExpireData() {
 			cutoff := time.Now().Add(-time.Hour * 24 * time.Duration(idays))
 			if err := db.Where("acct_stop_time > ? AND acct_stop_time < ?", time.Unix(0, 0), cutoff).Delete(&domain.RadiusAccounting{}).Error; err != nil {
 				zap.L().Error("prune tenant accounting history", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			}
+		}
+	}
+
+	// Prune network monitoring health samples older than 30 days
+	a.gormDB.Where("checked_at < ?", time.Now().AddDate(0, 0, -30)).Delete(&domain.NetMonitorSample{})
+
+	// Prune processed notification outbox records older than 30 days
+	a.gormDB.Where("created_at < ?", time.Now().AddDate(0, 0, -30)).Delete(&domain.NotificationOutbox{})
+
+	// Prune historical billing lifecycle audit events older than 180 days
+	a.gormDB.Where("created_at < ?", time.Now().AddDate(0, 0, -180)).Delete(&domain.BillingEvent{})
+
+	// Prune RADIUS bandwidth traffic samples older than 14 days
+	a.gormDB.Where("recorded_at < ?", time.Now().AddDate(0, 0, -14)).Delete(&domain.RadiusTrafficSample{})
+
+	// Prune Syslog event history older than 7 days
+	a.gormDB.Where("created_at < ?", time.Now().AddDate(0, 0, -7)).Delete(&domain.SyslogEvent{})
+}
+
+// SchedFUPCheckTask evaluates subscriber traffic usage against package FUP quotas,
+// automatically throttling accounts exceeding thresholds and resetting restored quotas.
+func (a *Application) SchedFUPCheckTask() {
+	defer func() {
+		if err := recover(); err != nil {
+			zap.L().Error("FUP check scheduler panic", zap.Any("error", err))
+			a.enqueueSchedulerFailure("isp-fup", "scheduler recovered from a task error")
+		}
+	}()
+
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	var activeSubs []domain.Subscription
+	if err := a.gormDB.Where("status = ?", domain.SubscriptionActive).Find(&activeSubs).Error; err != nil {
+		return
+	}
+
+	for _, sub := range activeSubs {
+		var pkg domain.InternetPackage
+		if err := a.gormDB.First(&pkg, sub.PackageID).Error; err != nil || pkg.FupLimitGB <= 0 {
+			continue
+		}
+
+		var user domain.RadiusUser
+		if sub.RadiusUserID <= 0 || a.gormDB.First(&user, sub.RadiusUserID).Error != nil {
+			continue
+		}
+
+		limitBytes := pkg.FupLimitGB * 1024 * 1024 * 1024
+
+		type trafficTotals struct {
+			Input  int64
+			Output int64
+		}
+		var live trafficTotals
+		a.gormDB.Model(&domain.RadiusOnline{}).
+			Where("username = ?", user.Username).
+			Select("COALESCE(SUM(acct_input_total), 0) as input, COALESCE(SUM(acct_output_total), 0) as output").
+			Scan(&live)
+
+		var hist trafficTotals
+		a.gormDB.Model(&domain.RadiusAccounting{}).
+			Where("username = ? AND acct_start_time >= ?", user.Username, monthStart).
+			Select("COALESCE(SUM(acct_input_total), 0) as input, COALESCE(SUM(acct_output_total), 0) as output").
+			Scan(&hist)
+
+		totalTraffic := live.Input + live.Output + hist.Input + hist.Output
+
+		if totalTraffic >= limitBytes && !sub.FupTriggered && pkg.FupRateDown > 0 {
+			a.gormDB.Model(&sub).Update("fup_triggered", true)
+			if pkg.FupRateUp > 0 && pkg.FupRateDown > 0 {
+				a.gormDB.Model(&user).Updates(map[string]interface{}{
+					"up_rate":    pkg.FupRateUp,
+					"down_rate":  pkg.FupRateDown,
+					"updated_at": now,
+				})
+			}
+			if handler := a.sessionDisconnectHandler(); handler != nil {
+				var sessions []domain.RadiusOnline
+				if a.gormDB.Where("username = ?", user.Username).Find(&sessions).Error == nil {
+					for _, s := range sessions {
+						_ = handler(context.Background(), s)
+					}
+				}
+			}
+			_ = a.gormDB.Create(&domain.BillingEvent{
+				CustomerID:     sub.CustomerID,
+				SubscriptionID: sub.ID,
+				Type:           "fup_throttled",
+				Description:    fmt.Sprintf("Auto FUP quota (%d GB) reached: speed throttled", pkg.FupLimitGB),
+				CreatedAt:      now,
+			})
+		} else if totalTraffic < limitBytes && sub.FupTriggered && now.Day() == 1 {
+			var profile domain.RadiusProfile
+			if a.gormDB.First(&profile, pkg.RadiusProfileID).Error == nil {
+				a.gormDB.Model(&sub).Update("fup_triggered", false)
+				a.gormDB.Model(&user).Updates(map[string]interface{}{
+					"up_rate":    profile.UpRate,
+					"down_rate":  profile.DownRate,
+					"updated_at": now,
+				})
+				if handler := a.sessionDisconnectHandler(); handler != nil {
+					var sessions []domain.RadiusOnline
+					if a.gormDB.Where("username = ?", user.Username).Find(&sessions).Error == nil {
+						for _, s := range sessions {
+							_ = handler(context.Background(), s)
+						}
+					}
+				}
+				_ = a.gormDB.Create(&domain.BillingEvent{
+					CustomerID:     sub.CustomerID,
+					SubscriptionID: sub.ID,
+					Type:           "fup_restored",
+					Description:    "Monthly cycle start: FUP quota reset and normal speed restored",
+					CreatedAt:      now,
+				})
 			}
 		}
 	}

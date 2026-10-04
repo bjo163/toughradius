@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/bjo163/mwx-isp/config"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSQLiteDatabaseRespectsPlatformAbsolutePath(t *testing.T) {

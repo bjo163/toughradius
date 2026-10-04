@@ -717,3 +717,78 @@ func TestNASEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestNASEnrichment(t *testing.T) {
+	db, e, appCtx := CreateTestAppContext(t)
+	require.NoError(t, db.AutoMigrate(&domain.NetMonitorTarget{}))
+
+	// Create test NAS
+	nas := domain.NetNas{
+		ID:         99901,
+		Name:       "Test-POP-Router",
+		Identifier: "POP-ROUTER-1",
+		Ipaddr:     "10.250.1.1",
+		Secret:     "secret123",
+		Status:     "enabled",
+	}
+	require.NoError(t, db.Create(&nas).Error)
+
+	// Create a dummy online session on this NAS
+	onlineSession := domain.RadiusOnline{
+		ID:            88801,
+		Username:      "nas_user_1",
+		NasId:         "POP-ROUTER-1",
+		NasAddr:       "10.250.1.1",
+		AcctSessionId: "sess-nas-1",
+	}
+	require.NoError(t, db.Create(&onlineSession).Error)
+
+	// Create a monitor target for this NAS IP
+	monitorTarget := domain.NetMonitorTarget{
+		ID:                     77701,
+		Name:                   "Monitor POP 1",
+		Address:                "10.250.1.1",
+		Enabled:                true,
+		LastStatus:             "up",
+		LastLatencyMilliseconds: 5,
+	}
+	require.NoError(t, db.Create(&monitorTarget).Error)
+
+	// Test GetNAS
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/network/nas/99901", nil)
+	rec := httptest.NewRecorder()
+	c := CreateTestContext(e, db, req, rec, appCtx)
+	c.SetParamNames("id")
+	c.SetParamValues("99901")
+
+	err := GetNAS(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp struct {
+		Code int        `json:"code"`
+		Data nasViewDTO `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, int64(1), resp.Data.OnlineSessions)
+	assert.Equal(t, "up", resp.Data.HealthStatus)
+	assert.Equal(t, int64(5), resp.Data.LatencyMs)
+
+	// Test ListNAS
+	reqList := httptest.NewRequest(http.MethodGet, "/api/v1/network/nas?name=Test-POP", nil)
+	recList := httptest.NewRecorder()
+	cList := CreateTestContext(e, db, reqList, recList, appCtx)
+
+	errList := ListNAS(cList)
+	require.NoError(t, errList)
+	assert.Equal(t, http.StatusOK, recList.Code)
+
+	var listResp struct {
+		Data  []nasViewDTO `json:"data"`
+		Total int64        `json:"total"`
+	}
+	require.NoError(t, json.Unmarshal(recList.Body.Bytes(), &listResp))
+	assert.GreaterOrEqual(t, len(listResp.Data), 1)
+	assert.Equal(t, int64(1), listResp.Data[0].OnlineSessions)
+	assert.Equal(t, "up", listResp.Data[0].HealthStatus)
+}

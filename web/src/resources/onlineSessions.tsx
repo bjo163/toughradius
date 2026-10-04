@@ -62,6 +62,7 @@ import {
 } from '@mui/icons-material';
 import { ReactNode, useMemo, useCallback, useState, useEffect } from 'react';
 import { ServerPagination, ActiveFilters } from '../components';
+import { StatusChip, Mono } from '../components/Enterprise';
 import { apiRequest, ApiError } from '../utils/apiClient';
 import { formatBytes, sumNumberish, type Numberish } from '../utils/formatters';
 
@@ -1575,13 +1576,7 @@ const UsernameField = () => {
         >
           {record.username || '-'}
         </Typography>
-        <Chip
-          icon={<OnlineIcon sx={{ fontSize: '0.85rem !important' }} />}
-          label="Online"
-          size="small"
-          color="success"
-          sx={{ height: 20, fontWeight: 500, fontSize: '0.7rem' }}
-        />
+        <StatusChip status="online" />
       </Box>
     </Box>
   );
@@ -1591,15 +1586,7 @@ const IpAddressField = () => {
   const record = useRecordContext<OnlineSession>();
   if (!record?.framed_ipaddr) return <Typography variant="body2" color="text.secondary">-</Typography>;
 
-  return (
-    <Chip
-      label={record.framed_ipaddr}
-      size="small"
-      color="info"
-      variant="outlined"
-      sx={{ fontFamily: 'monospace', fontSize: '0.8rem', height: 24 }}
-    />
-  );
+  return <Mono sx={{ fontWeight: 600, color: 'info.main' }}>{record.framed_ipaddr}</Mono>;
 };
 
 const TrafficFieldCompact = ({ type }: { type: 'upload' | 'download' }) => {
@@ -1613,9 +1600,9 @@ const TrafficFieldCompact = ({ type }: { type: 'upload' | 'download' }) => {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <Icon sx={{ fontSize: 16, color }} />
-      <Typography variant="body2" sx={{ fontWeight: 500, color }}>
+      <Mono sx={{ fontWeight: 600, color }}>
         {formatBytes(value)}
-      </Typography>
+      </Mono>
     </Box>
   );
 };
@@ -1626,19 +1613,11 @@ const SessionIdField = () => {
 
   return (
     <Tooltip title={record.acct_session_id}>
-      <Typography
-        variant="body2"
-        sx={{
-          fontFamily: 'monospace',
-          fontSize: '0.8rem',
-          maxWidth: 120,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {record.acct_session_id}
-      </Typography>
+      <span>
+        <Mono sx={{ maxWidth: 120, display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {record.acct_session_id}
+        </Mono>
+      </span>
     </Tooltip>
   );
 };
