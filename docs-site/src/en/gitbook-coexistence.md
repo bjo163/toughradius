@@ -1,6 +1,6 @@
 # Handbook Publishing
 
-> 中文版本：[手册发布说明](../zh/gitbook-coexistence.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/gitbook-coexistence.md)
 
 This handbook is maintained in `docs-site/src/` and published to the repository's
 GitHub Pages project site: <https://bjo163.github.io/mwx-isp/>. The repository
@@ -18,14 +18,14 @@ current canonical handbook URL is the GitHub Pages URL above.
 Both mdBook and a configured GitBook integration can read the same source files:
 the landing page is `docs-site/src/introduction.md`, and the navigation is
 `docs-site/src/SUMMARY.md`. mdBook settings live in `docs-site/book.toml`; GitBook
-settings live in `.gitbook.yaml`. Keep both English and Chinese chapters aligned
+settings live in `.gitbook.yaml`. Keep the English and Indonesian chapters aligned
 when changing the handbook.
 
 ## Language toggle
 
-The mdBook output adds an EN / 中文 switch via
+The mdBook output adds an EN / ID switch via
 `docs-site/assets/lang-toggle.{js,css}`. It links matching filenames under
-`src/en/` and `src/zh/`. GitBook readers can use the same language sections in
+`src/en/` and `src/id/`. GitBook readers can use the same language sections in
 the sidebar and the chapter links.
 
 ## Build and validation

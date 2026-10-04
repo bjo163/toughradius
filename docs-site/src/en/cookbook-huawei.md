@@ -1,12 +1,12 @@
 # Cookbook: Huawei BRAS / NetEngine
 
-> 中文版本：[实战手册：华为 BRAS / NetEngine](../zh/cookbook-huawei.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/cookbook-huawei.md)
 >
 > This chapter is part of the [Scenario Cookbook](./cookbook.md) and follows its
 > [five-part shape and reading conventions](./cookbook.md#the-five-part-shape-of-every-scenario).
 
-Huawei (vendor code **2011**) is the dominant broadband BRAS / enterprise
-gateway in Chinese carrier and enterprise networks (NetEngine / ME60 / older
+Huawei (vendor code **2011**) is a widely deployed broadband BRAS / enterprise
+gateway in carrier and enterprise networks (NetEngine / ME60 / older
 MA5200 lines). MWX-ISP registers a dedicated vendor enhancer for it; on a
 successful auth it emits:
 

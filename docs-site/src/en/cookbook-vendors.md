@@ -1,6 +1,6 @@
 # Cookbook: H3C, ZTE, iKuai & Cisco
 
-> 中文版本：[实战手册：H3C / 中兴 / 爱快 / Cisco](../zh/cookbook-vendors.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/cookbook-vendors.md)
 >
 > This chapter is part of the [Scenario Cookbook](./cookbook.md) and follows its
 > [reading conventions](./cookbook.md#the-five-part-shape-of-every-scenario).

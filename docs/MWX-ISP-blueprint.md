@@ -2,7 +2,7 @@
 
 **Nama:** MWX-ISP
 **Deskripsi:** ISP Management + RADIUS + Billing
-**Target:** aplikasi mandiri untuk operasional satu ISP, dikelola operator/admin.
+**Target:** satu deployment MWX-ISP untuk mengelola beberapa organisasi ISP atau RT/RW Net yang terisolasi, dengan operator platform dan operator tenant.
 
 **Status saat ini (2026-10-02):** MVP manajemen ISP, RADIUS, dan billing telah diimplementasikan. Fake NAS berbasis UDP berhasil dipakai untuk memvalidasi CoA/Disconnect ACK, NAK, timeout, retry, Message-Authenticator, serta alur Admin API. MVP monitoring jaringan read-only (TR-F031) dan notifikasi operator WhatsApp berbasis whatsmeow (TR-F030, default nonaktif) juga telah diimplementasikan dan dicatat pada bagian 11; adapter SNMP fisik dan alur WhatsApp dengan nomor uji masih memerlukan validasi operasional. Kesiapan produksi tetap perlu dibuktikan melalui acceptance suite PostgreSQL/Docker dan pilot dengan NAS yang akan dipakai.
 
@@ -28,7 +28,7 @@ Produk fungsional lebih diutamakan daripada pemolesan atau pengujian ekstensif p
 
 ### Tidak termasuk sekarang
 
-Payment gateway, chat bot WhatsApp / layanan pelanggan otomatis, portal pelanggan, ticketing, CRM lanjutan, provisioning/perubahan konfigurasi router, inventaris OLT/ODP/fiber, reseller, voucher/hotspot, laporan lanjutan, pajak/ERP akuntansi, aplikasi mobile, dan multi-tenant. Pengecualian terbatas: notifikasi satu arah untuk operator (TR-F030) dan pembacaan metrik kesehatan perangkat yang didaftarkan (TR-F031).
+Payment gateway, chat bot WhatsApp / layanan pelanggan otomatis, portal pelanggan, ticketing, CRM lanjutan, provisioning/perubahan konfigurasi router, inventaris OLT/ODP/fiber, reseller marketplace, laporan lanjutan, pajak/ERP akuntansi, dan aplikasi mobile. Multi-tenant hanya termasuk dalam batas isolasi dan migrasi yang disetujui pada TR-F033; reseller marketplace dan hierarki tenant tidak termasuk. Pengecualian terbatas: notifikasi satu arah untuk operator (TR-F030) dan pembacaan metrik kesehatan perangkat yang didaftarkan (TR-F031).
 
 ## 3. Model dan aturan bisnis
 
@@ -113,7 +113,7 @@ Rilis pertama berhasil ketika alur tersebut berfungsi dengan data RADIUS lama te
 
 ## 9. Grand plan setelah MVP
 
-Prinsip urutan: tutup risiko operasional dan validasi alur lengkap dahulu; baru tambah fitur. Jangan memperluas produk ke payment gateway, CRM, portal pelanggan, atau multi-tenant tanpa revisi ruang lingkup.
+Prinsip urutan: tutup risiko operasional dan validasi alur lengkap dahulu; setiap perluasan mengikuti feature checklist. Multi-tenant kini disetujui secara terbatas pada TR-F033; jangan memperluasnya menjadi reseller marketplace, customer portal, atau hierarki organisasi tanpa keputusan ruang lingkup baru.
 
 ### Gelombang A — Uji lokal yang bisa diulang
 
@@ -267,7 +267,7 @@ Tidak membuat demo mode yang meniru traffic nyata, workflow wizard yang menulis 
 1. **Visual konsisten:** halaman menggunakan token MUI dan komponen bersama untuk surface, section heading, metric, status, form, data table, dan page header. Karakter manga-ink tetap tampak, tetapi pola visual dan intensitas efek punya aturan jelas untuk menjaga fokus kerja profesional.
 2. **Branding editable per instalasi tunggal:** Admin dapat mengganti nama produk yang terlihat, nama ringkas/monogram, tagline, logo, dan warna aksen utama; UI memperbarui header, login, footer, browser title, favicon, dan tema tanpa rebuild frontend.
 3. **Default aman:** nilai awal tetap MWX-ISP, dark theme, hijau MWX, dan aset MWX. Admin dapat preview sebelum simpan dan reset identitas produk ke default. Brand aplikasi tidak mengubah nama legal/perusahaan pada invoice.
-4. **Batas arsitektur:** branding berlaku global untuk satu deployment; tidak membuat tenant, white-label per customer, marketplace tema, plugin branding, atau CSS bebas.
+4. **Batas arsitektur:** branding produk MWX tetap global per deployment. TR-F033 mengizinkan identitas perusahaan dan invoice per tenant, tetapi tidak mengizinkan tema produk, white-label, marketplace tema, plugin branding, atau CSS bebas per tenant.
 
 ### Tahapan rencana
 

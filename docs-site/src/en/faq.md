@@ -1,6 +1,6 @@
 # FAQ
 
-> 中文版本：[常见问题解答](../zh/faq.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/faq.md)
 
 Frequently asked questions, grouped by theme. If your question is not covered,
 search the [GitHub issues](https://github.com/bjo163/mwx-isp/issues) or

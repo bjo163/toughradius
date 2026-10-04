@@ -1,6 +1,6 @@
 # Admin UI Manual
 
-> 中文版本：[管理系统用户手册](../zh/admin-manual.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/admin-manual.md)
 
 The management console runs on port `1816` (HTTP) and is built with React
 Admin. English is the default interface language, and the dark green theme is
@@ -148,7 +148,7 @@ contact info, level, status. The operator action log is kept in the database
 
 ## UI conveniences
 
-- **Language switcher** (app bar) — 简体中文 / English, persisted per browser.
+- **Language switcher** — English / Bahasa Indonesia, persisted per browser.
 - **Theme toggle** — light/dark.
 - **CSV export** on users, sessions, accounting, NAS, nodes, operators.
 - Server-side pagination and active-filter chips on all list pages.

@@ -1,17 +1,15 @@
 # MWX-ISP Development Roadmap
 
-Chinese version: [docs/roadmap.zh.md](roadmap.zh.md)
+This roadmap is the long-term development plan for MWX-ISP. It is bound to the English feature checklist in [`docs/feature-checklist.md`](feature-checklist.md): every milestone must reference at least one `TR-F` feature ID, and scope that cannot be mapped to the checklist must update the checklist before it is scheduled here.
 
-This roadmap is the long-term development plan for MWX-ISP. It is bound to the feature checklist in [`docs/feature-checklist.en.md`](feature-checklist.en.md): every milestone must reference at least one `TR-F` feature ID, and scope that cannot be mapped to the checklist must update the checklist before it is scheduled here.
-
-The Chinese roadmap keeps the detailed agent delivery log. This English roadmap is the default planning surface and task source: milestone status, guardrails, current execution order, and the next deliverable work. When roadmap scope or status changes, update both files in the same PR.
+This is the canonical planning surface and task source: milestone status, guardrails, current execution order, and the next deliverable work.
 
 ## Maintenance Rules
 
 1. Milestones use `M<number>` IDs and map to one or more `TR-F` feature IDs.
 2. Each milestone is split into MVP subtasks that are independently deliverable, reversible, and verifiable.
 3. Status flows as `Planned -> In progress -> Delivered`; delivery means merged to `main` with passing CI.
-4. Do not schedule non-goals from `TR-N001` through `TR-N006`: billing/orders, CRM/tickets, generic monitoring, multi-tenant SaaS, protocol-stack/framework rewrites, or hosted captive portal products.
+4. Do not schedule non-goals from `TR-N001` through `TR-N003`, `TR-N005`, or `TR-N006`: generic payment/orders/finance, CRM/ticketing/customer portal, general observability, protocol-stack/framework rewrites, or hosted captive portal products. Tenant work is allowed only within `TR-F033`; `TR-N004` prohibits unbounded expansion beyond that scope.
 5. Agent output must go through pull request, CI, and human review. Direct pushes to `main` are forbidden.
 6. After each delivered subtask, use `.agents/skills/groom-roadmap/SKILL.md` to update status, split or reorder work, and keep the roadmap consistent with the checklist.
 7. Delivered subtasks should keep only outcome, evidence, residual risk, and traceable entry points. Long implementation narratives belong in PRs, commits, or changelogs.
@@ -44,6 +42,8 @@ The Chinese roadmap keeps the detailed agent delivery log. This English roadmap 
 | M12 | EAP-PWD password authentication | TR-F004 | P3 | Planned |
 | M13 | Bilingual documentation site with mdbook | TR-F023 | P2 | Delivered |
 | M14 | LDAP / AD bind authentication backend for PAP-family methods | TR-F025 | P2 | In progress |
+| M15 | Multi-tenant ISP and RT/RW Net isolation | TR-F033 | P1 | Planned |
+| M16 | Automated dev-to-main versioning, changelog, and releases | TR-F022 | P2 | Planned |
 
 ## Cross-Cutting Baseline
 
@@ -61,11 +61,24 @@ The scheduled **M5 vendor VSA expansion** batch (M5.1 inventory + M5.2/M5.3/M5.4
 | 2 | M7 upstream and RFC compliance tracking | Delivered | M7.1 evaluation closed with a no-sync decision; recurring upstream checks continue via `.agents/skills/sync-upstream-radius/SKILL.md` and the cross-cutting baseline |
 | 3 | M10 EAP-TLS 1.3 / RFC 9190 | In progress | M10.1 (#562) TLS 1.3 negotiation + §2.1.1 protected success; M10.2 (#564) version-branched MSK → MS-MPPE derivation; M10.3 (#607) tolerate `close_notify` after the success point (RFC 9190 §2.1.4/§2.5); next M10.5 identity protection / anonymous NAI |
 | 4 | M14.5 LDAP connection robustness | Blocked: waiting for load evidence | Revisit pooling/reconnect design only when connection cost or cancellation evidence justifies the complexity |
+| 5 | M15 multi-tenant ISP operations | Planned | Tenant data model and safe migration first; then operator/API isolation, RADIUS, operational jobs, UI, and PostgreSQL acceptance |
+| 6 | M16 release automation | Planned | Keep only `dev` and `main`; promote through the existing review PR; create an idempotent SemVer tag, changelog, GitHub Release, binaries, and GHCR image after approved main promotion |
 
 Agent-facing unchecked tasks:
 
 - [x] M14.6 LDAP integration acceptance tests: add CI-executable `test/integration/` coverage with a real OpenLDAP service container and seed LDIF. Delivered via `test/integration/ldap_test.go` plus CI / local compose OpenLDAP service wiring: plain PAP and `EAP-TTLS/PAP` authenticate through real LDAP bind while local `RadiusUser.Password` is deliberately wrong; wrong password rejects as `radus_reject_passwd_error`; directory unavailable and non-PAP CHAP reject as `radus_reject_ldap_error` with diagnostic reply text.
 - [ ] M14.5 (Blocked: waiting for load evidence) LDAP connection robustness: revisit pooling, reconnect, and request-context propagation only when load evidence shows connection setup cost or cancellation behavior justifies the added complexity.
+- [ ] M15.1 Add tenant identity, tenant-owned data model, tenant context primitives, and an additive PostgreSQL/SQLite migration that assigns existing rows to one default tenant without changing user-visible IDs or credentials. Verify migration idempotency, rollback from backup, and tenant-scoped unique-index conversion.
+- [ ] M15.2 Add platform/tenant operator membership and trusted tenant resolution to login, JWT/current-user, authorization middleware, and Admin API request context. Reject disabled memberships and never derive authority from a client-provided tenant ID.
+- [ ] M15.3 Scope Admin API reads/writes, imports, exports, backups/restores, dashboard, billing documents, and cross-entity references by the authenticated tenant; include hostile cross-tenant IDOR and duplicate-identifier acceptance coverage.
+- [ ] M15.4 Resolve RADIUS tenant from an unambiguous registered NAS before user lookup; scope auth/accounting repositories, username/MAC/session keys, rate limits, caches, EAP state, NAS state events, and CoA/Disconnect. Fail closed on ambiguous NAS identity and test overlapping usernames/session IDs.
+- [ ] M15.5 Scope scheduler, billing enforcement/sequences, demo seeding, monitoring samples/incidents, syslog/traffic, notifications/outbox, and retention jobs to tenant or explicitly documented platform-global ownership.
+- [ ] M15.6 Add platform tenant administration and tenant-scoped operator experience in the existing React Admin shell, including tenant company/invoice identity and clear active-tenant context; preserve installation-wide MWX product branding.
+- [ ] M15.7 Run PostgreSQL integration coverage for migration, login/operator permissions, all core data domains, same-name RADIUS accounts, accounting, and CoA/Disconnect; update English/Indonesian handbook, deployment and backup guidance, and mark `TR-F033` implemented only after CI passes.
+- [ ] M16.1 Normalize repository guidance and automation around the existing two branches (`dev` and `main`), make dev-to-main PR creation reliable with least-necessary Actions permissions, and prevent merge settings from deleting `dev`.
+- [ ] M16.2 Define Conventional Commit release classification and idempotent version/changelog generation from commits since the previous tag; document no-release, patch, minor, and breaking-change behavior without adding release/feature branches.
+- [ ] M16.3 After reviewed promotion to `main`, create the annotated SemVer tag and changelog/release notes, then build and publish the existing Windows/Linux/macOS assets and GHCR image in a workflow chain that does not depend on a `GITHUB_TOKEN` tag push triggering another workflow.
+- [ ] M16.4 Add workflow-lint and release simulation coverage for no-op/docs-only changes, patch/minor/major classification, repeated runs, tag collisions, and publish failures; keep release jobs idempotent and report recovery steps.
 - [x] M5.1 Inventory pending vendor VSA gaps and dictionary differences. Delivered: `docs/vendor-vsa-gap-baseline.md` refreshed to HEAD `9882f79e` — registered parsers `default + huawei + h3c + zte + radback + alcatel + aruba + juniper`, response enhancers `default + huawei + h3c + zte + mikrotik + ikuai + aruba`, a corrected gap matrix, a delta-since-#433 section, and the next-batch backlog. (The first baseline #433 was superseded once M5.2/M5.3 landed; `#470` had re-opened this checkbox.)
 - [x] M5.2 Add request-side vendor parsers for genuine MAC/VLAN request VSAs. Delivered: `radback` (#449), `alcatel` (#450), `aruba` (#451), and `juniper` (#453) request parsers, plus the `vendors.CodeAlcatel` / `CodeAruba` constants.
 - [x] M5.3 Add the first vendor Access-Accept response enhancer. Delivered: `aruba` response enhancer registered in `plugins/init.go` (#456) with sample-based tests.
@@ -82,7 +95,7 @@ Agent-facing unchecked tasks:
 - Do not build a billing, order, or finance system.
 - Do not turn the admin UI into CRM, ticketing, or a customer self-service portal.
 - Do not turn the dashboard into a generic monitoring platform.
-- Do not add multi-tenant SaaS semantics without a prior scope decision and migration design.
+- Do not implement tenant behavior outside the approved isolation, authorization, RADIUS-resolution, and migration boundaries in `TR-F033`.
 - Do not rewrite the RADIUS protocol stack or replace the management framework without a specific defect and migration plan.
 - Do not build, host, or operate captive portal login pages, voucher/SMS/WeChat/payment onboarding, or vendor portal-server state machines. Portal belongs to another product; MWX-ISP only integrates as the RADIUS auth/accounting backend.
 

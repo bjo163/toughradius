@@ -1,6 +1,6 @@
 # Concepts & Terminology
 
-> 中文版本：[核心术语与概念](../zh/concepts.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/concepts.md)
 
 This chapter explains the core AAA terminology used throughout MWX-ISP and
 maps each concept to where it lives in the product. For the authoritative list

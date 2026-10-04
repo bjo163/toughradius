@@ -30,34 +30,3 @@ Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped a
 | EAP-TTLS/PAP valid credentials | EAP-TTLS/PAP | Access-Accept | passed | 138 ms | external supplicant received the expected Access-Accept |
 | EAP-TTLS/MSCHAPv2 valid credentials | EAP-TTLS/MSCHAPv2 | Access-Accept | passed | 138 ms | external supplicant received the expected Access-Accept |
 | Malformed external EAP client config | tooling | documented skip | skipped | 0 ms | Skipped intentionally: eapol_test parser failures do not exercise ToughRADIUS over RADIUS/EAP. Negative server behavior is covered by untrusted certificate and wrong password scenarios. |
-
-## 中文
-
-**结论：** 部分通过
-
-覆盖说明：PEAP/MSCHAPv2 外部 `eapol_test` 场景仍为 skipped，并由 [#495](https://github.com/talkincode/toughradius/issues/495) 跟踪，因此本报告代表部分外部覆盖，不宣称完整 PEAP 外部验收。
-
-### 运行上下文
-
-| Field | Value |
-| --- | --- |
-| Started | 2026-08-10T10:37:08Z |
-| Finished | 2026-08-10T10:37:09Z |
-| Commit | 2bf67750ac35 |
-| Ref | main |
-| Workflow | [workflow run](https://github.com/talkincode/toughradius/actions/runs/31379861606) |
-| Runner OS | Linux |
-| Go | go version go1.25.12 linux/amd64 |
-| Tool | eapol_test eapol_test v2.10 |
-
-### 场景结果
-
-| 场景 | 方法 | 预期 | 状态 | 耗时 | 说明 |
-| --- | --- | --- | --- | ---: | --- |
-| EAP-TLS valid client certificate | EAP-TLS | Access-Accept | 通过 | 186 ms | external supplicant received the expected Access-Accept |
-| EAP-TLS untrusted client certificate | EAP-TLS | Access-Reject | 通过 | 37 ms | external supplicant was rejected as expected |
-| PEAP/MSCHAPv2 valid credentials | PEAP/MSCHAPv2 | Access-Accept | 跳过 | 0 ms | Skipped intentionally: eapol_test currently exposes a PEAP inner-framing interop gap (server rejects the decrypted phase-2 payload as an invalid inner EAP message). The in-process PEAP/MSCHAPv2 integration test remains the current acceptance coverage. Tracking issue: https://github.com/talkincode/toughradius/issues/495. |
-| PEAP/MSCHAPv2 wrong password | PEAP/MSCHAPv2 | Access-Reject | 跳过 | 0 ms | Skipped intentionally: eapol_test currently exposes a PEAP inner-framing interop gap (server rejects the decrypted phase-2 payload as an invalid inner EAP message). The in-process PEAP/MSCHAPv2 integration test remains the current acceptance coverage. Tracking issue: https://github.com/talkincode/toughradius/issues/495. |
-| EAP-TTLS/PAP valid credentials | EAP-TTLS/PAP | Access-Accept | 通过 | 138 ms | external supplicant received the expected Access-Accept |
-| EAP-TTLS/MSCHAPv2 valid credentials | EAP-TTLS/MSCHAPv2 | Access-Accept | 通过 | 138 ms | external supplicant received the expected Access-Accept |
-| Malformed external EAP client config | tooling | documented skip | 跳过 | 0 ms | Skipped intentionally: eapol_test parser failures do not exercise ToughRADIUS over RADIUS/EAP. Negative server behavior is covered by untrusted certificate and wrong password scenarios. |

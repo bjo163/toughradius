@@ -1,6 +1,6 @@
 # Quick Start
 
-> 中文版本：[快速开始](../zh/quickstart.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/quickstart.md)
 
 This guide deploys MWX-ISP on a Linux VPS with Docker Compose and PostgreSQL,
 then walks through the first login and RADIUS smoke test. The admin UI uses TCP
