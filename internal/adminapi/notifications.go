@@ -38,8 +38,8 @@ type notificationSettingsDTO struct {
 func registerNotificationRoutes() {
 	webserver.ApiGET("/system/notifications/whatsapp", getWhatsAppSettings, requireAdmin())
 	webserver.ApiPUT("/system/notifications/whatsapp", putWhatsAppSettings, requireAdmin())
-	webserver.ApiPOST("/system/notifications/whatsapp/pair", pairWhatsApp, requireAdmin())
-	webserver.ApiPOST("/system/notifications/whatsapp/disconnect", disconnectWhatsApp, requireAdmin())
+	webserver.ApiPOST("/system/notifications/whatsapp/pair", pairWhatsApp, requirePlatformAdmin())
+	webserver.ApiPOST("/system/notifications/whatsapp/disconnect", disconnectWhatsApp, requirePlatformAdmin())
 	webserver.ApiPOST("/system/notifications/whatsapp/test", sendWhatsAppTest, requireAdmin())
 	webserver.ApiGET("/system/notifications/outbox", listNotificationOutbox, requireAdmin())
 }

@@ -220,5 +220,5 @@ func toSystemLogString(value interface{}) string {
 }
 
 func registerSystemLogRoutes() {
-	webserver.GET("/admin/loki/query", querySystemLogs)
+	webserver.GET("/admin/loki/query", querySystemLogs, requirePlatformAdmin())
 }

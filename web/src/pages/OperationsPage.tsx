@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Add, DeleteOutline, NetworkCheck, NotificationsActive, QrCode2, Refresh, Send } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNotify } from 'react-admin';
+import { useNotify, usePermissions } from 'react-admin';
 import { apiRequest } from '../utils/apiClient';
 
 type Target = { id: string; name: string; kind: string; address: string; probe_type: string; port: number; interval_seconds: number; timeout_milliseconds: number; failure_threshold: number; enabled: boolean; last_status: string; last_latency_milliseconds: number; last_packet_loss_percent: number; last_checked_at?: string; last_error?: string; snmp_secret_configured?: boolean };
@@ -65,6 +65,8 @@ const OperationsPage: React.FC = () => {
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const queryClient = useQueryClient();
   const notify = useNotify();
+  const { permissions = [] } = usePermissions();
+  const canControlWhatsApp = permissions.includes('platform_admin');
   const targetsQuery = useQuery({ queryKey: ['network', 'monitor-targets'], queryFn: () => apiRequest<Target[]>('/network/monitor-targets?perPage=100') });
   const incidentsQuery = useQuery({ queryKey: ['network', 'monitor-incidents'], queryFn: () => apiRequest<Array<Record<string, unknown>>>('/network/monitor-incidents?perPage=20') });
   const samplesQuery = useQuery({ queryKey: ['network', 'samples', selectedTarget], queryFn: () => apiRequest<Sample[]>(`/network/monitor-targets/${selectedTarget}/samples?perPage=12`), enabled: Boolean(selectedTarget) });
@@ -174,10 +176,11 @@ const OperationsPage: React.FC = () => {
         <Button variant="contained" onClick={saveNotify} disabled={mutation.isPending}>Save settings</Button>
       </CardContent></Card>
       <Card variant="outlined"><CardContent><Stack direction="row" spacing={1} alignItems="center"><QrCode2 color="primary"/><Typography variant="h6">Device pairing</Typography><Chip size="small" label={settings?.whatsapp.state ?? 'loading'} color={settings?.whatsapp.logged_in ? 'success' : 'default'}/></Stack>
+        {!canControlWhatsApp && <Alert severity="info" sx={{ mt: 1 }}>WhatsApp device pairing is managed by the platform administrator. Tenant notification recipients and events remain configured here.</Alert>}
         {settings?.whatsapp.account && <Typography variant="body2" sx={{ mt: 1 }}>Linked account: {settings.whatsapp.account}</Typography>}
         {settings?.whatsapp.qr_image && <Box component="img" src={settings.whatsapp.qr_image} alt="WhatsApp pairing QR code" sx={{ display: 'block', width: 260, maxWidth: '100%', my: 2, bgcolor: 'white', p: 1, borderRadius: 1 }}/ >}
         {settings?.whatsapp.qr_expires && <Typography variant="caption">QR expires {new Date(settings.whatsapp.qr_expires).toLocaleTimeString()}</Typography>}
-        <Stack direction="row" spacing={1} sx={{ mt: 1 }}><Button variant="outlined" startIcon={<QrCode2/>} disabled={!enabled || !riskAck || mutation.isPending} onClick={() => mutation.mutate({ path: '/system/notifications/whatsapp/pair', method: 'POST' })}>Start pairing</Button><Button color="error" onClick={() => mutation.mutate({ path: '/system/notifications/whatsapp/disconnect', method: 'POST' })}>Unlink device</Button><Button startIcon={<Send/>} disabled={!selectedRecipient} onClick={() => mutation.mutate({ path: '/system/notifications/whatsapp/test', method: 'POST', body: { recipient: selectedRecipient } })}>Send test</Button></Stack>
+        <Stack direction="row" spacing={1} sx={{ mt: 1 }}><Button variant="outlined" startIcon={<QrCode2/>} disabled={!canControlWhatsApp || !enabled || !riskAck || mutation.isPending} onClick={() => mutation.mutate({ path: '/system/notifications/whatsapp/pair', method: 'POST' })}>Start pairing</Button><Button color="error" disabled={!canControlWhatsApp || mutation.isPending} onClick={() => mutation.mutate({ path: '/system/notifications/whatsapp/disconnect', method: 'POST' })}>Unlink device</Button><Button startIcon={<Send/>} disabled={!selectedRecipient} onClick={() => mutation.mutate({ path: '/system/notifications/whatsapp/test', method: 'POST', body: { recipient: selectedRecipient } })}>Send test</Button></Stack>
         {settings?.recipients?.length ? <TextField select size="small" sx={{ mt: 2, minWidth: 260 }} label="Test recipient" value={selectedRecipient} onChange={e => setSelectedRecipient(e.target.value)}>{settings.recipients.map(number => <MenuItem key={number} value={number}>{number}</MenuItem>)}</TextField> : <Alert severity="info" sx={{ mt: 2 }}>Save at least one allowlisted operator number before pairing.</Alert>}
       </CardContent></Card>
       <Card variant="outlined"><CardContent><Typography variant="h6" sx={{ mb: 1 }}>Recent delivery history</Typography>{outboxItems.length === 0 ? <Typography color="text.secondary">No alert deliveries yet.</Typography> : <Stack spacing={0.75}>{outboxItems.map(item => <Box key={item.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}><Chip size="small" label={item.status.toUpperCase()} color={item.status === 'sent' ? 'success' : item.status === 'failed' ? 'error' : 'default'}/><Typography variant="body2" sx={{ flex: '1 1 160px' }}>{item.event_type} → {item.recipient}</Typography><Typography variant="caption" color="text.secondary">{item.sent_at ? `Sent ${new Date(item.sent_at).toLocaleString()}` : `${item.attempts} attempts · ${new Date(item.created_at).toLocaleString()}`}</Typography>{item.last_error && <Typography variant="caption" color="error.main">{item.last_error}</Typography>}</Box>)}</Stack>}</CardContent></Card>
