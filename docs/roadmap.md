@@ -9,7 +9,7 @@ This is the canonical planning surface and task source: milestone status, guardr
 1. Milestones use `M<number>` IDs and map to one or more `TR-F` feature IDs.
 2. Each milestone is split into MVP subtasks that are independently deliverable, reversible, and verifiable.
 3. Status flows as `Planned -> In progress -> Delivered`; delivery means merged to `main` with passing CI.
-4. Do not schedule non-goals from `TR-N001` through `TR-N003`, `TR-N005`, or `TR-N006`: generic payment/orders/finance, CRM/ticketing/customer portal, general observability, protocol-stack/framework rewrites, or hosted captive portal products. The narrowly bounded private fleet-status service in `TR-F034` is the only exception to `TR-N003`; tenant work is allowed only within `TR-F033`, and `TR-N004` prohibits unbounded expansion beyond that scope.
+4. Do not schedule non-goals from `TR-N001` through `TR-N003`, `TR-N005`, or `TR-N006`: generic payment/orders/finance, CRM/ticketing/customer portal, general observability, protocol-stack/framework rewrites, or hosted captive portal products. Tenant work is allowed only within `TR-F033`; `TR-N004` prohibits unbounded expansion beyond that scope.
 5. Agent output must go through pull request, CI, and human review. Direct pushes to `main` are forbidden.
 6. After each delivered subtask, use `.agents/skills/groom-roadmap/SKILL.md` to update status, split or reorder work, and keep the roadmap consistent with the checklist.
 7. Delivered subtasks should keep only outcome, evidence, residual risk, and traceable entry points. Long implementation narratives belong in PRs, commits, or changelogs.
@@ -45,7 +45,6 @@ This is the canonical planning surface and task source: milestone status, guardr
 | M15 | Multi-tenant ISP and RT/RW Net isolation | TR-F033 | P1 | Delivered |
 | M16 | Automated dev-to-main versioning, changelog, and releases | TR-F022 | P2 | Delivered |
 | M17 | Safe VPS installation and first-run onboarding | TR-F020 / TR-F016 | P1 | Delivered |
-| M18 | Developer-owned MWX-Control peer network | TR-F034 | P2 | In progress (M18.1 status-only gossip and owner inventory) |
 
 ## Cross-Cutting Baseline
 
@@ -85,7 +84,6 @@ Agent-facing unchecked tasks:
 - [x] M17.1 Add non-mutating installer preflight, supported-host checks, Docker daemon recovery, and safe generated configuration for first installs while preserving existing secrets/data. Delivered in PR #20: `--check` is read-only; guided/automatic setup validates domain/timezone, protects `.env`, and preserves existing configuration and volumes.
 - [x] M17.2 Serialize install/update/restore operations, resume only installer-marked incomplete first installs, and verify PostgreSQL, app, and Caddy readiness before declaring success. Delivered in PR #20: shared deployment lock is acquired before host mutation; interrupted installs back up existing data before resuming; readiness checks cover database, app HTTP, and local Caddy routing.
 - [x] M17.3 Align English/Indonesian VPS quickstarts with the guided setup, safe automation flags, failure recovery, and first-login/network onboarding. Delivered in PR #20: README and EN/ID quickstarts document preflight, guided and unattended setup, recovery, firewall ownership, and ISP first-use sequence.
-- [ ] M18.1 Deliver the first private MWX-Control vertical slice: standalone Go service, encrypted WAN gossip for bounded node/health metadata, stable node identity, owner-token read-only inventory, isolated Docker deployment, and EN/ID trust-boundary documentation. No remote commands, customer data, or configuration writes.
 - [x] M17.4 Make the default VPS install a no-prompt, one-command bootstrap with detected hostname/timezone, secure localhost/SSH-tunnel fallback, and concise EN/ID quickstarts; keep preflight and interactive setup optional. Delivered in PR #22: the direct install command handles prerequisites and first run automatically; interactive mode and read-only preflight remain optional.
 - [x] M5.1 Inventory pending vendor VSA gaps and dictionary differences. Delivered: `docs/vendor-vsa-gap-baseline.md` refreshed to HEAD `9882f79e` — registered parsers `default + huawei + h3c + zte + radback + alcatel + aruba + juniper`, response enhancers `default + huawei + h3c + zte + mikrotik + ikuai + aruba`, a corrected gap matrix, a delta-since-#433 section, and the next-batch backlog. (The first baseline #433 was superseded once M5.2/M5.3 landed; `#470` had re-opened this checkbox.)
 - [x] M5.2 Add request-side vendor parsers for genuine MAC/VLAN request VSAs. Delivered: `radback` (#449), `alcatel` (#450), `aruba` (#451), and `juniper` (#453) request parsers, plus the `vendors.CodeAlcatel` / `CodeAruba` constants.

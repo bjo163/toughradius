@@ -54,7 +54,3 @@ docs-site/book/
 # Local verification databases contain runtime data and must stay out of Git.
 /bin/automatic-verify-db/
 /bin/verify-work/
-
-# MWX-Control deployment credentials
-/services/mwx-control/.env
-/services/mwx-control/mwx-control.exe
