@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.6.0 — 2026-10-05
+
+Changes since v0.5.0:
+
+### Features
+
+- add SSH owner CLI for VPS operations
+
 ## v0.5.0 — 2026-10-05
 
 Changes since v0.4.1:
