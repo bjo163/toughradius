@@ -117,7 +117,7 @@ if [[ ! -f "${APP_DIR}/.env" ]]; then
   echo "MWX-ISP admin password (store securely now): ${admin_password}"
 fi
 chmod 0600 "${APP_DIR}/.env"
-if grep -q 'CHANGE_ME' "${APP_DIR}/.env"; then echo "Replace all CHANGE_ME values in ${APP_DIR}/.env first." >&2; exit 1; fi
+if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=[^#]*CHANGE_ME' "${APP_DIR}/.env"; then echo "Replace all CHANGE_ME values in ${APP_DIR}/.env first." >&2; exit 1; fi
 
 cd "${APP_DIR}"
 docker compose config --quiet
