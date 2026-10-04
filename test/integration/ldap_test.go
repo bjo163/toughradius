@@ -46,7 +46,7 @@ func TestLDAPIntegrationAcceptance(t *testing.T) {
 
 	const secret = "it-ldap-secret"
 	suffix := uniqueSuffix()
-	nasIP := net.ParseIP("10.204.0.1")
+	nasIP := net.ParseIP(uniqueNASIP())
 	nasID := "it-ldap-nas-" + suffix
 
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -256,7 +256,7 @@ func exchangeCHAP(t *testing.T, serverAddr, secret, username, nasID, nasIP strin
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP.String())
 	require.NoError(t, err)
 	return resp
 }

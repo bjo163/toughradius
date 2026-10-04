@@ -9,10 +9,16 @@ web/dist/*
 !web/dist/.gitkeep
 web/.vite/
 __debug_bin
+coverage.out
 .DS_Store
 /.fleet/
 /testdatas/
+/config.yml
+/config.yaml
+/mwx-isp.yml
+/mwx-isp.yaml
 /toughradius.yml
+/toughradius.yaml
 /.toughradius/
 /.env
 /tmp/
@@ -39,3 +45,7 @@ pkg/tls/my.crt
 pkg/tls/my.key
 # mdBook handbook build output (docs-site)
 docs-site/book/
+
+# Local verification databases contain runtime data and must stay out of Git.
+/bin/automatic-verify-db/
+/bin/verify-work/

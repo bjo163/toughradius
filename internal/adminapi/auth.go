@@ -109,7 +109,7 @@ func issueToken(c echo.Context, op domain.SysOpr) (string, error) {
 		"exp":      now.Add(tokenTTL).Unix(),
 		"iat":      now.Unix(),
 		"nbf":      now.Add(-1 * time.Minute).Unix(),
-		"iss":      "toughradius",
+		"iss":      "mwx-isp",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(GetAppContext(c).Config().Web.Secret))

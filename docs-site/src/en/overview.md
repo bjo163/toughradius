@@ -1,6 +1,6 @@
 # Overview
 
-> 中文版本：[概述](../zh/overview.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/overview.md)
 
 MWX-ISP is a powerful, open-source RADIUS server written in Go, designed for
 ISPs, enterprise networks, and carriers. It implements the standard RADIUS

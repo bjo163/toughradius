@@ -27,6 +27,11 @@ if [[ -n "${old_image_id}" ]]; then
   docker image tag "${old_image_id}" mwx-isp:rollback
 fi
 
+if [[ -x "${APP_DIR}/scripts/backup-db.sh" ]]; then
+  echo "--> Creating pre-update database backup..."
+  "${APP_DIR}/scripts/backup-db.sh" || echo "Warning: Pre-update database backup failed, continuing update with caution..." >&2
+fi
+
 git reset --hard "${new_revision}"
 if ! docker compose config --quiet || ! docker compose pull db; then
   echo "Compose validation or database image pull failed; restoring the previous source revision." >&2

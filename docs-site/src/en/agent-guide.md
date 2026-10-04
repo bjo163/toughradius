@@ -1,6 +1,6 @@
 # Agent Development Guide
 
-> 中文版本：[Agent 开发指南](../zh/agent-guide.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/agent-guide.md)
 
 This chapter is a **contributor-oriented** digest of how MWX-ISP is built
 with AI coding agents. It summarizes the working rules, quality gates, and the
@@ -19,7 +19,7 @@ unrelated product directions.
 - The canonical scope baseline is
   [`docs/feature-checklist.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md)
   (with an English copy at
-  [`docs/feature-checklist.en.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.en.md)).
+  [`docs/feature-checklist.md`](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md)).
 - Every task, issue, PR, test, and review note maps to a feature ID such as
   `TR-F004`.
 - If a request does not map to an existing ID, the checklist is updated first

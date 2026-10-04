@@ -5,6 +5,8 @@ import "time"
 const (
 	// CustomerActive marks a customer as active.
 	CustomerActive = "active"
+	// CustomerPending marks a customer registration awaiting installation/activation.
+	CustomerPending = "pending"
 	// CustomerInactive marks a customer as inactive.
 	CustomerInactive = "inactive"
 	// CustomerSuspended marks a customer as suspended.
@@ -56,6 +58,11 @@ type Customer struct {
 	City       string    `json:"city" gorm:"size:100"`
 	Province   string    `json:"province" gorm:"size:100"`
 	IdentityNo string    `json:"identity_no" gorm:"size:100"`
+	ODPID      int64     `json:"odp_id,string" gorm:"index"`
+	ODPCode    string    `json:"odp_code" gorm:"size:32"`
+	ODPPort    int       `json:"odp_port"`
+	Latitude   float64   `json:"latitude"`
+	Longitude  float64   `json:"longitude"`
 	Status     string    `json:"status" gorm:"index;size:24;not null;default:active"`
 	Notes      string    `json:"notes" gorm:"size:1000"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -75,6 +82,9 @@ type InternetPackage struct {
 	RadiusProfileID int64     `json:"radius_profile_id,string" gorm:"index;not null"`
 	Description     string    `json:"description" gorm:"size:1000"`
 	BillingCycle    string    `json:"billing_cycle" gorm:"size:20;not null;default:monthly"`
+	FupLimitGB      int64     `json:"fup_limit_gb" gorm:"not null;default:0"`
+	FupRateDown     int       `json:"fup_rate_down" gorm:"not null;default:0"`
+	FupRateUp       int       `json:"fup_rate_up" gorm:"not null;default:0"`
 	Status          string    `json:"status" gorm:"index;size:24;not null;default:active"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
@@ -95,6 +105,7 @@ type Subscription struct {
 	StartDate        time.Time `json:"start_date" gorm:"not null"`
 	BillingDay       int       `json:"billing_day" gorm:"not null;default:1"`
 	GraceDays        int       `json:"grace_days" gorm:"not null;default:3"`
+	FupTriggered     bool      `json:"fup_triggered" gorm:"default:false"`
 	SuspensionReason string    `json:"suspension_reason" gorm:"size:64"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`

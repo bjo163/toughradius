@@ -1,10 +1,8 @@
 # MWX-ISP Development Roadmap
 
-Chinese version: [docs/roadmap.zh.md](roadmap.zh.md)
+This roadmap is the long-term development plan for MWX-ISP. It is bound to the English feature checklist in [`docs/feature-checklist.md`](feature-checklist.md): every milestone must reference at least one `TR-F` feature ID, and scope that cannot be mapped to the checklist must update the checklist before it is scheduled here.
 
-This roadmap is the long-term development plan for MWX-ISP. It is bound to the feature checklist in [`docs/feature-checklist.en.md`](feature-checklist.en.md): every milestone must reference at least one `TR-F` feature ID, and scope that cannot be mapped to the checklist must update the checklist before it is scheduled here.
-
-The Chinese roadmap keeps the detailed agent delivery log. This English roadmap is the default planning surface and task source: milestone status, guardrails, current execution order, and the next deliverable work. When roadmap scope or status changes, update both files in the same PR.
+This is the canonical planning surface and task source: milestone status, guardrails, current execution order, and the next deliverable work.
 
 ## Maintenance Rules
 

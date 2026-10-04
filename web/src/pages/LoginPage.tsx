@@ -63,11 +63,11 @@ export const LoginPage = () => {
         backgroundSize: '8px 8px',
       }}
     >
-      <Card sx={{ width: 'min(100% - 32px, 460px)', borderRadius: 1, boxShadow: '4px 4px 0 ' + theme.palette.text.primary, border: '2px solid', borderColor: 'text.primary', bgcolor: 'background.paper', color: 'text.primary' }}>
+      <Card sx={{ width: 'min(100% - 32px, 460px)', color: 'text.primary' }}>
         <CardContent sx={{ p: 4 }}>
           <Box sx={{ mb: 4, textAlign: 'center' }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <Box sx={{ transform: 'rotate(-2deg)', '& > div': { width: 54, height: 54, fontSize: 21, boxShadow: '3px 3px 0 ' + theme.palette.text.primary } }}><BrandMark size={54} /></Box>
+              <Box sx={{ '& > div': { width: 54, height: 54, fontSize: 21, boxShadow: '3px 3px 0 ' + theme.palette.text.primary } }}><BrandMark size={54} /></Box>
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: '"Arial Narrow", "Franklin Gothic Medium", Impact, sans-serif', textTransform: 'uppercase', color: 'text.primary', mb: 1, letterSpacing: '0.06em' }}>
               {branding.product_name}

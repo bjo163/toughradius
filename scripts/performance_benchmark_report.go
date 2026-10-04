@@ -243,31 +243,6 @@ func renderReport(date string, run benchmarkRun, previous previousReport) string
 	fmt.Fprintln(&b)
 	writeBenchmarkTable(&b, run.Benchmarks, comparisons)
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "## 中文")
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "**结论：** 已记录")
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "本报告只提供性能可见性。GitHub 托管 runner 存在波动，因此当前工作流记录趋势信号，但不会因为耗时变化直接失败。")
-	if !contextComparable {
-		fmt.Fprintln(&b)
-		fmt.Fprintln(&b, "上一份报告的 runner 上下文不同，因此 `Delta ns/op` 标记为 `n/a (context changed)`，避免把跨 runner 耗时差异呈现为直接趋势。")
-	}
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "### 运行上下文")
-	fmt.Fprintln(&b)
-	writeContextTable(&b, run)
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "### 摘要")
-	fmt.Fprintln(&b)
-	writeSummaryTableCN(&b, run)
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "### 最慢 Benchmark")
-	fmt.Fprintln(&b)
-	writeBenchmarkTable(&b, topByNs(run.Benchmarks, 10), comparisons)
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "### 最高内存分配 Benchmark")
-	fmt.Fprintln(&b)
-	writeBenchmarkTable(&b, topByBytes(run.Benchmarks, 10), comparisons)
 	return b.String()
 }
 
@@ -300,18 +275,6 @@ func writeSummaryTable(b *strings.Builder, run benchmarkRun) {
 	fmt.Fprintf(b, "| Packages | %d |\n", packages)
 	fmt.Fprintf(b, "| Slowest | %s |\n", escapeTable(formatBenchmarkRef(slowest)))
 	fmt.Fprintf(b, "| Highest B/op | %s |\n", escapeTable(formatBenchmarkRef(highestAlloc)))
-}
-
-func writeSummaryTableCN(b *strings.Builder, run benchmarkRun) {
-	packages := packageCount(run.Benchmarks)
-	slowest := firstBenchmark(topByNs(run.Benchmarks, 1))
-	highestAlloc := firstBenchmark(topByBytes(run.Benchmarks, 1))
-	fmt.Fprintln(b, "| 指标 | 值 |")
-	fmt.Fprintln(b, "| --- | ---: |")
-	fmt.Fprintf(b, "| Benchmark 数量 | %d |\n", len(run.Benchmarks))
-	fmt.Fprintf(b, "| 包数量 | %d |\n", packages)
-	fmt.Fprintf(b, "| 最慢项 | %s |\n", escapeTable(formatBenchmarkRef(slowest)))
-	fmt.Fprintf(b, "| 最高 B/op | %s |\n", escapeTable(formatBenchmarkRef(highestAlloc)))
 }
 
 func writeBenchmarkTable(b *strings.Builder, benchmarks []benchmarkResult, comparisons map[string]comparison) {
@@ -488,17 +451,17 @@ func pruneReports(dir string, retention int) ([]string, error) {
 
 func writeDocsPages(src string, reports []string, run benchmarkRun) error {
 	en := filepath.Join(src, "en", "performance-benchmark-reports.md")
-	zh := filepath.Join(src, "zh", "performance-benchmark-reports.md")
+	id := filepath.Join(src, "id", "performance-benchmark-reports.md")
 	if err := os.MkdirAll(filepath.Dir(en), 0o755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(zh), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(id), 0o755); err != nil {
 		return err
 	}
 	if err := os.WriteFile(en, []byte(renderDocsEN(reports, run)), 0o644); err != nil {
 		return err
 	}
-	return os.WriteFile(zh, []byte(renderDocsZH(reports, run)), 0o644)
+	return os.WriteFile(id, []byte(renderDocsID(reports, run)), 0o644)
 }
 
 func renderDocsEN(reports []string, run benchmarkRun) string {
@@ -518,18 +481,20 @@ func renderDocsEN(reports []string, run benchmarkRun) string {
 	return b.String()
 }
 
-func renderDocsZH(reports []string, run benchmarkRun) string {
+func renderDocsID(reports []string, run benchmarkRun) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# 性能基准测试报告")
+	fmt.Fprintln(&b, "# Laporan Benchmark Performa")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "每周 benchmark 任务基于现有 Go `Benchmark*` 函数记录 MWX-ISP 性能信号。报告仅用于观察趋势，不会因为 GitHub 托管 runner 的耗时波动直接失败。")
+	fmt.Fprintln(&b, "> English version: [Performance Benchmark Reports](../en/performance-benchmark-reports.md)")
 	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "**最近结论：** %s\n\n", chineseVerdict(run.Verdict))
-	fmt.Fprintln(&b, "## 最近摘要")
+	fmt.Fprintln(&b, "Benchmark mingguan merekam sinyal performa dari fungsi Go `Benchmark*`. Hasil bersifat informatif dan perubahan durasi pada runner GitHub tidak otomatis menggagalkan workflow.")
 	fmt.Fprintln(&b)
-	writeSummaryTableCN(&b, run)
+	fmt.Fprintf(&b, "**Status terbaru:** %s\n\n", strings.ToUpper(run.Verdict))
+	fmt.Fprintln(&b, "## Ringkasan terbaru")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "## 保留报告")
+	writeSummaryTable(&b, run)
+	fmt.Fprintln(&b)
+	fmt.Fprintln(&b, "## Laporan sebelumnya")
 	fmt.Fprintln(&b)
 	writeReportLinks(&b, reports)
 	return b.String()
@@ -630,15 +595,6 @@ func workflowURL() string {
 		return ""
 	}
 	return server + "/" + repo + "/actions/runs/" + runID
-}
-
-func chineseVerdict(verdict string) string {
-	switch verdict {
-	case "recorded":
-		return "已记录"
-	default:
-		return verdict
-	}
 }
 
 func markdownLink(url string) string {

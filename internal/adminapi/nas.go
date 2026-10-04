@@ -8,7 +8,15 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/webserver"
+	"gorm.io/gorm"
 )
+
+type nasViewDTO struct {
+	domain.NetNas
+	OnlineSessions int64  `json:"online_sessions"`
+	HealthStatus   string `json:"health_status"`
+	LatencyMs      int64  `json:"latency_ms"`
+}
 
 // nasPayload represents the NAS device request structure
 type nasPayload struct {
@@ -122,10 +130,51 @@ func ListNAS(c echo.Context) error {
 	offset := (page - 1) * perPage
 	query.Order(sortField + " " + order).Limit(perPage).Offset(offset).Find(&devices)
 
+	dtos := make([]nasViewDTO, len(devices))
+	for i, dev := range devices {
+		dtos[i] = enrichNAS(db, dev)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"data":  devices,
+		"data":  dtos,
 		"total": total,
 	})
+}
+
+func enrichNAS(db *gorm.DB, nas domain.NetNas) nasViewDTO {
+	dto := nasViewDTO{
+		NetNas:       nas,
+		HealthStatus: "unmonitored",
+	}
+
+	// Count active sessions on this NAS
+	var count int64
+	q := db.Model(&domain.RadiusOnline{})
+	if nas.Identifier != "" && nas.Ipaddr != "" {
+		q = q.Where("nas_addr = ? OR nas_paddr = ? OR nas_id = ?", nas.Ipaddr, nas.Ipaddr, nas.Identifier)
+	} else if nas.Ipaddr != "" {
+		q = q.Where("nas_addr = ? OR nas_paddr = ?", nas.Ipaddr, nas.Ipaddr)
+	} else if nas.Identifier != "" {
+		q = q.Where("nas_id = ?", nas.Identifier)
+	}
+	if err := q.Count(&count).Error; err == nil {
+		dto.OnlineSessions = count
+	}
+
+	// Query health from network_monitor_targets if registered
+	var target domain.NetMonitorTarget
+	if err := db.Where("address = ?", nas.Ipaddr).First(&target).Error; err == nil {
+		if !target.Enabled {
+			dto.HealthStatus = "paused"
+		} else if target.LastStatus != "" {
+			dto.HealthStatus = target.LastStatus
+		} else {
+			dto.HealthStatus = "unknown"
+		}
+		dto.LatencyMs = target.LastLatencyMilliseconds
+	}
+
+	return dto
 }
 
 // GetNAS handles GET /api/v1/network/nas/:id, returning the single NAS device
@@ -149,7 +198,8 @@ func GetNAS(c echo.Context) error {
 		return fail(c, http.StatusNotFound, "NOT_FOUND", "NAS device not found", nil)
 	}
 
-	return ok(c, device)
+	dto := enrichNAS(GetDB(c), device)
+	return ok(c, dto)
 }
 
 // CreateNAS handles POST /api/v1/network/nas, creating a NAS device from the

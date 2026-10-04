@@ -77,7 +77,8 @@ var JwtSkipPrefix = []string{
 	"/realip",
 	apiBasePath + "/auth/login",
 	apiBasePath + "/auth/refresh",
-	apiBasePath + "/public/branding",
+	apiBasePath + "/public",
+	apiBasePath + "/portal",
 }
 
 var server *AdminServer
@@ -189,9 +190,31 @@ func NewAdminServer(appCtx app.AppContext) *AdminServer {
 	s.root.Logger.SetLevel(common.If(appconfig.System.Debug, elog.DEBUG, elog.INFO).(elog.Lvl)) //nolint:errcheck // type assertion is safe
 	s.root.Debug = appconfig.System.Debug
 
-	// Redirect the root path to /admin
+	// Redirect the root path to /admin#/home for enterprise landing page
 	s.root.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusMovedPermanently, "/admin")
+		return c.Redirect(http.StatusMovedPermanently, "/admin#/home")
+	})
+
+	s.root.GET("/home", func(c echo.Context) error {
+		return c.Redirect(http.StatusFound, "/admin#/home")
+	})
+
+	// Redirect /portal requests to the React Customer Portal SPA route
+	s.root.GET("/portal", func(c echo.Context) error {
+		query := c.QueryString()
+		target := "/admin#/portal"
+		if query != "" {
+			target += "?" + query
+		}
+		return c.Redirect(http.StatusFound, target)
+	})
+	s.root.GET("/portal/*", func(c echo.Context) error {
+		query := c.QueryString()
+		target := "/admin#/portal"
+		if query != "" {
+			target += "?" + query
+		}
+		return c.Redirect(http.StatusFound, target)
 	})
 
 	s.root.GET("/ready", func(c echo.Context) error {

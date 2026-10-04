@@ -147,7 +147,7 @@ func backupSystem(c echo.Context) error {
 		return fail(c, http.StatusInternalServerError, "ENCODE_ERROR", "Failed to encode backup", err.Error())
 	}
 
-	filename := fmt.Sprintf("toughradius-backup-%s.json", backup.CreatedAt.Format("20060102-150405"))
+	filename := fmt.Sprintf("mwx-isp-backup-%s.json", backup.CreatedAt.Format("20060102-150405"))
 
 	// Best-effort: persist a copy of the backup to the backup directory.
 	if cfg := GetAppContext(c).Config(); cfg != nil {

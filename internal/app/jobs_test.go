@@ -129,6 +129,6 @@ func TestInitJobRegistersCleanup(t *testing.T) {
 	a.initJob()
 	defer a.sched.Stop()
 
-	require.Len(t, a.sched.Entries(), 4,
-		"expected monitor + operation-log cleanup + expire-data cleanup + billing cron entries")
+	require.Len(t, a.sched.Entries(), 5,
+		"expected monitor + operation-log cleanup + expire-data cleanup + billing + FUP cron entries")
 }

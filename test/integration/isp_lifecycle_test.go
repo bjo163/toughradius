@@ -76,7 +76,7 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	assert.Equal(t, "enabled", linkedUser.Status)
 	assert.Equal(t, profileID, linkedUser.ProfileId)
 
-	const nasIP = "10.200.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-isp-nas-" + suffix
 	secret := "it-isp-secret-" + suffix
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -92,13 +92,13 @@ func TestISPBillingLifecycleThroughRadius(t *testing.T) {
 	// NAS would create after Access-Accept, then close it cleanly before billing.
 	sessionID := "it-isp-session-" + suffix
 	acctStart := accountingRequestISP(t, rfc2866.AcctStatusType_Value_Start, secret, username, nasID, nasIP, sessionID)
-	acctResp, err := radius.Exchange(context.Background(), acctStart, acctAddr)
+	acctResp, err := exchangeFromNAS(context.Background(), acctStart, acctAddr, nasIP)
 	require.NoError(t, err)
 	require.Equal(t, radius.CodeAccountingResponse, acctResp.Code)
 	online := waitForOnline(t, sessionID)
 	require.Equal(t, username, online.Username)
 	acctStop := accountingRequestISP(t, rfc2866.AcctStatusType_Value_Stop, secret, username, nasID, nasIP, sessionID)
-	acctResp, err = radius.Exchange(context.Background(), acctStop, acctAddr)
+	acctResp, err = exchangeFromNAS(context.Background(), acctStop, acctAddr, nasIP)
 	require.NoError(t, err)
 	require.Equal(t, radius.CodeAccountingResponse, acctResp.Code)
 	accounting := waitForAccountingStopISP(t, sessionID)
@@ -184,7 +184,7 @@ func exchangeISP(t *testing.T, serverAddr, secret, username, password, nasID, na
 	require.NoError(t, rfc2865.NASIPAddress_Set(packet, net.ParseIP(nasIP)))
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }

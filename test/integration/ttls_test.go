@@ -64,7 +64,7 @@ const ttlsChallengeLabel = "ttls challenge"
 func TestTTLSEndToEnd(t *testing.T) {
 	const secret = "it-ttls-secret"
 	suffix := uniqueSuffix()
-	nasIP := net.ParseIP("10.203.0.1")
+	nasIP := net.ParseIP(uniqueNASIP())
 	nasID := "it-ttls-nas-" + suffix
 
 	nas := &domain.NetNas{
@@ -483,7 +483,7 @@ func (s *ttlsSupplicant) newAccessRequest() *radius.Packet {
 func (s *ttlsSupplicant) exchangeRaw(packet *radius.Packet) (*radius.Packet, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return radius.Exchange(ctx, packet, s.serverAddr)
+	return exchangeFromNAS(ctx, packet, s.serverAddr, s.nasIP.String())
 }
 
 // startClient launches the crypto/tls client handshake bound to in-memory duplex

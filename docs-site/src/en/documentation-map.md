@@ -1,6 +1,6 @@
 # Documentation Map
 
-> 中文版本：[文档地图](../zh/documentation-map.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/documentation-map.md)
 
 This handbook is the user-facing guide to MWX-ISP. The first table lists its
 chapters; the second links to contributor and project documents maintained in
@@ -31,8 +31,10 @@ the repository, so readers can reach both from one place.
 | README              | Project introduction, features, and quick start       | [README.md](https://github.com/bjo163/mwx-isp/blob/main/README.md) |
 | Agent guide         | AI-agent development guide and working rules           | [Agent Development Guide](./agent-guide.md) (handbook digest) · [AGENT.md](https://github.com/bjo163/mwx-isp/blob/main/AGENT.md) (canonical) |
 | Security policy     | Security advisories and update guidance                | [Security Policy](./security-policy.md) (canonical) · [SECURITY.md](https://github.com/bjo163/mwx-isp/blob/main/SECURITY.md) (pointer) |
-| Feature checklist   | Feature scope baseline (`TR-F` IDs)                    | [docs/feature-checklist.md](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md) · [English](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.en.md) |
+| Feature checklist   | Feature scope baseline (`TR-F` IDs)                    | [docs/feature-checklist.md](https://github.com/bjo163/mwx-isp/blob/main/docs/feature-checklist.md) |
 | Roadmap             | Long-term roadmap and milestones                       | [docs/roadmap.md](https://github.com/bjo163/mwx-isp/blob/main/docs/roadmap.md) |
+| Product blueprint   | Current product scope, business rules, and architecture boundaries | [docs/MWX-ISP-blueprint.md](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-blueprint.md) |
+| Implementation todo | Original implementation checklist and completion record | [docs/MWX-ISP-todo.md](https://github.com/bjo163/mwx-isp/blob/main/docs/MWX-ISP-todo.md) |
 | RFC index           | Protocol standards index used by the project           | [Protocol & RFC Reference](./rfc-index.md) (canonical) · [docs/rfcs/README.md](https://github.com/bjo163/mwx-isp/blob/main/docs/rfcs/README.md) (raw catalog) |
 
 > **Migration plan.** The handbook now covers the README's user-facing content

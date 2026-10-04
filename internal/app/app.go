@@ -18,6 +18,7 @@ import (
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/networkmonitor"
 	"github.com/bjo163/mwx-isp/internal/notify"
+	"github.com/bjo163/mwx-isp/internal/syslogd"
 	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -39,6 +40,7 @@ type Application struct {
 	disconnectSession  func(context.Context, domain.RadiusOnline) error
 	networkMonitor     *networkmonitor.Monitor
 	notificationOutbox *notify.Dispatcher
+	syslogServer       *syslogd.Server
 	whatsAppMu         sync.Mutex
 	whatsAppManager    *notify.WhatsAppManager
 	whatsAppInitErr    error
@@ -53,6 +55,7 @@ var (
 	_ ConfigManagerProvider  = (*Application)(nil)
 	_ AppContext             = (*Application)(nil)
 	_ NetworkMonitorProvider = (*Application)(nil)
+	_ SyslogProvider         = (*Application)(nil)
 	_ NotificationProvider   = (*Application)(nil)
 )
 
@@ -116,7 +119,19 @@ func (a *Application) initializeOperationalServices(cfg *config.AppConfig) {
 			zap.L().Warn("enqueue network alert failed", zap.Error(err))
 		}
 	})
+
+	syslogAddr := os.Getenv("TOUGHRADIUS_SYSLOG_ADDR")
+	if syslogAddr == "" {
+		syslogAddr = ":1514"
+	}
+	a.syslogServer = syslogd.NewServer(a.gormDB, syslogAddr)
+	if err := a.syslogServer.Start(); err != nil {
+		zap.L().Warn("start syslog udp server failed", zap.String("addr", syslogAddr), zap.Error(err))
+	}
 }
+
+// SyslogServer returns the embedded UDP syslog collector server.
+func (a *Application) SyslogServer() *syslogd.Server { return a.syslogServer }
 
 // NetworkMonitor returns the registered-target health monitor.
 func (a *Application) NetworkMonitor() *networkmonitor.Monitor { return a.networkMonitor }
@@ -510,6 +525,9 @@ func (a *Application) Release() {
 
 	if a.profileCache != nil {
 		a.profileCache.Stop()
+	}
+	if a.syslogServer != nil {
+		a.syslogServer.Stop()
 	}
 	a.whatsAppMu.Lock()
 	if a.whatsAppManager != nil {

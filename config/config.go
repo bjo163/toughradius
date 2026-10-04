@@ -5,8 +5,8 @@
 // from multiple locations with the following priority:
 //
 //  1. Custom file specified via -c flag
-//  2. ./toughradius.yml in current directory
-//  3. /etc/toughradius.yml system-wide config
+//  2. ./mwx-isp.yml in current directory (then the legacy toughradius.yml)
+//  3. /etc/mwx-isp.yml system-wide config (then the legacy /etc/toughradius.yml)
 //  4. DefaultAppConfig embedded defaults
 //
 // Environment variables override YAML settings using the TOUGHRADIUS_ prefix.
@@ -552,10 +552,16 @@ func boolPtr(v bool) *bool {
 func LoadConfig(cfile string) *AppConfig {
 	// In development environment, first check if custom config file exists in current directory
 	if cfile == "" {
-		cfile = "toughradius.yml"
+		cfile = "mwx-isp.yml"
+		if !common.FileExists(cfile) {
+			cfile = "toughradius.yml"
+		}
 	}
 	if !common.FileExists(cfile) {
-		cfile = "/etc/toughradius.yml"
+		cfile = "/etc/mwx-isp.yml"
+		if !common.FileExists(cfile) {
+			cfile = "/etc/toughradius.yml"
+		}
 	}
 	cfg := new(AppConfig)
 	if common.FileExists(cfile) {

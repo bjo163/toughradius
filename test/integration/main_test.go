@@ -13,12 +13,14 @@
 package integration
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -35,6 +37,7 @@ import (
 	"github.com/bjo163/mwx-isp/internal/radiusd/vendors"
 	"github.com/bjo163/mwx-isp/internal/webserver"
 	"github.com/bjo163/mwx-isp/pkg/common"
+	"layeh.com/radius"
 )
 
 // harness holds the shared state for the whole integration run: one freshly
@@ -53,6 +56,19 @@ type harness struct {
 }
 
 var h *harness
+var integrationNASSequence atomic.Uint32
+
+// uniqueNASIP returns a distinct loopback address for each simulated NAS so
+// integration traffic can use the RFC-required source-IP client selection
+// without colliding with NAS records left by earlier tests.
+func uniqueNASIP() string {
+	return fmt.Sprintf("127.0.1.%d", integrationNASSequence.Add(1))
+}
+
+func exchangeFromNAS(ctx context.Context, packet *radius.Packet, addr, sourceIP string) (*radius.Packet, error) {
+	client := &radius.Client{Dialer: net.Dialer{LocalAddr: &net.UDPAddr{IP: net.ParseIP(sourceIP)}}}
+	return client.Exchange(ctx, packet, addr)
+}
 
 // pgEnv describes the PostgreSQL connection provided by the environment.
 type pgEnv struct {

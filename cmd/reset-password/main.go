@@ -2,7 +2,7 @@
  * MWX-ISP Admin Password Reset Tool
  *
  * Usage:
- *   go run . -c toughradius.yml -u admin -p newpassword
+ *   go run . -c mwx-isp.yml -u admin -p newpassword
  */
 
 package main
@@ -32,7 +32,7 @@ func main() {
 		password   string
 	)
 
-	flag.StringVar(&configFile, "c", "toughradius.yml", "Configuration file path")
+	flag.StringVar(&configFile, "c", "mwx-isp.yml", "Configuration file path")
 	flag.StringVar(&username, "u", "admin", "Username to reset")
 	flag.StringVar(&password, "p", "", "New password (required; must not be the historical default)")
 	flag.Parse()

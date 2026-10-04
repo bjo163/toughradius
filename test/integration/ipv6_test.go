@@ -43,7 +43,7 @@ import (
 func TestRadiusIPv6ProvisioningEndToEnd(t *testing.T) {
 	const secret = "it-ipv6-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.203.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-ipv6-nas-" + suffix
 
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -139,7 +139,7 @@ func TestRadiusIPv6ProvisioningEndToEnd(t *testing.T) {
 func TestRadiusIPv6PoolInheritanceEndToEnd(t *testing.T) {
 	const secret = "it-ipv6-inherit-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.203.0.2"
+	nasIP := uniqueNASIP()
 	nasID := "it-ipv6-inh-nas-" + suffix
 
 	require.NoError(t, h.appCtx.DB().Create(&domain.NetNas{
@@ -219,7 +219,7 @@ func acctStartIPv6(t *testing.T, serverAddr, secret, username, nasID, nasIP, ses
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }

@@ -21,7 +21,7 @@ import (
 func TestRadiusClassInAccessAccept(t *testing.T) {
 	const secret = "it-radius-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.200.0.21"
+	nasIP := uniqueNASIP()
 	nasID := "it-class-nas-" + suffix
 
 	nas := &domain.NetNas{

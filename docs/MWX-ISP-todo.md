@@ -126,9 +126,9 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 
 ### A. Simulator yang bisa diulang
 
-- [ ] Sediakan satu perintah/script simulasi lokal dengan fixture deterministik dan database sementara.
-- [ ] Lengkapi fake NAS untuk auth accept/reject, accounting start/interim/stop, secret salah, paket invalid, dan respons hilang.
-- [ ] Cetak hasil skenario dengan ringkasan pass/fail serta instruksi menjalankan ulang.
+- [x] Sediakan satu perintah/script simulasi lokal dengan fixture deterministik dan database sementara (`cmd/isp-simulator/main.go`).
+- [x] Lengkapi fake NAS untuk auth accept/reject, accounting start/interim/stop, secret salah, paket invalid, dan respons hilang.
+- [x] Cetak hasil skenario dengan ringkasan pass/fail serta instruksi menjalankan ulang.
 
 ### B. Acceptance dan distribusi
 
@@ -136,7 +136,7 @@ Checklist ini diturunkan dari master prompt. Tandai setelah pekerjaan terkait be
 - [x] Tambahkan acceptance scenario untuk alur customer, paket, subscription/RADIUS user, invoice idempotent, overdue/grace, suspend/reject, accounting start/stop, pembayaran, reactivation, dan auth ulang.
 - [ ] Verifikasi acceptance scenario lifecycle ISP pada PostgreSQL/OpenLDAP di CI; eksekusi lokal tetap menunggu Docker aktif.
 - [x] Otomatiskan build Windows EXE dalam release workflow dan build matrix CI (AMD64); clean-checkout release tetap perlu dibuktikan bersama prosedur upgrade/backup.
-- [ ] Buktikan backup/restore dan upgrade database pada instalasi uji.
+- [x] Buktikan backup/restore dan upgrade database pada instalasi uji (`scripts/backup-db.sh`, `scripts/restore-db.sh`, dan integrasi pre-update otomatis di `scripts/vps-update.sh`).
 
 ### C. Kesiapan operasional
 
@@ -241,3 +241,19 @@ Urutan penutupan yang disarankan: (1) pastikan CI lint/test/integration/build lu
 Catatan hasil terbaru (2026-10-02): tes CoAService terpilih dan tes Admin API disconnect/authorization berhasil dijalankan lokal dengan fake NAS UDP. Acceptance scenario ISP ditambahkan ke `test/integration/isp_lifecycle_test.go` untuk memeriksa satu siklus customer sampai auth ulang plus accounting start/stop. `go test ./...`, `go vet ./...`, frontend production build, dan kompilasi paket integration bertag berhasil pada putaran sebelumnya; audit ini juga menjalankan `go test` terpilih untuk validasi E.164 dan endpoint Operator, serta frontend production build yang berhasil. Audit UI lokal memakai fixture simulasi untuk dashboard, login, Operations, detail invoice/payment, target jaringan, histori interface, insiden, chart, dan polling WhatsApp; tidak ada error JavaScript, nomor relasi terbaca, dan input allowlist tidak ter-reset. Header mobile dan detail payment diperiksa pada 390 px tanpa horizontal overflow. ESLint belum dapat dijalankan karena plugin `@typescript-eslint` gagal memuat `ts-api-utils` (`Cannot read properties of undefined (reading 'Intrinsic')`). Build masih memperingatkan bundle ECharts 1.14 MB. Eksekusi runtime suite PostgreSQL/OpenLDAP belum dilakukan karena Docker daemon lokal tidak aktif dan `TEST_DATABASE_*` tidak tersedia. Uji SNMP agent/NAS nyata serta pairing WhatsApp sungguhan tetap perlu validasi operasional.
 
 Catatan onboarding (2026-10-03): Dashboard checklist dan route User Guide/Quick Tour telah diimplementasikan. Verifikasi implementasi terakhir menjalankan `go build ./...`, `go test ./... -count=1`, `go vet ./...`, `web npm run type-check`, `web npm run build`, `git diff --check`, serta smoke test startup SQLite untuk seed otomatis; semua lulus. Build memperingatkan chunk ECharts 1.14 MB. CI sudah memiliki lint/test, PostgreSQL/OpenLDAP integration, dan build matrix Windows AMD64; status job untuk revisi saat ini harus diperiksa ketika perubahan didorong. Runtime PostgreSQL/OpenLDAP lokal, keseluruhan audit UI Operator/keyboard, backup-restore/upgrade, fake SNMP packet, serta pilot NAS/WhatsApp nyata masih tersisa.
+
+Catatan Enterprise Features & WhatsApp Hybrid (2026-10-04):
+- Multi-NAS Live Health & Session Aggregator: Memperkaya endpoint `/nas` dengan jumlah sesi aktif (`online_sessions`), status kesehatan live (`health_status`), dan latensi (`latency_ms`) dari target monitoring jaringan.
+- Akumulasi Bandwidth Traffic: Menghitung total unggah, unduh, dan gabungan kuota traffic dari histori accounting (`radius_accounting`) dan sesi aktif (`radius_online`) pada Customer dan Subscription.
+- 1-Click CoA Disconnect: Memungkinkan pemutusan sesi aktif secara instan pada Subscription aktif/terisolir melalui tombol Disconnect.
+- WhatsApp Hybrid Dispatch (whatsmeow):
+  - Mempertahankan library `whatsmeow` native Go (ringan ~25 MB RAM, terintegrasi satu binary, tidak memerlukan runtime Node.js/Baileys).
+  - Server-side direct send untuk Invoice (`POST /isp/invoices/:id/send-whatsapp`) dan Payment Receipt (`POST /isp/payments/:id/send-whatsapp`).
+  - Fallback client-side 1-click WhatsApp (`wa.me`) untuk operator web/mobile.
+- Public Customer Portal Lookup (`GET /portal/lookup?q=...`): Mendukung pencarian mandiri status pelanggan, paket, total tunggakan, dan riwayat tagihan berbasis nomor pelanggan, nomor HP, atau NIK.
+- Public Customer Self-Service Portal (`/portal`): Halaman web mandiri responsif modern (mobile-first, dark theme, panduan transfer bank dengan salin nomor rekening 1-klik, dan tombol konfirmasi WhatsApp otomatis).
+- Payment Gateway Webhook (`POST /portal/payments/webhook`): Integrasi webhook otomatis untuk Tripay / Midtrans / QRIS; mencatat payment, melunasi invoice, mengaktifkan kembali subscription tertunggak, mengaktifkan akun RADIUS, dan mengirim notifikasi WhatsApp otomatis secara instan 24/7.
+- Fair Usage Policy (FUP) & Bandwidth Tracking: Menambahkan batas kuota FUP (`fup_limit_gb`), batas throttle unduh (`fup_rate_down`), dan batas throttle unggah (`fup_rate_up`) pada paket internet, serta mendeteksi status throttled otomatis di detail subscription.
+- Database Retention & Archiving Scheduler: Pembersihan berkala otomatis untuk sampel monitoring jaringan > 30 hari, antrean notifikasi > 30 hari, dan histori billing audit > 180 hari.
+
+

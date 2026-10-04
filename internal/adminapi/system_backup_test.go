@@ -28,6 +28,7 @@ func TestBackupSystem(t *testing.T) {
 	require.NoError(t, backupSystem(c))
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), "attachment")
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), "mwx-isp-backup-")
 
 	var backup SystemBackup
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &backup))

@@ -1,6 +1,6 @@
 # Scenario Cookbook
 
-> 中文版本：[场景实战手册](../zh/cookbook.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/cookbook.md)
 
 The [Vendor Integration Guide](./vendor-guide.md) is a **reference card** — it
 tells you which attributes MWX-ISP sends to / parses for a given vendor.

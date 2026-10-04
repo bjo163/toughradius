@@ -12,7 +12,12 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import { Box, Typography, useTheme } from '@mui/material';
 import { MenuItemLink, MenuProps, useGetIdentity, useTranslate } from 'react-admin';
+import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import BrushOutlinedIcon from '@mui/icons-material/BrushOutlined';
+import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
+import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
+import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useBranding } from '../branding/BrandingContext';
 import { BrandMark } from './BrandMark';
 
@@ -21,6 +26,8 @@ const menuItems = [
   { to: '/isp/customers', labelKey: 'menu.customers', sectionKey: 'menu.isp', icon: <PeopleAltOutlinedIcon /> },
   { to: '/isp/packages', labelKey: 'menu.packages', sectionKey: 'menu.services', icon: <Inventory2OutlinedIcon /> },
   { to: '/isp/subscriptions', labelKey: 'menu.subscriptions', icon: <AutorenewOutlinedIcon /> },
+  { to: '/isp/vouchers', labelKey: 'menu.vouchers', icon: <ConfirmationNumberOutlinedIcon /> },
+  { to: '/isp/tickets', labelKey: 'menu.tickets', icon: <SupportAgentOutlinedIcon /> },
   { to: '/isp/invoices', labelKey: 'menu.invoices', sectionKey: 'menu.billing', icon: <ReceiptLongOutlinedIcon /> },
   { to: '/isp/payments', labelKey: 'menu.payments', icon: <ReceiptLongOutlinedIcon /> },
   { to: '/radius/users', labelKey: 'menu.radius_users', sectionKey: 'menu.radius', icon: <PeopleAltOutlinedIcon /> },
@@ -29,8 +36,11 @@ const menuItems = [
   { to: '/radius/accounting', labelKey: 'menu.accounting', icon: <ReceiptLongOutlinedIcon /> },
   { to: '/network/nodes', labelKey: 'menu.network_nodes', sectionKey: 'menu.network', icon: <AccountTreeOutlinedIcon /> },
   { to: '/network/nas', labelKey: 'menu.nas_devices', icon: <RouterOutlinedIcon /> },
+  { to: '/network/ipam', labelKey: 'menu.ipam', icon: <DnsOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/network/odp', labelKey: 'menu.odp_management', icon: <HubOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/operations', labelKey: 'menu.operations', sectionKey: 'menu.network', icon: <SensorsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['super', 'admin'] },
+  { to: '/system/website', labelKey: 'menu.website_editor', icon: <LanguageOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/branding', labelKey: 'menu.branding', icon: <BrushOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['super', 'admin'] },

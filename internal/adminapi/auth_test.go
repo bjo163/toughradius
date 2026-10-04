@@ -241,7 +241,7 @@ func TestIssueToken(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("%d", testOpr.ID), claims["sub"])
 		assert.Equal(t, testOpr.Username, claims["username"])
 		assert.Equal(t, testOpr.Level, claims["role"])
-		assert.Equal(t, "toughradius", claims["iss"])
+		assert.Equal(t, "mwx-isp", claims["iss"])
 	} else {
 		t.Errorf("unable to parse claims")
 	}

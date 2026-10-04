@@ -3,6 +3,10 @@ package networkmonitor
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -112,4 +116,36 @@ func TestMonitorPollDueHonorsIntervalAndStoresInterfaceMetrics(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(sample.InterfaceMetricsJSON), &got))
 	require.Equal(t, metrics, []byte(sample.InterfaceMetricsJSON))
 	require.Equal(t, "wan0", got[0].Name)
+}
+
+func TestSystemProbeHTTP(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/fail" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	host, portStr, err := net.SplitHostPort(ts.Listener.Addr().String())
+	require.NoError(t, err)
+	port, err := strconv.Atoi(portStr)
+	require.NoError(t, err)
+
+	probe := systemProbe{}
+
+	// Successful probe
+	res := probe.Check(context.Background(), domain.NetMonitorTarget{
+		Address: host, Port: port, ProbeType: "http", TimeoutMilliseconds: 1000,
+	}, "")
+	require.True(t, res.Reachable)
+	require.Empty(t, res.Error)
+
+	// Unreachable port
+	resBad := probe.Check(context.Background(), domain.NetMonitorTarget{
+		Address: host, Port: port + 1, ProbeType: "http", TimeoutMilliseconds: 500,
+	}, "")
+	require.False(t, resBad.Reachable)
+	require.NotEmpty(t, resBad.Error)
 }

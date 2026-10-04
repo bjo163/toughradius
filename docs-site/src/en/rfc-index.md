@@ -1,6 +1,6 @@
 # Protocol & RFC Reference
 
-> 中文版本：[协议与 RFC 索引](../zh/rfc-index.md)
+> Bahasa Indonesia: [Versi Indonesia](../id/rfc-index.md)
 
 MWX-ISP implements standard RADIUS, EAP, dynamic-authorization, and
 secure-transport protocols. This chapter is the curated, implementation-oriented

@@ -113,6 +113,13 @@ func TestTableNameUniqueness(t *testing.T) {
 		"net_monitor_incident":        true,
 		"notification_settings":       true,
 		"notification_outbox":         true,
+		"radius_traffic_sample":       true,
+		"syslog_event":                true,
+		"isp_hotspot_batch":           true,
+		"isp_hotspot_voucher":         true,
+		"isp_ipam_pool":               true,
+		"isp_trouble_ticket":          true,
+		"isp_odp":                     true,
 	}
 
 	assert.Equal(t, len(expectedNames), len(tableNames), "Table name count should match")
@@ -121,3 +128,23 @@ func TestTableNameUniqueness(t *testing.T) {
 		assert.True(t, expectedNames[name], "Unexpected table name: %s", name)
 	}
 }
+
+func TestRadiusTrafficSample_TableName(t *testing.T) {
+	model := RadiusTrafficSample{}
+	assert.Equal(t, "radius_traffic_sample", model.TableName())
+}
+
+func TestSyslogEvent_TableName(t *testing.T) {
+	model := SyslogEvent{}
+	assert.Equal(t, "syslog_event", model.TableName())
+}
+
+func TestOperationsModels_TableName(t *testing.T) {
+	assert.Equal(t, "isp_hotspot_batch", HotspotBatch{}.TableName())
+	assert.Equal(t, "isp_hotspot_voucher", HotspotVoucher{}.TableName())
+	assert.Equal(t, "isp_ipam_pool", IPAMPool{}.TableName())
+	assert.Equal(t, "isp_trouble_ticket", TroubleTicket{}.TableName())
+	assert.Equal(t, "isp_odp", ODP{}.TableName())
+}
+
+

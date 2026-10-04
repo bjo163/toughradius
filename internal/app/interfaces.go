@@ -8,6 +8,7 @@ import (
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/networkmonitor"
 	"github.com/bjo163/mwx-isp/internal/notify"
+	"github.com/bjo163/mwx-isp/internal/syslogd"
 	"gorm.io/gorm"
 )
 
@@ -15,6 +16,11 @@ import (
 // requiring unrelated AppContext implementations to own the service.
 type NetworkMonitorProvider interface {
 	NetworkMonitor() *networkmonitor.Monitor
+}
+
+// SyslogProvider exposes the embedded UDP syslog collector server.
+type SyslogProvider interface {
+	SyslogServer() *syslogd.Server
 }
 
 // NotificationProvider exposes opt-in operator notification services.

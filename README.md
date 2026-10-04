@@ -34,7 +34,7 @@ Payment gateways, customer portal, WhatsApp, ticketing, fiber inventory, multi-t
 
 The repository root includes a production Compose stack with PostgreSQL, persistent database/application volumes, required secrets, health checks, and RADIUS ports. The VPS installer builds the app image from the public `main` source checkout, so no GHCR credentials are needed. The admin UI is bound to `127.0.0.1:1816` by default so it is not exposed directly to the public internet; put it behind a TLS reverse proxy such as Caddy or Nginx.
 
-Install Docker Engine and the Docker Compose plugin on an Ubuntu/Debian VPS, then run:
+On an Ubuntu/Debian VPS, the installer installs Docker Engine and the Docker Compose plugin when either is missing, then prepares and starts MWX-ISP:
 
 ```bash
 git clone https://github.com/bjo163/mwx-isp.git
@@ -42,7 +42,7 @@ cd mwx-isp
 sudo bash scripts/vps-install.sh
 ```
 
-The installer clones the `main` source, builds the app image, creates `/opt/mwx-isp/.env` with unique database, JWT, and admin credentials, then starts the stack. It enables a daily systemd update timer when systemd is available. **Save the generated admin password printed by the installer.** Keep `/opt/mwx-isp/.env` private; it contains secrets. To update manually, run `sudo /opt/mwx-isp/scripts/vps-update.sh`. The updater rebuilds only when `main` has changed, waits for the container health check, and restores the prior source and image if startup fails. A small VPS needs available memory, CPU, and disk space for a Go and frontend build during initial install and updates.
+The installer clones the `main` source, builds the app image, creates `/opt/mwx-isp/.env` with unique database, JWT, and admin credentials, then starts the stack. It enables a daily systemd update timer when systemd is available. **Save the generated admin password printed by the installer.** Keep `/opt/mwx-isp/.env` private; it contains secrets. For distributions other than Ubuntu/Debian, install Docker Engine and the Docker Compose plugin manually using the [official Docker Engine guide](https://docs.docker.com/engine/install/), then rerun the script. To update manually, run `sudo /opt/mwx-isp/scripts/vps-update.sh`. The updater rebuilds only when `main` has changed, waits for the container health check, and restores the prior source and image if startup fails. A small VPS needs available memory, CPU, and disk space for a Go and frontend build during initial install and updates.
 
 For a source checkout, copy `.env.vps.example` to `.env`, replace the `CHANGE_ME` values, and run `docker compose up -d --build`. The daily updater follows `main` and preserves both Docker volumes; keep regular off-host backups of the PostgreSQL volume before relying on upgrades.
 

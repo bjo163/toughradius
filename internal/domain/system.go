@@ -7,13 +7,23 @@ import (
 // ProductBranding stores one installation-wide product identity. It is
 // intentionally separate from ISP/company fields used on invoices.
 type ProductBranding struct {
-	ID          int64     `json:"id" gorm:"primaryKey"`
-	ProductName string    `json:"product_name" gorm:"size:60;not null"`
-	ShortName   string    `json:"short_name" gorm:"size:8;not null"`
-	Tagline     string    `json:"tagline" gorm:"size:120"`
-	AccentColor string    `json:"accent_color" gorm:"size:7;not null"`
-	LogoFile    string    `json:"-" gorm:"size:80"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID              int64     `json:"id" gorm:"primaryKey"`
+	ProductName     string    `json:"product_name" gorm:"size:60;not null"`
+	ShortName       string    `json:"short_name" gorm:"size:8;not null"`
+	Tagline         string    `json:"tagline" gorm:"size:120"`
+	AccentColor     string    `json:"accent_color" gorm:"size:7;not null"`
+	LogoFile        string    `json:"-" gorm:"size:80"`
+	HeroHeadline    string    `json:"hero_headline" gorm:"size:255"`
+	HeroSubtitle    string    `json:"hero_subtitle" gorm:"size:500"`
+	TickerText      string    `json:"ticker_text" gorm:"size:255"`
+	ContactPhone    string    `json:"contact_phone" gorm:"size:64"`
+	ContactWhatsApp string    `json:"contact_whatsapp" gorm:"size:64"`
+	ContactEmail    string    `json:"contact_email" gorm:"size:120"`
+	ContactAddress  string    `json:"contact_address" gorm:"size:255"`
+	CoverageAreas   string    `json:"coverage_areas" gorm:"size:500"`
+	SlaUptime       string    `json:"sla_uptime" gorm:"size:32"`
+	SlaLatency      string    `json:"sla_latency" gorm:"size:32"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // TableName returns the storage table for installation product branding.

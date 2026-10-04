@@ -7,10 +7,66 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
+# Install Docker automatically on supported Debian/Ubuntu hosts. Other systems
+# get an actionable message rather than failing later on a missing executable.
+install_docker() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ ! -r /etc/os-release ]]; then
+    echo "Cannot identify this Linux distribution. Install Docker Engine and the Docker Compose plugin manually." >&2
+    echo "Official guide: https://docs.docker.com/engine/install/" >&2
+    exit 1
+  fi
+
+  # shellcheck disable=SC1091
+  . /etc/os-release
+  case "${ID:-}" in
+    ubuntu|debian) ;;
+    *)
+      echo "Automatic Docker installation supports Ubuntu and Debian; detected '${PRETTY_NAME:-${ID:-unknown}}'." >&2
+      echo "Install Docker Engine and the Docker Compose plugin, then rerun this script." >&2
+      echo "Official guide: https://docs.docker.com/engine/install/" >&2
+      exit 1
+      ;;
+  esac
+
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get is required to install Docker automatically on ${ID}." >&2
+    exit 1
+  fi
+
+  echo "Installing Docker Engine and Docker Compose plugin for ${PRETTY_NAME:-${ID}}..."
+  apt-get update
+  apt-get install -y ca-certificates curl
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL "https://download.docker.com/linux/${ID}/gpg" -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+
+  local arch codename
+  arch="$(dpkg --print-architecture)"
+  codename="${VERSION_CODENAME:-}"
+  if [[ -z "${codename}" ]] && command -v lsb_release >/dev/null 2>&1; then
+    codename="$(lsb_release -cs)"
+  fi
+  if [[ -z "${codename}" ]]; then
+    echo "Could not determine the ${ID} release codename; install Docker manually." >&2
+    exit 1
+  fi
+
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/%s %s stable\n' \
+    "${arch}" "${ID}" "${codename}" > /etc/apt/sources.list.d/docker.list
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  systemctl enable --now docker
+}
+
+install_docker
+
 for command in docker openssl git; do
   if ! command -v "${command}" >/dev/null 2>&1; then
-    echo "Missing ${command}. Install Docker Engine and the Docker Compose plugin first." >&2
-    echo "Official guide: https://docs.docker.com/engine/install/" >&2
+    echo "Missing required command: ${command}." >&2
     exit 1
   fi
 done
@@ -55,6 +111,8 @@ docker compose build app
 docker compose up -d
 docker compose ps
 
+chmod +x scripts/*.sh 2>/dev/null || true
+
 if command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
   cp scripts/mwx-isp-update.service /etc/systemd/system/mwx-isp-update.service
   cp scripts/mwx-isp-update.timer /etc/systemd/system/mwx-isp-update.timer
@@ -68,3 +126,4 @@ fi
 
 echo "MWX-ISP is running. Admin UI is bound to 127.0.0.1:${MWX_ISP_WEB_PORT:-1816}; configure a TLS reverse proxy before remote browser access."
 echo "RADIUS auth/accounting and RadSec ports are exposed. Configure only the ports your NAS actually uses in the VPS firewall."
+echo "Database maintenance: use '${APP_DIR}/scripts/backup-db.sh' and '${APP_DIR}/scripts/restore-db.sh'."

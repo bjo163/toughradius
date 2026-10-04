@@ -112,18 +112,6 @@ func renderReport(date string, run acceptanceRun) string {
 	writeScenarioTable(&b, run.Scenarios)
 	writeFailureDetails(&b, run.Scenarios)
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "## 中文")
-	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "**结论：** %s\n\n", chineseVerdict(run.Verdict))
-	writeCoverageNoteCN(&b, run.Scenarios)
-	fmt.Fprintln(&b, "### 运行上下文")
-	fmt.Fprintln(&b)
-	writeContextTable(&b, run)
-	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "### 场景结果")
-	fmt.Fprintln(&b)
-	writeScenarioTableCN(&b, run.Scenarios)
-	writeFailureDetailsCN(&b, run.Scenarios)
 	return b.String()
 }
 
@@ -155,16 +143,6 @@ func writeScenarioTable(b *strings.Builder, scenarios []scenario) {
 	}
 }
 
-func writeScenarioTableCN(b *strings.Builder, scenarios []scenario) {
-	fmt.Fprintln(b, "| 场景 | 方法 | 预期 | 状态 | 耗时 | 说明 |")
-	fmt.Fprintln(b, "| --- | --- | --- | --- | ---: | --- |")
-	for _, s := range scenarios {
-		fmt.Fprintf(b, "| %s | %s | %s | %s | %d ms | %s |\n",
-			escapeTable(s.Name), escapeTable(s.Method), escapeTable(s.Expected),
-			escapeTable(chineseStatus(s.Status)), s.DurationMS, escapeTable(s.Detail))
-	}
-}
-
 func writeFailureDetails(b *strings.Builder, scenarios []scenario) {
 	for _, s := range scenarios {
 		if s.Status != "failed" || strings.TrimSpace(s.Output) == "" {
@@ -178,32 +156,11 @@ func writeFailureDetails(b *strings.Builder, scenarios []scenario) {
 	}
 }
 
-func writeFailureDetailsCN(b *strings.Builder, scenarios []scenario) {
-	for _, s := range scenarios {
-		if s.Status != "failed" || strings.TrimSpace(s.Output) == "" {
-			continue
-		}
-		fmt.Fprintln(b)
-		fmt.Fprintf(b, "### 失败输出：%s\n\n", s.Name)
-		fmt.Fprintln(b, "```text")
-		fmt.Fprintln(b, truncate(s.Output, 4000))
-		fmt.Fprintln(b, "```")
-	}
-}
-
 func writeCoverageNote(b *strings.Builder, scenarios []scenario) {
 	if !hasPEAPExternalCoverageGap(scenarios) {
 		return
 	}
 	fmt.Fprintln(b, "Coverage note: PEAP/MSCHAPv2 external `eapol_test` scenarios are still skipped and tracked by [#495](https://github.com/bjo163/mwx-isp/issues/495), so this report is partial external coverage rather than complete PEAP acceptance.")
-	fmt.Fprintln(b)
-}
-
-func writeCoverageNoteCN(b *strings.Builder, scenarios []scenario) {
-	if !hasPEAPExternalCoverageGap(scenarios) {
-		return
-	}
-	fmt.Fprintln(b, "覆盖说明：PEAP/MSCHAPv2 外部 `eapol_test` 场景仍为 skipped，并由 [#495](https://github.com/bjo163/mwx-isp/issues/495) 跟踪，因此本报告代表部分外部覆盖，不宣称完整 PEAP 外部验收。")
 	fmt.Fprintln(b)
 }
 
@@ -237,17 +194,17 @@ func pruneReports(dir string, retention int) ([]string, error) {
 
 func writeDocsPages(src string, reports []string, run acceptanceRun) error {
 	en := filepath.Join(src, "en", "eap-acceptance-reports.md")
-	zh := filepath.Join(src, "zh", "eap-acceptance-reports.md")
+	id := filepath.Join(src, "id", "eap-acceptance-reports.md")
 	if err := os.MkdirAll(filepath.Dir(en), 0o755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(zh), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(id), 0o755); err != nil {
 		return err
 	}
 	if err := os.WriteFile(en, []byte(renderDocsEN(reports, run)), 0o644); err != nil {
 		return err
 	}
-	return os.WriteFile(zh, []byte(renderDocsZH(reports, run)), 0o644)
+	return os.WriteFile(id, []byte(renderDocsID(reports, run)), 0o644)
 }
 
 func renderDocsEN(reports []string, run acceptanceRun) string {
@@ -268,19 +225,21 @@ func renderDocsEN(reports []string, run acceptanceRun) string {
 	return b.String()
 }
 
-func renderDocsZH(reports []string, run acceptanceRun) string {
+func renderDocsID(reports []string, run acceptanceRun) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, "# EAP 验收测试报告")
+	fmt.Fprintln(&b, "# Laporan Penerimaan EAP")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "每周 EAP 验收任务使用外部 `eapol_test` supplicant 验证 MWX-ISP，并在这里展示最近保留的报告。")
+	fmt.Fprintln(&b, "> English version: [EAP Acceptance Reports](../en/eap-acceptance-reports.md)")
 	fmt.Fprintln(&b)
-	fmt.Fprintf(&b, "**最近结论：** %s\n\n", chineseVerdict(run.Verdict))
-	writeCoverageNoteCN(&b, run.Scenarios)
-	fmt.Fprintln(&b, "## 最近场景摘要")
+	fmt.Fprintln(&b, "Pengujian mingguan memverifikasi MWX-ISP menggunakan supplicant eksternal `eapol_test`. Rincian skenario dan konteks runner tersedia pada laporan berikut:")
 	fmt.Fprintln(&b)
-	writeScenarioTableCN(&b, run.Scenarios)
+	fmt.Fprintf(&b, "**Verdik terbaru:** %s\n\n", strings.ToUpper(run.Verdict))
+	writeCoverageNote(&b, run.Scenarios)
+	fmt.Fprintln(&b, "## Ringkasan skenario terbaru")
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, "## 保留报告")
+	writeScenarioTable(&b, run.Scenarios)
+	fmt.Fprintln(&b)
+	fmt.Fprintln(&b, "## Laporan sebelumnya")
 	fmt.Fprintln(&b)
 	writeReportLinks(&b, reports)
 	return b.String()
@@ -332,34 +291,6 @@ func hasPEAPExternalCoverageGap(scenarios []scenario) bool {
 
 func isPEAPMSCHAPv2Scenario(id string) bool {
 	return strings.HasPrefix(id, "peap-mschapv2-")
-}
-
-func chineseVerdict(verdict string) string {
-	switch verdict {
-	case "accepted":
-		return "通过"
-	case "partial":
-		return "部分通过"
-	case "failed":
-		return "失败"
-	case "incomplete":
-		return "未完成"
-	default:
-		return verdict
-	}
-}
-
-func chineseStatus(status string) string {
-	switch status {
-	case "passed":
-		return "通过"
-	case "failed":
-		return "失败"
-	case "skipped":
-		return "跳过"
-	default:
-		return status
-	}
 }
 
 func markdownLink(url string) string {

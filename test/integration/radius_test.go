@@ -25,7 +25,7 @@ import (
 func TestRadiusPAPAuthentication(t *testing.T) {
 	const secret = "it-radius-secret"
 	suffix := uniqueSuffix()
-	nasIP := "10.200.0.1"
+	nasIP := uniqueNASIP()
 	nasID := "it-nas-" + suffix
 
 	nas := &domain.NetNas{
@@ -80,7 +80,7 @@ func exchange(t *testing.T, serverAddr, secret, username, password, nasID, nasIP
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := radius.Exchange(ctx, packet, serverAddr)
+	resp, err := exchangeFromNAS(ctx, packet, serverAddr, nasIP)
 	require.NoError(t, err)
 	return resp
 }
