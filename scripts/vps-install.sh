@@ -460,7 +460,9 @@ if [[ -n "${app_container:-}" && "${INSTALL_IN_PROGRESS}" != true ]]; then
   MWX_ISP_DEPLOY_LOCK_HELD=true MWX_ISP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/vps-update.sh"
 else
   # The project GHCR package must be public for passwordless VPS pulls.
-  docker compose pull db app || fail "Could not pull release images. Check DNS/network access to Docker Hub and GHCR, then rerun."
+  # Pull every service image before --pull never starts the complete stack.
+  # In particular, Caddy is a Docker Hub image and is not included in db/app.
+  docker compose pull || fail "Could not pull all service images. Check DNS/network access to Docker Hub and GHCR, then rerun."
   docker compose up -d --pull never || fail "Could not start the application stack. Check port conflicts and inspect 'docker compose logs'."
   wait_for_healthy_service db
   wait_for_healthy_service app
