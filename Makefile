@@ -8,7 +8,7 @@ LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X m
 
 # 默认目标
 help:
-	@echo "ToughRADIUS v9 Makefile Commands"
+	@echo "MWX-ISP Makefile Commands"
 	@echo "================================="
 	@echo "Development:"
 	@echo "  make runs       - 启动后端服务 (支持 SQLite)"
@@ -37,11 +37,11 @@ help:
 
 # 启动后端服务（开发模式，支持 SQLite）
 runs:
-	@echo "🚀 启动 ToughRADIUS 后端服务..."
-	@echo "📝 配置文件: toughradius.yml"
+	@echo "🚀 启动 MWX-ISP 后端服务..."
+	@echo "📝 配置文件: mwx-isp.yml"
 	@echo "🔧 SQLite 支持: 已启用 (CGO_ENABLED=0)"
 	@echo ""
-	CGO_ENABLED=0 go run main.go -c toughradius.yml
+	CGO_ENABLED=0 go run main.go -c mwx-isp.yml
 
 # 启动前端开发服务
 runf:
@@ -81,10 +81,10 @@ build: buildf
 	echo "✅ 前端验证通过 ($$ASSET_COUNT 个资源文件)"
 	@echo ""
 	@mkdir -p release
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o release/toughradius main.go
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o release/mwx-isp main.go
 	@echo ""
-	@SIZE=$$(ls -lh release/toughradius | awk '{print $$5}'); \
-	echo "✅ 构建完成: release/toughradius ($$SIZE)"
+	@SIZE=$$(ls -lh release/mwx-isp | awk '{print $$5}'); \
+	echo "✅ 构建完成: release/mwx-isp ($$SIZE)"
 	@echo "📁 前端已嵌入二进制文件"
 
 # 仅构建后端（不重新构建前端，假设前端已存在）
@@ -98,9 +98,9 @@ build-backend:
 		$(MAKE) buildf; \
 	fi
 	@mkdir -p release
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o release/toughradius main.go
-	@SIZE=$$(ls -lh release/toughradius | awk '{print $$5}'); \
-	echo "✅ 构建完成: release/toughradius ($$SIZE)"
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o release/mwx-isp main.go
+	@SIZE=$$(ls -lh release/mwx-isp | awk '{print $$5}'); \
+	echo "✅ 构建完成: release/mwx-isp ($$SIZE)"
 
 # 显示版本信息
 version:
@@ -129,7 +129,7 @@ initdb:
 	@echo "⚠️  警告：此操作将删除并重建所有数据库表！"
 	@read -p "确认继续？(yes/no): " confirm && [ "$$confirm" = "yes" ] || (echo "已取消"; exit 1)
 	@echo "🗄️  初始化数据库..."
-	CGO_ENABLED=0 go run main.go -initdb -c toughradius.yml
+	CGO_ENABLED=0 go run main.go -initdb -c mwx-isp.yml
 
 # 运行测试
 test:

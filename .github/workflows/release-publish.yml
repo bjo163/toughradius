@@ -1,4 +1,4 @@
-name: toughradius release
+name: MWX-ISP release
 
 on:
   push:
@@ -97,7 +97,7 @@ jobs:
           echo "version_num=${VERSION_NUM}" >> $GITHUB_OUTPUT
           echo "commit=${COMMIT_SHA}" >> $GITHUB_OUTPUT
           echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
-          echo "Building ToughRADIUS ${VERSION} (${COMMIT_SHA})"
+          echo "Building MWX-ISP ${VERSION} (${COMMIT_SHA})"
 
       - name: Verify Go Embed
         run: |
@@ -140,39 +140,39 @@ jobs:
           
           # Build for Linux AMD64 (x86_64)
           echo "Building for Linux AMD64..."
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_linux_amd64 main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_linux_amd64 main.go
           
           # Build for Linux ARM64 (aarch64)
           echo "Building for Linux ARM64..."
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_linux_arm64 main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_linux_arm64 main.go
           
           # Build for Linux ARMv7
           echo "Building for Linux ARMv7..."
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_linux_armv7 main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_linux_armv7 main.go
           
           # Build for Linux RISC-V 64-bit
           echo "Building for Linux RISC-V 64..."
-          CGO_ENABLED=0 GOOS=linux GOARCH=riscv64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_linux_riscv64 main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=riscv64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_linux_riscv64 main.go
           
           # Build for Linux LoongArch 64-bit
           echo "Building for Linux LoongArch 64..."
-          CGO_ENABLED=0 GOOS=linux GOARCH=loong64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_linux_loong64 main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=loong64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_linux_loong64 main.go
           
           # Build for macOS AMD64
           echo "Building for macOS AMD64..."
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_darwin_amd64 main.go
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_darwin_amd64 main.go
           
           # Build for macOS ARM64 (Apple Silicon)
           echo "Building for macOS ARM64..."
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_darwin_arm64 main.go
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_darwin_arm64 main.go
           
           # Build for Windows AMD64
           echo "Building for Windows AMD64..."
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_windows_amd64.exe main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_windows_amd64.exe main.go
           
           # Build for Windows ARM64
           echo "Building for Windows ARM64..."
-          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/toughradius_windows_arm64.exe main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -ldflags "${LDFLAGS}" -o ./release/mwx-isp_windows_arm64.exe main.go
           
           # Create checksums
           cd ./release
@@ -192,26 +192,26 @@ jobs:
           # Get previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 ${VERSION}^ 2>/dev/null || echo "")
           
-          echo "## ToughRADIUS ${VERSION}" > release_notes.md
+          echo "## MWX-ISP ${VERSION}" > release_notes.md
           echo "" >> release_notes.md
           echo "### 📦 Downloads" >> release_notes.md
           echo "" >> release_notes.md
           echo "| Platform | Architecture | File |" >> release_notes.md
           echo "|----------|--------------|------|" >> release_notes.md
-          echo "| Linux | x86_64 (AMD64) | \`toughradius_linux_amd64\` |" >> release_notes.md
-          echo "| Linux | ARM64 (aarch64) | \`toughradius_linux_arm64\` |" >> release_notes.md
-          echo "| Linux | ARMv7 | \`toughradius_linux_armv7\` |" >> release_notes.md
-          echo "| Linux | RISC-V 64 | \`toughradius_linux_riscv64\` |" >> release_notes.md
-          echo "| Linux | LoongArch 64 | \`toughradius_linux_loong64\` |" >> release_notes.md
-          echo "| macOS | x86_64 (Intel) | \`toughradius_darwin_amd64\` |" >> release_notes.md
-          echo "| macOS | ARM64 (Apple Silicon) | \`toughradius_darwin_arm64\` |" >> release_notes.md
-          echo "| Windows | x86_64 (AMD64) | \`toughradius_windows_amd64.exe\` |" >> release_notes.md
-          echo "| Windows | ARM64 | \`toughradius_windows_arm64.exe\` |" >> release_notes.md
+          echo "| Linux | x86_64 (AMD64) | \`mwx-isp_linux_amd64\` |" >> release_notes.md
+          echo "| Linux | ARM64 (aarch64) | \`mwx-isp_linux_arm64\` |" >> release_notes.md
+          echo "| Linux | ARMv7 | \`mwx-isp_linux_armv7\` |" >> release_notes.md
+          echo "| Linux | RISC-V 64 | \`mwx-isp_linux_riscv64\` |" >> release_notes.md
+          echo "| Linux | LoongArch 64 | \`mwx-isp_linux_loong64\` |" >> release_notes.md
+          echo "| macOS | x86_64 (Intel) | \`mwx-isp_darwin_amd64\` |" >> release_notes.md
+          echo "| macOS | ARM64 (Apple Silicon) | \`mwx-isp_darwin_arm64\` |" >> release_notes.md
+          echo "| Windows | x86_64 (AMD64) | \`mwx-isp_windows_amd64.exe\` |" >> release_notes.md
+          echo "| Windows | ARM64 | \`mwx-isp_windows_arm64.exe\` |" >> release_notes.md
           echo "" >> release_notes.md
           echo "### 🐳 Docker" >> release_notes.md
           echo "" >> release_notes.md
           echo "\`\`\`bash" >> release_notes.md
-          echo "docker pull talkincode/toughradius:${{ steps.version.outputs.version_num }}" >> release_notes.md
+          echo "docker pull ghcr.io/bjo163/mwx-isp:${{ steps.version.outputs.version_num }}" >> release_notes.md
           echo "\`\`\`" >> release_notes.md
           echo "" >> release_notes.md
           
@@ -257,20 +257,20 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
-          name: ToughRADIUS ${{ steps.version.outputs.version }}
+          name: MWX-ISP ${{ steps.version.outputs.version }}
           body_path: release_notes.md
           draft: false
           prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
           files: |
-            ./release/toughradius_linux_amd64
-            ./release/toughradius_linux_arm64
-            ./release/toughradius_linux_armv7
-            ./release/toughradius_linux_riscv64
-            ./release/toughradius_linux_loong64
-            ./release/toughradius_darwin_amd64
-            ./release/toughradius_darwin_arm64
-            ./release/toughradius_windows_amd64.exe
-            ./release/toughradius_windows_arm64.exe
+            ./release/mwx-isp_linux_amd64
+            ./release/mwx-isp_linux_arm64
+            ./release/mwx-isp_linux_armv7
+            ./release/mwx-isp_linux_riscv64
+            ./release/mwx-isp_linux_loong64
+            ./release/mwx-isp_darwin_amd64
+            ./release/mwx-isp_darwin_arm64
+            ./release/mwx-isp_windows_amd64.exe
+            ./release/mwx-isp_windows_arm64.exe
             ./release/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

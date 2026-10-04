@@ -26,7 +26,7 @@ RUN test -f /src/web/dist/admin/index.html || (echo "ERROR: Frontend not found!"
 
 # Build for target platform
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -ldflags \
-     '-s -w -extldflags "-static"' -o /toughradius main.go
+     '-s -w -extldflags "-static"' -o /mwx-isp main.go
 
 FROM alpine:latest
 
@@ -34,11 +34,11 @@ RUN apk add --no-cache curl ca-certificates tzdata
 ENV TZ=Asia/Jakarta
 LABEL org.opencontainers.image.title="MWX-ISP" \
       org.opencontainers.image.description="ISP Management, RADIUS, and Billing" \
-      org.opencontainers.image.source="local"
+      org.opencontainers.image.source="https://github.com/bjo163/mwx-isp"
 
-COPY --from=builder /toughradius /usr/local/bin/toughradius
+COPY --from=builder /mwx-isp /usr/local/bin/mwx-isp
 
-RUN chmod +x /usr/local/bin/toughradius
+RUN chmod +x /usr/local/bin/mwx-isp
 
 # Expose required ports:
 # 1816 - Web/Admin API (HTTP)
@@ -47,4 +47,4 @@ RUN chmod +x /usr/local/bin/toughradius
 # 2083 - RadSec (RADIUS over TLS)
 EXPOSE 1816/tcp 1812/udp 1813/udp 2083/tcp
 
-ENTRYPOINT ["/usr/local/bin/toughradius"]
+ENTRYPOINT ["/usr/local/bin/mwx-isp"]
