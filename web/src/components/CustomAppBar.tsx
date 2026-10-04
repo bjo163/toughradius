@@ -5,7 +5,7 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import { Box, Chip, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
-import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, useTranslate, useSidebarState } from 'react-admin';
+import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, usePermissions, useTranslate, useSidebarState } from 'react-admin';
 import { useEffect, useState } from 'react';
 import { useBranding } from '../branding/BrandingContext';
 import { BrandMark } from './BrandMark';
@@ -14,6 +14,7 @@ export const CustomAppBar = (props: AppBarProps) => {
   const redirect = useRedirect();
   const theme = useTheme();
   const { data: identity } = useGetIdentity();
+  const { permissions = [] } = usePermissions();
   const translate = useTranslate();
   const [sidebarOpen, setSidebarOpen] = useSidebarState();
   const { branding } = useBranding();
@@ -155,7 +156,7 @@ export const CustomAppBar = (props: AppBarProps) => {
           </Tooltip>
           
           {/* 只对Super admin和Admin显示系统设置button */}
-          {identity?.level === 'super' || identity?.level === 'admin' ? (
+          {permissions.includes('platform_admin') ? (
             <Tooltip title={translate('appbar.system_settings')}>
               <IconButton 
                 size="large" 

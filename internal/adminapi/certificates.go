@@ -415,10 +415,10 @@ func ExportCertificate(c echo.Context) error {
 
 // registerCertificateRoutes registers certificate management routes.
 func registerCertificateRoutes() {
-	webserver.ApiGET("/system/certificate", ListCertificates)
-	webserver.ApiGET("/system/certificate/:id", GetCertificate)
-	webserver.ApiGET("/system/certificate/:id/export", ExportCertificate, requireAdmin())
-	webserver.ApiPOST("/system/certificate", CreateCertificate, requireAdmin())
-	webserver.ApiPUT("/system/certificate/:id", UpdateCertificate, requireAdmin())
-	webserver.ApiDELETE("/system/certificate/:id", DeleteCertificate, requireAdmin())
+	webserver.ApiGET("/system/certificate", ListCertificates, requirePlatformAdmin())
+	webserver.ApiGET("/system/certificate/:id", GetCertificate, requirePlatformAdmin())
+	webserver.ApiGET("/system/certificate/:id/export", ExportCertificate, requirePlatformAdmin())
+	webserver.ApiPOST("/system/certificate", CreateCertificate, requirePlatformAdmin())
+	webserver.ApiPUT("/system/certificate/:id", UpdateCertificate, requirePlatformAdmin())
+	webserver.ApiDELETE("/system/certificate/:id", DeleteCertificate, requirePlatformAdmin())
 }

@@ -276,14 +276,16 @@ func seedAdminOperator(appCtx *app.Application, username, password string) error
 		return nil
 	}
 	return appCtx.DB().Create(&domain.SysOpr{
-		ID:        common.UUIDint64(),
-		Username:  username,
-		Password:  hashed,
-		Level:     "super",
-		Status:    common.ENABLED,
-		Realname:  "Integration Admin",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:            common.UUIDint64(),
+		TenantID:      domain.DefaultTenantID,
+		Username:      username,
+		Password:      hashed,
+		Level:         "super",
+		Status:        common.ENABLED,
+		Realname:      "Integration Admin",
+		PlatformAdmin: true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}).Error
 }
 

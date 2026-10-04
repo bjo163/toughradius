@@ -67,6 +67,28 @@ func TestCreatePlatformTenantRejectsWeakCredentials(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
 }
 
+func TestPlatformGlobalBackupIsDeniedToTenantSuper(t *testing.T) {
+	db := setupTestDB(t)
+	appCtx := setupTestApp(t, db)
+	e := setupTestEcho()
+	request := httptest.NewRequest(http.MethodGet, "/system/backup", nil)
+	recorder := httptest.NewRecorder()
+	c := CreateTestContext(e, db, request, recorder, appCtx)
+	c.Set("current_operator", &domain.SysOpr{
+		ID: 2, TenantID: 2, Username: "tenant-super", Level: LevelSuper,
+		Status: common.ENABLED,
+	})
+
+	called := false
+	err := requirePlatformAdmin()(func(echo.Context) error {
+		called = true
+		return nil
+	})(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, recorder.Code)
+	require.False(t, called, "tenant-level super operators must not access installation-wide backup/restore")
+}
+
 func TestPlatformTenantUpdateCompanyIdentity(t *testing.T) {
 	db := setupTestDB(t)
 	appCtx := setupTestApp(t, db)

@@ -96,8 +96,8 @@ func (b SystemBackupCert) toSysCert() domain.SysCert {
 }
 
 func registerSystemBackupRoutes() {
-	webserver.ApiGET("/system/backup", backupSystem, requireAdmin())
-	webserver.ApiPOST("/system/restore", restoreSystem, requireAdmin())
+	webserver.ApiGET("/system/backup", backupSystem, requirePlatformAdmin())
+	webserver.ApiPOST("/system/restore", restoreSystem, requirePlatformAdmin())
 }
 
 // backupSystem exports the core configuration tables as a downloadable JSON file.
