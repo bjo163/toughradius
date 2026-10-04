@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      release_tag:
+        description: SemVer tag created by the main-branch release workflow
+        required: true
+        type: string
 
 concurrency:
   group: release-${{ github.ref }}
@@ -22,6 +28,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
@@ -88,8 +95,10 @@ jobs:
 
       - name: Extract version info
         id: version
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${RELEASE_TAG:-${GITHUB_REF_NAME}}
           VERSION_NUM=${VERSION#v}
           COMMIT_SHA=$(git rev-parse --short HEAD)
           BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')

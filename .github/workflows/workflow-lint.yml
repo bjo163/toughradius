@@ -7,12 +7,16 @@ on:
       - '.github/workflows/**'
       - '.github/actionlint.yaml'
       - '.github/actionlint.yml'
+      - 'scripts/release_automation.py'
+      - 'scripts/test_release_automation.py'
   push:
     branches: [main, dev]
     paths:
       - '.github/workflows/**'
       - '.github/actionlint.yaml'
       - '.github/actionlint.yml'
+      - 'scripts/release_automation.py'
+      - 'scripts/test_release_automation.py'
   workflow_dispatch: {}
 
 permissions:
@@ -51,3 +55,6 @@ jobs:
 
       - name: Lint GitHub Actions workflows
         run: actionlint -color -shellcheck=
+
+      - name: Simulate SemVer and changelog rules
+        run: python3 -m unittest discover -s scripts -p 'test_release_automation.py' -v

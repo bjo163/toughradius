@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      release_tag:
+        description: SemVer tag created by the main-branch release workflow
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,14 +27,19 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Resolve image tags
         id: version
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          if [ -z "$version" ] || [ "$version" = "$GITHUB_REF_NAME" ]; then
-            echo "Expected a v-prefixed release tag, got: $GITHUB_REF_NAME" >&2
+          release_ref="${RELEASE_TAG:-$GITHUB_REF_NAME}"
+          version="${release_ref#v}"
+          if [ -z "$version" ] || [ "$version" = "$release_ref" ]; then
+            echo "Expected a v-prefixed release tag, got: $release_ref" >&2
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
