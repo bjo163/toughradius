@@ -212,19 +212,45 @@ process exit as the failure signal (the process model is fail-fast).
 
 ## Backup and restore
 
-**System Config → Backup** downloads a JSON snapshot (schema version 9.0) of:
-nodes, NAS devices, profiles, users, system settings, operators, and managed
-certificates (including their private keys, so certificate-based EAP keeps
-working after a restore). A copy is also written to `{workdir}/backup/`.
-**Restore** re-imports such a file.
+**System Config → Backup** is restricted to a platform administrator and
+downloads an installation-wide JSON snapshot (schema version 9.1). It includes
+all organizations and hidden tenant-ownership metadata, plus nodes, NAS,
+profiles, subscribers, accounting history, operator audit logs, ISP customers,
+packages, subscriptions, invoices, payments, document sequences, monitor
+targets/history, notification settings/outbox, system settings, operators, and
+managed certificates. Certificate private keys and encrypted SNMP credentials
+are preserved so EAP and monitoring continue after recovery. Online sessions
+are intentionally omitted because restored session state would be stale; NAS
+devices rebuild it as they reconnect. A copy is also written to
+`{workdir}/backup/`. **Restore** imports the snapshot for every organization in
+one database transaction and preserves the existing platform-administrator
+grant; it never grants platform access from an uploaded file.
 
-> The snapshot does **not** include accounting history or online sessions. For
-> a full disaster-recovery story, also back up the database itself (copy the
-> SQLite file or use `pg_dump`).
+> For a full disaster-recovery story, also schedule encrypted database backups
+> (`pg_dump` for PostgreSQL). Store database dumps and JSON snapshots off-site,
+> and test recovery on a separate instance before relying on them.
 
-> **Security**: the snapshot contains secrets — RADIUS user passwords,
-> operator password hashes, and the PEM private keys of managed EAP
-> certificates. Store and transfer backup files as you would any credential.
+> **Security**: snapshots contain subscriber passwords, operator password
+> hashes, certificate private keys, and encrypted network credentials. Protect
+> them as production secrets and restrict access to platform administrators.
+
+## Multiple ISP and RT/RW Net organizations
+
+MWX-ISP uses PostgreSQL shared-schema tenancy. Existing single-organization
+records are assigned to the `default` organization by the migration without
+changing subscriber IDs or credentials. Configure the optional
+`MWX_PLATFORM_ADMIN_USERNAME` and `MWX_PLATFORM_ADMIN_PASSWORD` bootstrap only
+for the operator authorized to administer the installation. From
+**Platform → Organizations**, create an ISP or RT/RW Net organization and its
+first tenant administrator. Tenant operators sign in with the organization
+slug, username, and password; tenant IDs sent by a client do not grant access.
+
+RADIUS resolves the organization from the registered NAS before looking up a
+subscriber. A shared listener requires each NAS source IP to be unique across
+the installation; ambiguous registrations are rejected. Test each tenant with
+its own NAS and credentials before onboarding subscribers. Tenant data, billing
+sequences, monitoring, notifications, and operator access stay isolated while
+product branding and system configuration remain installation-wide.
 
 ## Command-line tools
 
@@ -241,7 +267,7 @@ All live under `cmd/` and run with `go run ./cmd/<tool>`:
 
 ## Production hardening checklist
 
-- [ ] Change `web.secret`. Confirm the bootstrap `admin` password is unique (`{workdir}/private/admin-bootstrap-password` or `TOUGHRADIUS_ADMIN_PASSWORD`); never reuse the historical default.
+- [ ] Change `web.secret`. Configure and verify the deployment bootstrap administrator; never reuse a historical default.
 - [ ] `radiusd.debug: false`, `logger.mode: production`.
 - [ ] Restrict UDP 1812/1813 and TCP 1816 to trusted networks (firewall).
 - [ ] Use RadSec (2083) or a trusted L2/VPN path for RADIUS across untrusted networks.
