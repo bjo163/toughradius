@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/billing"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
+	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
-	"github.com/bjo163/mwx-isp/internal/billing"
-	"github.com/bjo163/mwx-isp/internal/domain"
-	"github.com/bjo163/mwx-isp/pkg/metrics"
 	"go.uber.org/zap"
 )
 
@@ -80,52 +81,65 @@ func (a *Application) SchedISPBillingTask() {
 	if dueDays < 0 || dueDays > 90 {
 		dueDays = 10
 	}
-	if _, err := billing.GenerateMonthlyInvoices(a.gormDB, now, dueDays); err != nil {
-		zap.S().Error("monthly invoice generation failed", zap.Error(err))
-		a.enqueueSchedulerFailure("isp-billing-invoice", "monthly invoice generation failed")
+	// Settings are installation-wide today; each active tenant gets the same
+	// billing policy while all database reads/writes remain tenant scoped.
+	autoSuspend := a.GetSettingsBoolValue("isp", "AutoSuspend")
+	var tenants []domain.Tenant
+	if err := a.gormDB.Where("status = ?", "active").Order("id ASC").Find(&tenants).Error; err != nil {
+		zap.S().Error("active tenant query failed for ISP billing", zap.Error(err))
+		a.enqueueSchedulerFailure("isp-billing-tenants", "active tenant query failed")
 		return
 	}
-	if err := a.NotifyBillingEvents(context.Background(), now.Add(-2*time.Minute)); err != nil {
-		zap.S().Warn("billing notification enqueue failed", zap.Error(err))
+	for _, tenant := range tenants {
+		if err := a.runBillingForTenant(tenant.ID, now, dueDays, autoSuspend); err != nil {
+			zap.S().Error("tenant ISP billing run failed", zap.Int64("tenant_id", tenant.ID), zap.Error(err))
+			a.enqueueSchedulerFailure("isp-billing", fmt.Sprintf("billing failed for tenant %d", tenant.ID))
+		}
 	}
-	if !a.GetSettingsBoolValue("isp", "AutoSuspend") {
-		return
+}
+
+func (a *Application) runBillingForTenant(tenantID int64, now time.Time, dueDays int, autoSuspend bool) error {
+	if tenantID <= 0 {
+		return fmt.Errorf("invalid tenant ID %d", tenantID)
 	}
-	if err := billing.ProcessOverdueInvoices(a.gormDB, now); err != nil {
-		zap.S().Error("overdue invoice processing failed", zap.Error(err))
-		a.enqueueSchedulerFailure("isp-billing-overdue", "overdue invoice processing failed")
-		return
+	ctx := tenancy.WithTenantID(context.Background(), tenantID)
+	db := a.gormDB.WithContext(ctx)
+	if _, err := billing.GenerateMonthlyInvoices(db, now, dueDays); err != nil {
+		return fmt.Errorf("generate monthly invoices: %w", err)
 	}
-	if err := billing.SuspendOverdueSubscriptions(a.gormDB, now); err != nil {
-		zap.S().Error("overdue subscription suspension failed", zap.Error(err))
-		a.enqueueSchedulerFailure("isp-billing-suspension", "overdue subscription suspension failed")
-		return
+	if !autoSuspend {
+		return nil
+	}
+	if err := billing.ProcessOverdueInvoices(db, now); err != nil {
+		return fmt.Errorf("process overdue invoices: %w", err)
+	}
+	if err := billing.SuspendOverdueSubscriptions(db, now); err != nil {
+		return fmt.Errorf("suspend overdue subscriptions: %w", err)
 	}
 	handler := a.sessionDisconnectHandler()
 	if handler == nil {
-		return
+		return nil
 	}
 	var subs []domain.Subscription
-	if err := a.gormDB.Where("status = ? AND suspension_reason = ?", domain.SubscriptionSuspended, domain.SuspensionBillingOverdue).Find(&subs).Error; err != nil {
-		zap.S().Error("billing-suspended subscription query failed", zap.Error(err))
-		return
+	if err := db.Where("status = ? AND suspension_reason = ?", domain.SubscriptionSuspended, domain.SuspensionBillingOverdue).Find(&subs).Error; err != nil {
+		return fmt.Errorf("load billing-suspended subscriptions: %w", err)
 	}
 	for _, sub := range subs {
 		var user domain.RadiusUser
-		if sub.RadiusUserID == 0 || a.gormDB.First(&user, sub.RadiusUserID).Error != nil {
+		if sub.RadiusUserID == 0 || db.First(&user, sub.RadiusUserID).Error != nil {
 			continue
 		}
 		var sessions []domain.RadiusOnline
-		if err := a.gormDB.Where("username = ?", user.Username).Find(&sessions).Error; err != nil {
-			zap.S().Warn("could not load online sessions for billing suspension", zap.Error(err))
-			continue
+		if err := db.Where("username = ?", user.Username).Find(&sessions).Error; err != nil {
+			return fmt.Errorf("load online sessions for %q: %w", user.Username, err)
 		}
 		for _, session := range sessions {
-			if err := handler(context.Background(), session); err != nil {
-				zap.S().Warn("billing suspension disconnect failed", zap.String("username", user.Username), zap.Error(err))
+			if err := handler(ctx, session); err != nil {
+				zap.S().Warn("billing suspension disconnect failed", zap.Int64("tenant_id", tenantID), zap.String("username", user.Username), zap.Error(err))
 			}
 		}
 	}
+	return nil
 }
 
 func (a *Application) enqueueSchedulerFailure(job, summary string) {

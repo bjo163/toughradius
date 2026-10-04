@@ -1,15 +1,74 @@
 package app
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/billing"
+	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/config"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
+
+func TestRunBillingForTenantScopesInvoiceGenerationAndDisconnect(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
+	require.NoError(t, db.AutoMigrate(
+		&domain.Customer{}, &domain.InternetPackage{}, &domain.Subscription{}, &domain.Invoice{},
+		&domain.InvoiceItem{}, &domain.BillingEvent{}, &domain.RadiusUser{}, &domain.RadiusOnline{},
+		&domain.DocumentSequence{},
+	))
+
+	now := time.Date(2026, time.October, 1, 0, 0, 0, 0, time.UTC)
+	for _, tenantID := range []int64{10, 20} {
+		ctx := tenancy.WithTenantID(context.Background(), tenantID)
+		tenantDB := db.WithContext(ctx)
+		customer := domain.Customer{Name: "Same Name", Status: domain.CustomerActive}
+		require.NoError(t, tenantDB.Create(&customer).Error)
+		pkg := domain.InternetPackage{Code: "HOME", Name: "Home", Price: 150000, RadiusProfileID: 1, BillingCycle: "monthly", Status: "active"}
+		require.NoError(t, tenantDB.Create(&pkg).Error)
+		user := domain.RadiusUser{Username: "shared-user", Password: "secret", Status: "enabled"}
+		require.NoError(t, tenantDB.Create(&user).Error)
+		sub := domain.Subscription{SubscriptionNo: "SUB-001", CustomerID: customer.ID, PackageID: pkg.ID,
+			RadiusUserID: user.ID, Status: domain.SubscriptionActive, StartDate: now.AddDate(0, -1, 0), BillingDay: 1}
+		require.NoError(t, tenantDB.Create(&sub).Error)
+		session := domain.RadiusOnline{Username: user.Username, AcctSessionId: "session-" + string(rune('0'+tenantID/10))}
+		require.NoError(t, tenantDB.Create(&session).Error)
+	}
+
+	var disconnectedTenantIDs []int64
+	a := &Application{gormDB: db}
+	a.SetSessionDisconnectHandler(func(ctx context.Context, session domain.RadiusOnline) error {
+		tenantID, ok := tenancy.TenantID(ctx)
+		require.True(t, ok)
+		disconnectedTenantIDs = append(disconnectedTenantIDs, tenantID)
+		return nil
+	})
+	// Mark tenant 10's subscription overdue so this run suspends and disconnects
+	// only tenant 10's duplicate username session.
+	tenantA := db.WithContext(tenancy.WithTenantID(context.Background(), 10))
+	var sub domain.Subscription
+	require.NoError(t, tenantA.First(&sub).Error)
+	_, err = billing.GenerateMonthlyInvoices(tenantA, now, 10)
+	require.NoError(t, err)
+	var invoice domain.Invoice
+	require.NoError(t, tenantA.First(&invoice).Error)
+	require.NoError(t, tenantA.Model(&invoice).Update("due_date", now.AddDate(0, 0, -5)).Error)
+
+	require.NoError(t, a.runBillingForTenant(10, now, 10, true))
+	require.Equal(t, []int64{10}, disconnectedTenantIDs)
+
+	var tenantAInvoices, tenantBInvoices []domain.Invoice
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(context.Background(), 10)).Find(&tenantAInvoices).Error)
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(context.Background(), 20)).Find(&tenantBInvoices).Error)
+	require.Len(t, tenantAInvoices, 1)
+	require.Empty(t, tenantBInvoices, "tenant A billing must not generate invoices for tenant B")
+}
 
 // TestSchedClearExpireData verifies the daily cleanup removes only genuinely
 // stale rows: radius_online sessions that have missed several interim updates,

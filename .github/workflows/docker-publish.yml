@@ -43,6 +43,13 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          git fetch --force --tags origin
+          latest_tag=$(git describe --tags --match 'v*' --abbrev=0 origin/main)
+          if [ "$release_ref" = "$latest_tag" ]; then
+            echo "latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
@@ -64,8 +71,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
-            ghcr.io/${{ github.repository_owner }}/mwx-isp:latest
             ghcr.io/${{ github.repository_owner }}/mwx-isp:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.latest == 'true' && format('ghcr.io/{0}/mwx-isp:latest', github.repository_owner) || '' }}
           labels: |
             org.opencontainers.image.title=MWX-ISP
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
