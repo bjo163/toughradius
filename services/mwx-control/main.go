@@ -27,6 +27,12 @@ import (
 
 const metadataLimit = 512
 
+var (
+	version   = "dev"
+	buildTime = "unknown"
+	gitCommit = "unknown"
+)
+
 type config struct {
 	Mode          string
 	NodeID        string
@@ -109,6 +115,13 @@ type nodeInventory struct {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		if err := runOwnerCLI(os.Args[1:]); err != nil {
+			slog.Error("MWX-Control CLI failed", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := run(); err != nil {
 		slog.Error("MWX-Control stopped", "error", err)
 		os.Exit(1)
@@ -182,7 +195,7 @@ func loadConfig() (config, error) {
 	if len(cfg.NodeName) > 64 || strings.ContainsAny(cfg.NodeName, "\r\n") {
 		return cfg, errors.New("MWX_CONTROL_NODE_NAME must be at most 64 characters")
 	}
-	cfg.Version = env("MWX_CONTROL_MWX_ISP_VERSION", "unknown")
+	cfg.Version = env("MWX_CONTROL_MWX_ISP_VERSION", version)
 	if len(cfg.Version) > 32 || strings.ContainsAny(cfg.Version, "\r\n") {
 		return cfg, errors.New("MWX_CONTROL_MWX_ISP_VERSION must be at most 32 characters")
 	}

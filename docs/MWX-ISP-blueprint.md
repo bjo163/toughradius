@@ -4,7 +4,7 @@
 **Deskripsi:** ISP Management + RADIUS + Billing
 **Target:** satu deployment MWX-ISP untuk mengelola beberapa organisasi ISP atau RT/RW Net yang terisolasi, dengan operator platform dan operator tenant.
 
-**Status saat ini (2026-10-05):** MVP manajemen ISP, RADIUS, billing, multi-tenant, monitoring jaringan read-only (TR-F031), dan notifikasi WhatsApp berbasis whatsmeow (TR-F030, default nonaktif) telah diimplementasikan. Kontrol peer privat khusus developer MWX-ISP sedang dibangun secara terpisah sebagai TR-F034/M18; scope awalnya hanya membership gossip dan status minimum. Adapter SNMP fisik, alur WhatsApp dengan nomor uji, serta kesiapan operasional dengan NAS nyata tetap perlu divalidasi sebelum produksi.
+**Status saat ini (2026-10-05):** MVP manajemen ISP, RADIUS, billing, multi-tenant, monitoring jaringan read-only (TR-F031), dan notifikasi WhatsApp berbasis whatsmeow (TR-F030, default nonaktif) telah diimplementasikan. MWX-Control peer gossip untuk fleet developer telah masuk; Windows owner CLI untuk discovery Docker, shell SSH terkonfirmasi, dan aksi container terkonfirmasi sedang dibangun sebagai TR-F034/M18. Overlay WireGuard privat masih direncanakan. Adapter SNMP fisik, alur WhatsApp dengan nomor uji, serta kesiapan operasional dengan NAS nyata tetap perlu divalidasi sebelum produksi.
 
 ## 1. Tujuan dan alur utama
 
@@ -90,7 +90,7 @@ Utamakan PostgreSQL untuk produksi dan pertahankan SQLite yang sudah bekerja. Gu
 - Tangani duplikasi nomor, paket/user tidak valid, invoice duplikat, pembayaran berlebih, dan transisi status yang tidak valid.
 - Branding yang terlihat menggunakan MWX-ISP; nama internal boleh tetap jika penggantian memperlambat pekerjaan.
 - Implementasi dan alur inti didahulukan; pengujian penting, validasi tambahan, perapian UI, dokumentasi, dan Docker dilakukan setelah alur inti berjalan.
-- Jangan membangun microservice, ERP, event sourcing, atau infrastruktur yang tidak diperlukan. Pengecualian yang disetujui adalah `TR-F034`: service Go terpisah yang dioperasikan developer MWX-ISP untuk keanggotaan peer dan metadata kesehatan minimum; service ini bukan bagian dari runtime aplikasi pelanggan dan tidak boleh membawa data operasional pelanggan.
+- Jangan membangun microservice, ERP, event sourcing, atau infrastruktur yang tidak diperlukan. Pengecualian yang disetujui adalah `TR-F034`: service Go dan CLI terpisah yang dioperasikan developer MWX-ISP untuk peer discovery/status serta operasi VPS eksplisit melalui SSH terverifikasi; ini bukan bagian dari runtime aplikasi pelanggan dan gossip tidak boleh membawa data operasional pelanggan atau perintah. WireGuard hanya untuk jalur manajemen privat yang disetujui, tanpa full-tunnel Internet.
 
 ## 7. Fase pengembangan
 
