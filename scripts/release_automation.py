@@ -65,12 +65,21 @@ def validate_new_tag(version: str, existing_tags: list[str]) -> None:
 
 
 def read_commits(previous_tag: str) -> list[tuple[str, str, str]]:
-    raw = run_git("log", "--no-merges", "--format=%H%x1f%s%x1f%b%x1e", f"{previous_tag}..HEAD")
+    raw = subprocess.check_output(
+        ["git", "log", "--no-merges", "--format=%H%x1f%s%x1f%b%x1e", f"{previous_tag}..HEAD"],
+        text=True,
+    )
+    return parse_commit_records(raw)
+
+
+def parse_commit_records(raw: str) -> list[tuple[str, str, str]]:
+    """Parse git's unit-separated log records without trimming empty fields."""
     records = []
     for record in raw.split("\x1e"):
+        record = record.strip("\r\n")
         if not record.strip():
             continue
-        fields = record.strip().split("\x1f", 2)
+        fields = record.split("\x1f", 2)
         if len(fields) == 3:
             records.append((fields[0], fields[1].strip(), fields[2].strip()))
     return records
