@@ -12,13 +12,13 @@ RadSec）。**任一服务失败，整个进程退出**，交由守护程序重�
 systemd、Docker 或同类工具托管。
 
 ```ini
-# /etc/systemd/system/toughradius.service（参考）
+# /etc/systemd/system/mwx-isp.service（参考）
 [Unit]
 Description=MWX-ISP server
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/toughradius -c /etc/toughradius.yml
+ExecStart=/usr/local/bin/mwx-isp -c /etc/mwx-isp.yml
 Restart=always
 RestartSec=3
 
@@ -39,8 +39,9 @@ WantedBy=multi-user.target
 
 ## 配置
 
-查找顺序：`-c <文件>` → `./toughradius.yml` → `/etc/toughradius.yml` →
-内置默认值。可用 `toughradius -printcfg` 查看合并结果。
+新的手动安装请显式指定 MWX-ISP 配置文件，例如 `-c /etc/mwx-isp.yml`。为支持升级，程序仍保留旧配置文件名作为回退选项。使用 `mwx-isp -printcfg -c /etc/mwx-isp.yml` 查看合并后的配置。
+
+> **升级兼容性：** `TOUGHRADIUS_*`、`/var/toughradius` 数据目录及部分文件名会继续保留，以便现有安装读取原配置、数据库、证书和日志。Docker VPS 安装脚本会显式设置 PostgreSQL。
 
 ```yaml
 system:
@@ -55,10 +56,10 @@ web:
   tls_port: 1817
   secret: <随机字符串>            # JWT 签名密钥——务必修改
 database:
-  type: sqlite                   # sqlite | postgres
+  type: postgres                # postgres | sqlite（本地开发或旧版部署）
   host: 127.0.0.1                # 仅 postgres
   port: 5432
-  name: toughradius.db           # sqlite 文件名（位于 {workdir}/data/）或 pg 库名
+  name: mwxisp                   # PostgreSQL 数据库名
   user: postgres
   passwd: <密码>
   max_conn: 100

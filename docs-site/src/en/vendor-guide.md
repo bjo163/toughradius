@@ -94,7 +94,7 @@ as a dynamic simple queue (rx-rate/tx-rate from the router's perspective, i.e.
 subscriber upload first).
 
 ```routeros
-/radius add service=ppp,hotspot address=<TOUGHRADIUS_IP> secret=<SECRET> \
+/radius add service=ppp,hotspot address=<MWX_ISP_IP> secret=<SECRET> \
     timeout=3s
 /radius incoming set accept=yes port=3799
 /ppp aaa set use-radius=yes accounting=yes interim-update=5m
@@ -115,8 +115,8 @@ VLAN binding both work.
 ```text
 radius-server template tr_tpl
  radius-server shared-key cipher <SECRET>
- radius-server authentication <TOUGHRADIUS_IP> 1812
- radius-server accounting <TOUGHRADIUS_IP> 1813
+ radius-server authentication <MWX_ISP_IP> 1812
+ radius-server accounting <MWX_ISP_IP> 1813
 #
 aaa
  authentication-scheme auth_radius
@@ -145,13 +145,13 @@ other Cisco-specific attributes are sent. Apply bandwidth policy on the device
 
 ```text
 aaa new-model
-radius server TOUGHRADIUS
- address ipv4 <TOUGHRADIUS_IP> auth-port 1812 acct-port 1813
+radius server MWX_ISP
+ address ipv4 <MWX_ISP_IP> auth-port 1812 acct-port 1813
  key <SECRET>
 aaa authentication ppp default group radius
 aaa accounting network default start-stop group radius
 aaa server radius dynamic-author
- client <TOUGHRADIUS_IP> server-key <SECRET>
+ client <MWX_ISP_IP> server-key <SECRET>
 ```
 
 `aaa server radius dynamic-author` enables CoA/Disconnect (default port 3799).
@@ -163,8 +163,8 @@ The H3C parser extracts VLANs, so VLAN binding is supported.
 
 ```text
 radius scheme tr_scheme
- primary authentication <TOUGHRADIUS_IP> 1812
- primary accounting <TOUGHRADIUS_IP> 1813
+ primary authentication <MWX_ISP_IP> 1812
+ primary accounting <MWX_ISP_IP> 1813
  key authentication simple <SECRET>
  key accounting simple <SECRET>
  user-name-format without-domain

@@ -1,10 +1,10 @@
-# ToughRADIUS 功能清单
+# MWX-ISP 功能清单
 
 英文版本：[docs/feature-checklist.en.md](feature-checklist.en.md)
 
 开发路线图与里程碑：[docs/roadmap.md](roadmap.md)（中文详版：[docs/roadmap.zh.md](roadmap.zh.md)）
 
-本文档是 ToughRADIUS 的功能范围基线。后续需求、Issue、PR 和代码改动必须先对齐本清单中的功能编号；无法映射到现有编号的需求，必须先更新本清单并说明范围变化，再进入实现。
+本文档是 MWX-ISP 的功能范围基线。后续需求、Issue、PR 和代码改动必须先对齐本清单中的功能编号；无法映射到现有编号的需求，必须先更新本清单并说明范围变化，再进入实现。
 
 ## 维护规则
 
@@ -43,7 +43,7 @@
 | TR-F013 | 管理前端 | React Admin 管理后台 | 提供登录、Dashboard、用户、Profile、NAS、节点、会话、计费、操作员、账号设置和系统配置页面。 | `web/src/App.tsx`, `web/src/resources`, `web/src/pages`, `web/src/providers` | 已实现 | 前端新增页面必须对齐已有资源路由和 API 映射，不引入独立管理入口。 |
 | TR-F014 | 系统配置 | 动态配置与配置 Schema | 通过 `sys_config` 和内嵌 schema 管理 RADIUS 运行参数，支持配置查询、编辑、schema 输出和 reload。 | `internal/app/config_manager.go`, `internal/app/config_schemas.json`, `internal/adminapi/settings.go`, `web/src/pages/SystemConfigPage.tsx` | 已实现 | 新配置项必须先加入 schema，提供默认值、类型、范围、国际化 key 和测试。 |
 | TR-F015 | 运维监控 | Dashboard、指标和运行监控 | 展示用户数、在线数、认证/计费趋势、流量、Profile 分布；采集系统和进程 CPU/内存以及 RADIUS 指标。 | `internal/adminapi/dashboard.go`, `internal/app/jobs.go`, `internal/app/radius_metrics.go`, `pkg/metrics` | 已实现 | 指标名和 Dashboard 数据结构变更必须兼容前端和历史解释口径。 |
-| TR-F016 | 系统管理 | 操作员、登录与账号设置 | 支持首次启动创建超级管理员（随机口令或 `TOUGHRADIUS_ADMIN_PASSWORD`，禁止历史默认口令）、JWT 登录、当前账号信息、操作员 CRUD、账号资料和密码变更。 | `internal/app/initdb.go`, `internal/adminapi/auth.go`, `internal/adminapi/operators.go`, `web/src/pages/AccountSettings.tsx`, `web/src/resources/operators.tsx` | 已实现 | 不得持久化或接受历史内置口令（CWE-1392 / GHSA-2gwm-6gf5-8699）；升级时必须轮换遗留默认口令；不得静默重新启用或提权已降级/停用的 `admin`。引入 RBAC 前必须先拆分权限范围和迁移路径。 |
+| TR-F016 | 系统管理 | 操作员、登录与账号设置 | 支持全新安装时使用 `admin` / `admin` 引导超级管理员（VPS 安装脚本会设置唯一口令；也可通过 `TOUGHRADIUS_ADMIN_PASSWORD` 覆盖）、JWT 登录、当前账号信息、操作员 CRUD、账号资料和密码变更。 | `internal/app/initdb.go`, `internal/adminapi/auth.go`, `internal/adminapi/operators.go`, `web/src/pages/AccountSettings.tsx`, `web/src/resources/operators.tsx` | 已实现 | 将管理界面开放到网络前必须修改默认口令。升级时保留当前口令；不得静默重新启用或提权已降级/停用的 `admin`。引入 RBAC 前必须先拆分权限范围和迁移路径。 |
 | TR-F017 | 数据存储 | PostgreSQL / SQLite 数据库支持 | 支持 GORM 自动迁移、PostgreSQL 生产部署和 SQLite 开发/轻量部署。 | `config/config.go`, `internal/app/database.go`, `internal/domain`, `internal/app/app.go` | 核心基线 | Schema 变更必须兼容两类数据库，并补迁移/查询测试。 |
 | TR-F018 | Web 服务 | 静态前端、API、健康检查和中间件 | 提供 `/admin` SPA、API base path、ready/realip、CORS、JWT、请求上下文和统一错误处理。 | `internal/webserver/server.go`, `web/static.go`, `pkg/web` | 已实现 | Web 层只做协议和中间件承载，业务规则应留在 adminapi、app 或 radiusd。 |
 | TR-F019 | CLI 工具 | 运维与开发辅助命令 | 提供主程序参数、RADIUS 测试、证书生成、配置 schema 校验、压测、密码重置和演示数据工具。 | `main.go`, `cmd/radtest`, `cmd/certgen`, `cmd/config-tool`, `cmd/benchmark`, `cmd/reset-password`, `cmd/demo-seed` | 已实现 | CLI 必须保持脚本友好，输出和退出码变化需在测试或文档中说明。 |
@@ -92,4 +92,4 @@
 | TR-N003 | 通用可视化监控平台 | TR-F031 允许对已登记 ISP 网络设备做有限健康监控；仍不建设通用 NMS/BI/observability 平台，也不替代 Prometheus、Grafana 等系统。 |
 | TR-N004 | 多租户 SaaS 平台 | 当前模型以单实例管理为基线；多租户需要先完成权限、数据隔离和迁移设计。 |
 | TR-N005 | 重写协议栈或替换管理框架 | 除非有明确缺陷和迁移方案，否则不以重写为开发方向。 |
-| TR-N006 | 托管式 Captive Portal / 访客门户产品 | ToughRADIUS 只作为 RADIUS auth/accounting 后端，不提供、不托管、不运营 Portal 登录页、访客开户、券码、短信/微信/支付 onboarding 或厂商 Portal Server 状态机；这些属于其他产品。 |
+| TR-N006 | 托管式 Captive Portal / 访客门户产品 | MWX-ISP 只作为 RADIUS auth/accounting 后端，不提供、不托管、不运营 Portal 登录页、访客开户、券码、短信/微信/支付 onboarding 或厂商 Portal Server 状态机；这些属于其他产品。 |

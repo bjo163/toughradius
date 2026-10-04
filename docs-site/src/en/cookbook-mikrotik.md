@@ -68,7 +68,7 @@ code):
 
 ```routeros
 # Point at MWX-ISP (same shared secret for auth/accounting)
-/radius add service=ppp address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
+/radius add service=ppp address=<MWX_ISP_IP> secret=<SECRET> timeout=3s
 /radius incoming set accept=yes port=3799
 
 # Enable RADIUS auth + accounting + periodic interim updates
@@ -90,7 +90,7 @@ code):
 
 - **radtest (server side)**:
   ```bash
-  go run ./cmd/radtest auth -server <TOUGHRADIUS_IP> -nas-ip <NAS_IP> \
+  go run ./cmd/radtest auth -server <MWX_ISP_IP> -nas-ip <NAS_IP> \
     -username <username> -password <password> -secret <SECRET>
   ```
   On success it prints `Access-Accept`; you should see `Mikrotik-Rate-Limit`,
@@ -155,7 +155,7 @@ So configure it as follows:
 ### On the device side (RouterOS, reference example, verify on your firmware)
 
 ```routeros
-/radius add service=hotspot address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
+/radius add service=hotspot address=<MWX_ISP_IP> secret=<SECRET> timeout=3s
 
 # Enable RADIUS and MAC login on the hotspot server profile
 /ip hotspot profile set <profile> use-radius=yes login-by=mac,http-chap
@@ -368,7 +368,7 @@ the security profile **pass EAP through**:
 
 ```routeros
 # 1) RADIUS server for the wireless service (same secret as the NAS record)
-/radius add service=wireless address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
+/radius add service=wireless address=<MWX_ISP_IP> secret=<SECRET> timeout=3s
 
 # 2a) CLASSIC /interface wireless — passthrough is the key word
 /interface wireless security-profiles add name=eap-passthrough \
@@ -402,7 +402,7 @@ hostap) — the same tool the project's
 [EAP acceptance reports](./eap-acceptance-reports.md) run (v2.10). It talks
 RADIUS straight to MWX-ISP, so you can validate the server **before**
 touching a real radio. Save one of these and run
-`eapol_test -c <file>.conf -a <TOUGHRADIUS_IP> -p 1812 -s <SECRET>` — a pass
+`eapol_test -c <file>.conf -a <MWX_ISP_IP> -p 1812 -s <SECRET>` — a pass
 prints `SUCCESS`:
 
 ```ini

@@ -3,17 +3,18 @@
 > 中文版本：[管理系统用户手册](../zh/admin-manual.md)
 
 The management console runs on port `1816` (HTTP) and is built with React
-Admin. It is bilingual (中文 default, English via the app-bar language menu) and
-supports light/dark themes. This chapter walks through every page.
+Admin. English is the default interface language, and the dark green theme is
+the default appearance. Users can change the language and theme from the app
+bar. This chapter walks through every page.
 
 ## Logging in and accounts
 
-Sign in at `http://<server>:1816` with an operator account. The initial
-administrator is `admin` plus a one-time password in
-`{workdir}/private/admin-bootstrap-password` (or `TOUGHRADIUS_ADMIN_PASSWORD`).
-Change it immediately under **Account Settings** (top-right avatar), which also
-edits your profile info. Passwords must be at least 6 characters and must not
-be the historical default.
+Sign in at `http://<server>:1816` with an operator account. A fresh manual
+installation starts with `admin` / `admin`; set
+`TOUGHRADIUS_ADMIN_PASSWORD` to choose a different initial password. The VPS
+installer generates a unique password and prints it once. Existing installations
+keep their current password during upgrades. Change the password under
+**Account Settings** (top-right avatar), which also edits your profile info.
 
 Operator roles (set under **Operators**):
 

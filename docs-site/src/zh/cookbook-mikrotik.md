@@ -56,7 +56,7 @@ MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。MWX-I
 
 ```routeros
 # 指向 MWX-ISP（认证/计费同一共享密钥）
-/radius add service=ppp address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
+/radius add service=ppp address=<MWX_ISP_IP> secret=<SECRET> timeout=3s
 /radius incoming set accept=yes port=3799
 
 # 开启 RADIUS 认证 + 计费 + 周期上报
@@ -78,7 +78,7 @@ MikroTik RouterOS（厂商代码 **14988**）是最常见的对接对象。MWX-I
 
 - **radtest（服务端）**：
   ```bash
-  go run ./cmd/radtest auth -server <TOUGHRADIUS_IP> -nas-ip <NAS_IP> \
+  go run ./cmd/radtest auth -server <MWX_ISP_IP> -nas-ip <NAS_IP> \
     -username <用户名> -password <密码> -secret <SECRET>
   ```
   成功时打印 `Access-Accept`，应能看到 `Mikrotik-Rate-Limit`、`Session-Timeout`，
@@ -132,7 +132,7 @@ MWX-ISP 判定一次请求是否为 **MAC 认证**的条件是（锚定代码
 ### 设备侧（RouterOS，参考示例，以实际固件为准）
 
 ```routeros
-/radius add service=hotspot address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
+/radius add service=hotspot address=<MWX_ISP_IP> secret=<SECRET> timeout=3s
 
 # 在 hotspot server profile 上启用 RADIUS 与 MAC 登录
 /ip hotspot profile set <profile> use-radius=yes login-by=mac,http-chap
@@ -322,7 +322,7 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 
 ```routeros
 # 1) wireless 服务的 RADIUS 服务器（密钥与 NAS 记录一致）
-/radius add service=wireless address=<TOUGHRADIUS_IP> secret=<SECRET> timeout=3s
+/radius add service=wireless address=<MWX_ISP_IP> secret=<SECRET> timeout=3s
 
 # 2a) 经典 /interface wireless —— passthrough 是关键词
 /interface wireless security-profiles add name=eap-passthrough \
@@ -353,7 +353,7 @@ openssl pkcs12 -export -inkey alice.key -in alice.pem -certfile ca.pem \
 `radtest` **无法**驱动 EAP。请用 `eapol_test`（来自 `wpa_supplicant` / hostap）——
 即本项目 [EAP 验收测试报告](./eap-acceptance-reports.md) 所用的工具（v2.10）。它直接对
 MWX-ISP 讲 RADIUS，因此你能在**接触真实射频之前**先验证服务器。存成下列任一文件后运行
-`eapol_test -c <文件>.conf -a <TOUGHRADIUS_IP> -p 1812 -s <SECRET>`，通过会打印
+`eapol_test -c <文件>.conf -a <MWX_ISP_IP> -p 1812 -s <SECRET>`，通过会打印
 `SUCCESS`：
 
 ```ini

@@ -14,13 +14,13 @@ exits** so a supervisor can restart it — run it under systemd, Docker, or an
 equivalent.
 
 ```ini
-# /etc/systemd/system/toughradius.service (reference)
+# /etc/systemd/system/mwx-isp.service (reference)
 [Unit]
 Description=MWX-ISP server
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/toughradius -c /etc/toughradius.yml
+ExecStart=/usr/local/bin/mwx-isp -c /etc/mwx-isp.yml
 Restart=always
 RestartSec=3
 
@@ -41,8 +41,9 @@ WantedBy=multi-user.target
 
 ## Configuration
 
-Lookup order: `-c <file>` → `./toughradius.yml` → `/etc/toughradius.yml` →
-embedded defaults. Inspect the merged result with `toughradius -printcfg`.
+For a new manual install, pass an explicit MWX-ISP config path, such as `-c /etc/mwx-isp.yml`. Existing fallback config names remain available to support upgrades. Inspect the merged result with `mwx-isp -printcfg -c /etc/mwx-isp.yml`.
+
+> **Upgrade compatibility:** `TOUGHRADIUS_*`, `/var/toughradius`, and several file names remain stable so existing installs keep reading their configuration, database, certificates, and logs. The Docker VPS installer explicitly configures PostgreSQL.
 
 ```yaml
 system:
@@ -57,10 +58,10 @@ web:
   tls_port: 1817
   secret: <random-string>        # JWT signing secret — change it
 database:
-  type: sqlite                   # sqlite | postgres
+  type: postgres                # postgres | sqlite (local or legacy deployments)
   host: 127.0.0.1                # postgres only
   port: 5432
-  name: toughradius.db           # sqlite filename (under {workdir}/data/) or pg database
+  name: mwxisp                   # PostgreSQL database name
   user: postgres
   passwd: <password>
   max_conn: 100

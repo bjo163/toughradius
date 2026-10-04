@@ -12,19 +12,17 @@
 使用内置工具，指向服务器实际使用的配置文件：
 
 ```bash
-go run ./cmd/reset-password -c /etc/toughradius.yml -u admin -p <新密码>
+go run ./cmd/reset-password -c /etc/mwx-isp.yml -u admin -p <新密码>
 ```
 
-首次启动账号为 `admin`，口令是一次性随机值并写入
-`{workdir}/private/admin-bootstrap-password`（若在首次启动前设置了
-`TOUGHRADIUS_ADMIN_PASSWORD` 则使用该值）。历史默认口令 `toughradius`
-不再创建，也不会被登录接受。
+全新手动安装的首次登录为 `admin` / `admin`。首次启动前设置
+`TOUGHRADIUS_ADMIN_PASSWORD` 可指定其他初始口令。VPS 安装脚本会生成唯一口令并打印一次；
+升级已有安装会保留当前口令。
 
 ### SQLite 和 PostgreSQL 怎么选？
 
-SQLite（默认）零依赖——纯 Go 驱动、单文件存于 `{workdir}/data/`——适合实验
-与小规模部署。生产规模、高计费量，或需要外部备份工具（`pg_dump`、复制）时
-选 PostgreSQL。
+PostgreSQL 是默认数据库，也是生产环境推荐数据库。SQLite 仅在本地开发或旧版部署中
+显式选择时使用。
 
 ### 能不能不用 1812/1813/1816 这些端口？
 

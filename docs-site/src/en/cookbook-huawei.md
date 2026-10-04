@@ -79,8 +79,8 @@ How the stored Kbps rates become the four Huawei VSAs (anchored to
 # RADIUS server template
 radius-server template tr-tmpl
  radius-server shared-key cipher <SECRET>
- radius-server authentication <TOUGHRADIUS_IP> 1812 weight 80
- radius-server accounting <TOUGHRADIUS_IP> 1813 weight 80
+ radius-server authentication <MWX_ISP_IP> 1812 weight 80
+ radius-server accounting <MWX_ISP_IP> 1813 weight 80
 #
 # AAA domain bound to the template (matches Huawei-Domain-Name)
 aaa
@@ -101,7 +101,7 @@ aaa
 
 - **radtest (server side)**:
   ```bash
-  go run ./cmd/radtest auth -server <TOUGHRADIUS_IP> -nas-ip <NAS_IP> \
+  go run ./cmd/radtest auth -server <MWX_ISP_IP> -nas-ip <NAS_IP> \
     -username <username> -password <password> -secret <SECRET>
   ```
   On success it prints `Access-Accept`; you should see the four Huawei rate
@@ -170,8 +170,8 @@ Binding is then enforced by two checkers (anchored to `mac_bind_checker.go` /
 # subscriber MAC inside Calling-Station-Id by default on BRAS access.
 radius-server template tr-tmpl
  radius-server shared-key cipher <SECRET>
- radius-server authentication <TOUGHRADIUS_IP> 1812 weight 80
- radius-server accounting <TOUGHRADIUS_IP> 1813 weight 80
+ radius-server authentication <MWX_ISP_IP> 1812 weight 80
+ radius-server accounting <MWX_ISP_IP> 1813 weight 80
 #
 # Enable IPv6 address/prefix delivery on the BRAS as required by your design
 ipv6
@@ -237,7 +237,7 @@ retry, targeting the **CoA port (default 3799)** on the NAS record.
 ```text
 # The RADIUS template must accept dynamic authorization (CoA/DM).
 radius-server template tr-tmpl
- radius-server authorization <TOUGHRADIUS_IP> shared-key cipher <SECRET>
+ radius-server authorization <MWX_ISP_IP> shared-key cipher <SECRET>
 ```
 
 - The firewall must allow **inbound UDP 3799** from MWX-ISP to the BRAS.

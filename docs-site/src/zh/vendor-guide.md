@@ -84,7 +84,7 @@ MWX-ISP 下发 `Mikrotik-Rate-Limit = "{up}k/{down}k"`，RouterOS 将其应用�
 动态 simple queue（rx/tx 按路由器视角，即先用户上行）。
 
 ```routeros
-/radius add service=ppp,hotspot address=<TOUGHRADIUS_IP> secret=<SECRET> \
+/radius add service=ppp,hotspot address=<MWX_ISP_IP> secret=<SECRET> \
     timeout=3s
 /radius incoming set accept=yes port=3799
 /ppp aaa set use-radius=yes accounting=yes interim-update=5m
@@ -104,8 +104,8 @@ MWX-ISP 下发 `Mikrotik-Rate-Limit = "{up}k/{down}k"`，RouterOS 将其应用�
 ```text
 radius-server template tr_tpl
  radius-server shared-key cipher <SECRET>
- radius-server authentication <TOUGHRADIUS_IP> 1812
- radius-server accounting <TOUGHRADIUS_IP> 1813
+ radius-server authentication <MWX_ISP_IP> 1812
+ radius-server accounting <MWX_ISP_IP> 1813
 #
 aaa
  authentication-scheme auth_radius
@@ -132,13 +132,13 @@ Cisco 私有属性。带宽策略请在设备侧实施（Cisco 无可移植的�
 
 ```text
 aaa new-model
-radius server TOUGHRADIUS
- address ipv4 <TOUGHRADIUS_IP> auth-port 1812 acct-port 1813
+radius server MWX_ISP
+ address ipv4 <MWX_ISP_IP> auth-port 1812 acct-port 1813
  key <SECRET>
 aaa authentication ppp default group radius
 aaa accounting network default start-stop group radius
 aaa server radius dynamic-author
- client <TOUGHRADIUS_IP> server-key <SECRET>
+ client <MWX_ISP_IP> server-key <SECRET>
 ```
 
 `aaa server radius dynamic-author` 启用 CoA/Disconnect（默认端口 3799）。
@@ -150,8 +150,8 @@ H3C 解析器可提取 VLAN，支持 VLAN 绑定。
 
 ```text
 radius scheme tr_scheme
- primary authentication <TOUGHRADIUS_IP> 1812
- primary accounting <TOUGHRADIUS_IP> 1813
+ primary authentication <MWX_ISP_IP> 1812
+ primary accounting <MWX_ISP_IP> 1813
  key authentication simple <SECRET>
  key accounting simple <SECRET>
  user-name-format without-domain

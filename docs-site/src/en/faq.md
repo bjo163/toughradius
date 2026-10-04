@@ -13,20 +13,18 @@ open a new one.
 Use the bundled tool against the same configuration file the server runs with:
 
 ```bash
-go run ./cmd/reset-password -c /etc/toughradius.yml -u admin -p <new-password>
+go run ./cmd/reset-password -c /etc/mwx-isp.yml -u admin -p <new-password>
 ```
 
-The first-start account is `admin` with a one-time generated password written
-to `{workdir}/private/admin-bootstrap-password` (or `TOUGHRADIUS_ADMIN_PASSWORD`
-if you set it before the first start). The historical `toughradius` password is
-no longer created or accepted.
+The first-start account is `admin` / `admin` on a fresh manual install. Set
+`TOUGHRADIUS_ADMIN_PASSWORD` before first startup to choose another password.
+The VPS installer generates and prints a unique password. Existing accounts
+keep their password across upgrades.
 
 ### Which database should I choose, SQLite or PostgreSQL?
 
-SQLite (the default) requires nothing extra — pure-Go driver, single file under
-`{workdir}/data/` — and suits labs and small deployments. Choose PostgreSQL for
-production scale, high accounting volume, or when you need external backup
-tooling (`pg_dump`, replication).
+PostgreSQL is the default and production database. SQLite remains available when
+explicitly selected for local development or legacy deployments.
 
 ### Can I run it on a port other than 1812/1813/1816?
 

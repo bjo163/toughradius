@@ -68,8 +68,8 @@ AAA **域（domain）**，以便 BRAS 套用对应的域策略。
 # RADIUS 服务器模板
 radius-server template tr-tmpl
  radius-server shared-key cipher <SECRET>
- radius-server authentication <TOUGHRADIUS_IP> 1812 weight 80
- radius-server accounting <TOUGHRADIUS_IP> 1813 weight 80
+ radius-server authentication <MWX_ISP_IP> 1812 weight 80
+ radius-server accounting <MWX_ISP_IP> 1813 weight 80
 #
 # 绑定到模板的 AAA 域（与 Huawei-Domain-Name 对应）
 aaa
@@ -90,7 +90,7 @@ aaa
 
 - **radtest（服务端）**：
   ```bash
-  go run ./cmd/radtest auth -server <TOUGHRADIUS_IP> -nas-ip <NAS_IP> \
+  go run ./cmd/radtest auth -server <MWX_ISP_IP> -nas-ip <NAS_IP> \
     -username <用户名> -password <密码> -secret <SECRET>
   ```
   成功时打印 `Access-Accept`，应能看到四个华为限速属性以及（若设置了）
@@ -148,8 +148,8 @@ aaa
 # BRAS 接入默认把内/外层 VLAN 放进 NAS-Port-Id、把用户 MAC 放进 Calling-Station-Id。
 radius-server template tr-tmpl
  radius-server shared-key cipher <SECRET>
- radius-server authentication <TOUGHRADIUS_IP> 1812 weight 80
- radius-server accounting <TOUGHRADIUS_IP> 1813 weight 80
+ radius-server authentication <MWX_ISP_IP> 1812 weight 80
+ radius-server accounting <MWX_ISP_IP> 1813 weight 80
 #
 # 按设计需要在 BRAS 上启用 IPv6 地址/前缀下发
 ipv6
@@ -204,7 +204,7 @@ ipv6
 ```text
 # RADIUS 模板必须接受动态授权（CoA/DM）。
 radius-server template tr-tmpl
- radius-server authorization <TOUGHRADIUS_IP> shared-key cipher <SECRET>
+ radius-server authorization <MWX_ISP_IP> shared-key cipher <SECRET>
 ```
 
 - 防火墙需放行从 MWX-ISP 到 BRAS 的**入向 UDP 3799**。

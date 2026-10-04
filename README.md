@@ -2,6 +2,8 @@
 
 **ISP Management + RADIUS + Billing**
 
+[User Guide / GitHub Pages](https://bjo163.github.io/mwx-isp/) · [Repository documentation](docs/)
+
 MWX-ISP is an operator-facing application for a single ISP installation. It combines customer and service management, RADIUS network access, and a practical subscription billing lifecycle in one modular application. Existing RADIUS users, profiles, NAS devices, accounting records, sessions, and Disconnect support remain part of the product.
 
 The initial business flow is:

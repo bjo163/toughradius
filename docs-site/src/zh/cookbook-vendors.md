@@ -54,8 +54,8 @@ VLAN 来自 `NAS-Port-Id`。**MAC 与 VLAN 绑定均支持。**
 
 ```text
 radius scheme tr_scheme
- primary authentication <TOUGHRADIUS_IP> 1812
- primary accounting <TOUGHRADIUS_IP> 1813
+ primary authentication <MWX_ISP_IP> 1812
+ primary accounting <MWX_ISP_IP> 1813
  key authentication simple <SECRET>
  key accounting simple <SECRET>
  user-name-format without-domain
@@ -135,13 +135,13 @@ enhancer 会在套餐配置了地址池时下发一个非限速属性 `Cisco-AVP
 
 ```text
 aaa new-model
-radius server TOUGHRADIUS
- address ipv4 <TOUGHRADIUS_IP> auth-port 1812 acct-port 1813
+radius server MWX_ISP
+ address ipv4 <MWX_ISP_IP> auth-port 1812 acct-port 1813
  key <SECRET>
 aaa authentication ppp default group radius
 aaa accounting network default start-stop group radius
 aaa server radius dynamic-author
- client <TOUGHRADIUS_IP> server-key <SECRET>
+ client <MWX_ISP_IP> server-key <SECRET>
 ```
 
 > `aaa server radius dynamic-author` 启用 CoA / Disconnect（默认端口 3799）。不要指望
