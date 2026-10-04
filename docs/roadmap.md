@@ -43,7 +43,7 @@ This is the canonical planning surface and task source: milestone status, guardr
 | M13 | Bilingual documentation site with mdbook | TR-F023 | P2 | Delivered |
 | M14 | LDAP / AD bind authentication backend for PAP-family methods | TR-F025 | P2 | In progress |
 | M15 | Multi-tenant ISP and RT/RW Net isolation | TR-F033 | P1 | Delivered |
-| M16 | Automated dev-to-main versioning, changelog, and releases | TR-F022 | P2 | In progress |
+| M16 | Automated dev-to-main versioning, changelog, and releases | TR-F022 | P2 | Delivered |
 
 ## Cross-Cutting Baseline
 
@@ -62,7 +62,7 @@ The scheduled **M5 vendor VSA expansion** batch (M5.1 inventory + M5.2/M5.3/M5.4
 | 3 | M10 EAP-TLS 1.3 / RFC 9190 | In progress | M10.1 (#562) TLS 1.3 negotiation + §2.1.1 protected success; M10.2 (#564) version-branched MSK → MS-MPPE derivation; M10.3 (#607) tolerate `close_notify` after the success point (RFC 9190 §2.1.4/§2.5); next M10.5 identity protection / anonymous NAI |
 | 4 | M14.5 LDAP connection robustness | Blocked: waiting for load evidence | Revisit pooling/reconnect design only when connection cost or cancellation evidence justifies the complexity |
 | 5 | M15 multi-tenant ISP operations | Delivered | PR #8 merged to `main`; PostgreSQL/OpenLDAP acceptance, tenant isolation, RADIUS NAS-first routing, operational scoping, UI, recovery, and handbook coverage are CI-verified |
-| 6 | M16 release automation | In progress | Keep only `dev` and `main`; promote through the existing review PR; create an idempotent SemVer tag, changelog, GitHub Release, binaries, and GHCR image after approved main promotion |
+| 6 | M16 release automation | Delivered | Only `dev` and `main`; reviewed promotions; automated SemVer/changelog; `v0.2.0`–`v0.2.2` releases, platform assets, GHCR images, and safe unpublished-tag recovery verified |
 
 Agent-facing unchecked tasks:
 
@@ -77,8 +77,8 @@ Agent-facing unchecked tasks:
 - [x] M15.7 Run PostgreSQL integration coverage for migration, permissions, core data domains, same-name RADIUS users, accounting, CoA/Disconnect, backup/restore, and cross-tenant isolation; update English/Indonesian operations guidance. PR #8 CI passed PostgreSQL/OpenLDAP acceptance and the operator/backup handbooks are in place.
 - [x] M16.1 Normalize repository guidance and automation around the existing two branches (`dev` and `main`), make dev-to-main PR creation reliable with least-necessary Actions permissions, and prevent merge settings from deleting `dev`. Verified the active GitHub ruleset permits only `main` and `dev`; the release workflow only advances those branches and creates version tags.
 - [x] M16.2 Define Conventional Commit release classification and idempotent version/changelog generation from commits since the previous tag. `scripts/release_automation.py` classifies breaking/feature/fix commits; unit tests cover docs-only no-op, empty commit bodies, SemVer levels, collisions, and recovery.
-- [ ] M16.3 After reviewed promotion to `main`, create annotated SemVer tags and changelog/release notes, then build and publish Windows/Linux/macOS assets and GHCR images. Live release `v0.2.1` verified the pipeline; `v0.2.2` is in progress and `v0.2.0` backfill is tracked in M16.4.
-- [ ] M16.4 Add workflow-lint and release simulation coverage for no-op/docs-only changes, patch/minor/major classification, repeated runs, tag collisions, and publish failures; keep release jobs idempotent and report recovery steps. Progress: actionlint, classification/version/collision tests, and an isolated Git remote simulation for diverged dev and repeated metadata sync are covered. End-to-end workflow replay and publish-failure recovery remain to validate.
+- [x] M16.3 After reviewed promotion to `main`, create annotated SemVer tags and changelog/release notes, then build and publish Windows/Linux/macOS assets and GHCR images. Live `v0.2.0`, `v0.2.1`, and `v0.2.2` releases each published all 10 binary/checksum assets and a Linux amd64/arm64/armv7 image; `v0.2.2` remains Latest.
+- [x] M16.4 Add workflow-lint and release simulation coverage for no-op/docs-only changes, SemVer levels, repeated runs, tag collisions, and publish failures; keep jobs idempotent and report recovery steps. Actionlint and release automation tests pass. A failed `v0.2.0` release was recovered by dispatching the existing tag; GHCR and all assets published, while GitHub Release and image `latest` remained `v0.2.2`.
 - [x] M5.1 Inventory pending vendor VSA gaps and dictionary differences. Delivered: `docs/vendor-vsa-gap-baseline.md` refreshed to HEAD `9882f79e` — registered parsers `default + huawei + h3c + zte + radback + alcatel + aruba + juniper`, response enhancers `default + huawei + h3c + zte + mikrotik + ikuai + aruba`, a corrected gap matrix, a delta-since-#433 section, and the next-batch backlog. (The first baseline #433 was superseded once M5.2/M5.3 landed; `#470` had re-opened this checkbox.)
 - [x] M5.2 Add request-side vendor parsers for genuine MAC/VLAN request VSAs. Delivered: `radback` (#449), `alcatel` (#450), `aruba` (#451), and `juniper` (#453) request parsers, plus the `vendors.CodeAlcatel` / `CodeAruba` constants.
 - [x] M5.3 Add the first vendor Access-Accept response enhancer. Delivered: `aruba` response enhancer registered in `plugins/init.go` (#456) with sample-based tests.
