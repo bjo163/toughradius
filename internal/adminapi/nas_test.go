@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/bjo163/mwx-isp/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -541,7 +541,8 @@ func TestDeleteNAS(t *testing.T) {
 		{
 			name:           "NAS not found",
 			nasID:          "999",
-			expectedStatus: http.StatusOK, // GORM Delete does not return error
+			expectedStatus: http.StatusNotFound,
+			expectedError:  "NOT_FOUND",
 			checkDeleted:   false,
 		},
 		{

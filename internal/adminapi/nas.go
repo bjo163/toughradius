@@ -331,8 +331,12 @@ func DeleteNAS(c echo.Context) error {
 		})
 	}
 
-	if err := GetDB(c).Delete(&domain.NetNas{}, id).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.NetNas{}, id)
+	if err != nil {
 		return fail(c, http.StatusInternalServerError, "DELETE_FAILED", "Failed to delete NAS device", err.Error())
+	}
+	if !deleted {
+		return fail(c, http.StatusNotFound, "NOT_FOUND", "NAS device not found", nil)
 	}
 
 	return ok(c, map[string]interface{}{

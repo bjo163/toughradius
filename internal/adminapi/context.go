@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"github.com/bjo163/mwx-isp/internal/app"
+	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -17,6 +18,19 @@ import (
 // nil context that would fault later.
 func GetAppContext(c echo.Context) app.AppContext {
 	return c.Get("appCtx").(app.AppContext) //nolint:errcheck // type assertion is safe for middleware-set context
+}
+
+// deleteTenantRecord deletes one tenant-owned record and reports whether the
+// authenticated tenant owned the requested ID. The explicit predicate keeps
+// destructive paths safe even when a database callback or GORM primary-key
+// delete would otherwise bypass a request filter.
+func deleteTenantRecord(c echo.Context, model any, id int64) (bool, error) {
+	tenantID := domain.DefaultTenantID
+	if scopedID, ok := tenancy.TenantID(c.Request().Context()); ok {
+		tenantID = scopedID
+	}
+	result := GetDB(c).Where("tenant_id = ?", tenantID).Delete(model, id)
+	return result.RowsAffected > 0, result.Error
 }
 
 // GetDB returns the GORM database handle for the current request. It prefers a

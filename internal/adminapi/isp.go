@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/bjo163/mwx-isp/internal/billing"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/radiusd"
 	"github.com/bjo163/mwx-isp/internal/webserver"
 	"github.com/bjo163/mwx-isp/pkg/common"
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
@@ -241,8 +241,12 @@ func deleteCustomer(c echo.Context) error {
 	if count > 0 {
 		return fail(c, 409, "CUSTOMER_HAS_SUBSCRIPTIONS", "Customer with subscriptions cannot be deleted", nil)
 	}
-	if err := GetDB(c).Delete(&domain.Customer{}, id).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.Customer{}, id)
+	if err != nil {
 		return fail(c, 500, "DATABASE_ERROR", "Failed to delete customer", err.Error())
+	}
+	if !deleted {
+		return fail(c, 404, "NOT_FOUND", "Customer not found", nil)
 	}
 	return ok(c, map[string]int64{"id": id})
 }
@@ -335,8 +339,12 @@ func deletePackage(c echo.Context) error {
 	if n > 0 {
 		return fail(c, 409, "PACKAGE_IN_USE", "Package has subscriptions and cannot be deleted", nil)
 	}
-	if err := GetDB(c).Delete(&domain.InternetPackage{}, id).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.InternetPackage{}, id)
+	if err != nil {
 		return fail(c, 500, "DATABASE_ERROR", "Failed to delete package", err.Error())
+	}
+	if !deleted {
+		return fail(c, 404, "NOT_FOUND", "Package not found", nil)
 	}
 	return ok(c, map[string]int64{"id": id})
 }

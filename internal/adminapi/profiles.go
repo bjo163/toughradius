@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labstack/echo/v4"
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/labstack/echo/v4"
 )
 
 // allowedProfileSortFields defines the whitelist of sortable columns for the
@@ -497,8 +497,12 @@ func DeleteProfile(c echo.Context) error {
 		return fail(c, http.StatusConflict, "IN_USE", "Profile is linked to an internet package and cannot be deleted", map[string]int64{"package_count": packageCount})
 	}
 
-	if err := GetDB(c).Delete(&domain.RadiusProfile{}, id).Error; err != nil {
+	deleted, err := deleteTenantRecord(c, &domain.RadiusProfile{}, id)
+	if err != nil {
 		return fail(c, http.StatusInternalServerError, "DELETE_FAILED", "Failed to delete profile", err.Error())
+	}
+	if !deleted {
+		return fail(c, http.StatusNotFound, "NOT_FOUND", "Profile not found", nil)
 	}
 
 	// Invalidate profile cache
