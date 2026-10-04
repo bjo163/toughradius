@@ -14,7 +14,7 @@ func TestSQLiteDatabaseRespectsPlatformAbsolutePath(t *testing.T) {
 	db := getDatabase(config.DBConfig{Type: "sqlite", Name: path}, t.TempDir())
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
-	defer sqlDB.Close()
+	t.Cleanup(func() { require.NoError(t, sqlDB.Close()) })
 	require.NoError(t, db.Exec("CREATE TABLE probe (id INTEGER PRIMARY KEY)").Error)
 	_, err = os.Stat(path)
 	require.NoError(t, err)

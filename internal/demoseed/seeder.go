@@ -1,3 +1,4 @@
+// Package demoseed generates marked sample records for first-install walkthroughs.
 package demoseed
 
 import (

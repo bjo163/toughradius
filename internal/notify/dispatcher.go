@@ -14,6 +14,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// persistedCanceledOutboxStatus preserves the spelling used by existing rows.
+const persistedCanceledOutboxStatus = "cancelled" //nolint:misspell // Persisted status value is backward compatible.
+
 const (
 	maxDeliveryAttempts = 5
 	maxOutboxBatch      = 25
@@ -120,14 +123,14 @@ func (d *Dispatcher) EnqueueBillingEvents(ctx context.Context, since time.Time) 
 
 // ProcessOnce attempts at most 25 due notifications, honors ctx cancellation,
 // retries failures with exponential backoff, and stops after five attempts.
-// Delivery is skipped and queued rows are cancelled when the current settings
+// Delivery is skipped and queued rows are canceled when the current settings
 // no longer allow their event or recipient.
 func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 	if d.sender == nil || !d.mu.TryLock() {
 		return nil
 	}
 	defer d.mu.Unlock()
-	if err := d.db.WithContext(ctx).Where("created_at < ? AND status IN ?", now.Add(-30*24*time.Hour), []string{"sent", "failed", "cancelled"}).Delete(&domain.NotificationOutbox{}).Error; err != nil {
+	if err := d.db.WithContext(ctx).Where("created_at < ? AND status IN ?", now.Add(-30*24*time.Hour), []string{"sent", "failed", persistedCanceledOutboxStatus}).Delete(&domain.NotificationOutbox{}).Error; err != nil {
 		return fmt.Errorf("prune notification history: %w", err)
 	}
 	var rows []domain.NotificationOutbox
@@ -145,7 +148,7 @@ func (d *Dispatcher) ProcessOnce(ctx context.Context, now time.Time) error {
 			return err
 		}
 		if !allowed {
-			if err := d.db.Model(&row).Updates(map[string]any{"status": "cancelled", "last_error": "Notification settings changed"}).Error; err != nil {
+			if err := d.db.Model(&row).Updates(map[string]any{"status": persistedCanceledOutboxStatus, "last_error": "Notification settings changed"}).Error; err != nil {
 				return fmt.Errorf("cancel notification after settings change: %w", err)
 			}
 			continue

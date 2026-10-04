@@ -62,7 +62,7 @@ func NewWhatsAppManager(db *gorm.DB) (*WhatsAppManager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open WhatsApp session database: %w", err)
 	}
-	if db.Dialector.Name() == "sqlite" {
+	if db.Name() == "sqlite" {
 		conn, err := sqlDB.Conn(context.Background())
 		if err != nil {
 			return nil, fmt.Errorf("open SQLite session connection: %w", err)
@@ -76,7 +76,7 @@ func NewWhatsAppManager(db *gorm.DB) (*WhatsAppManager, error) {
 			return nil, fmt.Errorf("close SQLite session connection: %w", closeErr)
 		}
 	}
-	container := sqlstore.NewWithDB(sqlDB, db.Dialector.Name(), waLog.Noop)
+	container := sqlstore.NewWithDB(sqlDB, db.Name(), waLog.Noop)
 	if err := container.Upgrade(context.Background()); err != nil {
 		return nil, fmt.Errorf("upgrade WhatsApp session store: %w", err)
 	}

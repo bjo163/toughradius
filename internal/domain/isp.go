@@ -34,7 +34,7 @@ const (
 	InvoicePaid = "paid"
 	// InvoiceOverdue marks an unpaid invoice past its due date.
 	InvoiceOverdue = "overdue"
-	// InvoiceVoid marks an invoice cancelled from collection.
+	// InvoiceVoid marks an invoice canceled from collection.
 	InvoiceVoid = "void"
 
 	// PaymentPending marks a payment that has not been received.

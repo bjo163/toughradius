@@ -59,18 +59,6 @@ func (a *Application) checkSuper() {
 	}
 }
 
-func (a *Application) readBootstrapPasswordFile() string {
-	path := a.bootstrapPasswordFile()
-	if path == "" {
-		return ""
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(data))
-}
-
 func (a *Application) createBootstrapSuper() {
 	var supers int64
 	if err := a.gormDB.Model(&domain.SysOpr{}).Where("level = ?", "super").Count(&supers).Error; err != nil {
@@ -118,45 +106,6 @@ func (a *Application) createBootstrapSuper() {
 		fields = append(fields, zap.String("credential_file", credFile))
 	}
 	zap.L().Info("initialized bootstrap super admin account", fields...)
-}
-
-func (a *Application) rotateInsecureSuperPassword(operator *domain.SysOpr) {
-	if operator == nil {
-		return
-	}
-	if strings.TrimSpace(operator.Password) != "" {
-		return
-	}
-
-	password, source, err := resolveBootstrapAdminPassword()
-	if err != nil {
-		a.failInsecureBootstrap("failed to generate replacement for insecure admin password", zap.Error(err))
-		return
-	}
-	hashedPassword, err := common.HashPassword(password)
-	if err != nil {
-		a.failInsecureBootstrap("failed to hash replacement admin password", zap.Error(err))
-		return
-	}
-
-	if err := a.gormDB.Model(&domain.SysOpr{}).Where("id = ?", operator.ID).Updates(map[string]interface{}{
-		"password":   hashedPassword,
-		"updated_at": time.Now(),
-	}).Error; err != nil {
-		a.failInsecureBootstrap("failed to rotate insecure admin password", zap.Error(err))
-		return
-	}
-
-	credFile := a.writeBootstrapPasswordFile(password, source)
-	fields := []zap.Field{
-		zap.String("username", operator.Username),
-		zap.String("source", source),
-		zap.String("action", "the historical default password is no longer valid"),
-	}
-	if credFile != "" {
-		fields = append(fields, zap.String("credential_file", credFile))
-	}
-	zap.L().Warn("rotated insecure super admin password", fields...)
 }
 
 func (a *Application) failInsecureBootstrap(msg string, fields ...zap.Field) {

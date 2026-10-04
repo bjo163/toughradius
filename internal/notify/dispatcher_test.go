@@ -90,7 +90,7 @@ func TestDispatcherCancelsQueuedItemWhenRecipientIsRemoved(t *testing.T) {
 	require.NoError(t, d.ProcessOnce(context.Background(), time.Now()))
 	var item domain.NotificationOutbox
 	require.NoError(t, db.First(&item).Error)
-	require.Equal(t, "cancelled", item.Status)
+	require.Equal(t, persistedCanceledOutboxStatus, item.Status)
 }
 
 func TestNormalizePhone(t *testing.T) {

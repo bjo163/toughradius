@@ -163,8 +163,8 @@ test-integration-pg:
 	fi; \
 	TEST_DATABASE_HOST=127.0.0.1 \
 	TEST_DATABASE_PORT=15432 \
-	TEST_DATABASE_USER=mwx-isp \
-	TEST_DATABASE_PASSWORD=mwx-isp \
+	TEST_DATABASE_USER=toughradius \
+	TEST_DATABASE_PASSWORD=toughradius \
 	TEST_DATABASE_NAME=postgres \
 	TEST_LDAP_URL=ldap://127.0.0.1:1389 \
 	TEST_LDAP_BASE_DN=dc=example,dc=org \
@@ -201,8 +201,8 @@ test-eap-acceptance-docker:
 		-w /workspace \
 		-e TEST_DATABASE_HOST=postgres \
 		-e TEST_DATABASE_PORT=5432 \
-		-e TEST_DATABASE_USER=mwx-isp \
-		-e TEST_DATABASE_PASSWORD=mwx-isp \
+		-e TEST_DATABASE_USER=toughradius \
+		-e TEST_DATABASE_PASSWORD=toughradius \
 		-e TEST_DATABASE_NAME=postgres \
 		-e INTEGRATION_REQUIRED=1 \
 		-e EAP_ACCEPTANCE_REQUIRED=1 \

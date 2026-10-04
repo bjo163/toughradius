@@ -590,9 +590,10 @@ func subscriptionAction(c echo.Context) error {
 			}
 		}
 		event := "subscription_activated"
-		if status == domain.SubscriptionSuspended {
+		switch status {
+		case domain.SubscriptionSuspended:
 			event = "subscription_suspended"
-		} else if status == domain.SubscriptionTerminated {
+		case domain.SubscriptionTerminated:
 			event = "subscription_terminated"
 		}
 		return tx.Create(&domain.BillingEvent{CustomerID: sub.CustomerID, SubscriptionID: sub.ID, Type: event, Description: reason, CreatedAt: time.Now()}).Error

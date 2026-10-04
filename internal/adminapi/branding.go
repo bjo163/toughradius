@@ -99,7 +99,8 @@ func getPublicBrandLogo(c echo.Context) error {
 		return fail(c, http.StatusNotFound, "LOGO_NOT_FOUND", "Product logo is not configured", nil)
 	}
 	logoPath := filepath.Join(GetAppContext(c).Config().GetDataDir(), "branding", row.LogoFile)
-	content, err := os.ReadFile(logoPath)
+	// LogoFile is a generated, regex-validated basename rooted under data dir.
+	content, err := os.ReadFile(logoPath) //nolint:gosec // G304: validated generated logo basename.
 	if errors.Is(err, os.ErrNotExist) {
 		return fail(c, http.StatusNotFound, "LOGO_NOT_FOUND", "Product logo is not available", nil)
 	}

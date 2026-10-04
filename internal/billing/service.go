@@ -262,7 +262,7 @@ func nextMonthlySerial(tx *gorm.DB, kind, period string) (int64, error) {
 		clause.OnConflict{
 			Columns: []clause.Column{{Name: "kind"}, {Name: "period"}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
-				"value": gorm.Expr("value + 1"),
+				"value": gorm.Expr("isp_document_sequence.value + 1"),
 			}),
 		},
 		clause.Returning{Columns: []clause.Column{{Name: "value"}}},

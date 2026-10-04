@@ -285,8 +285,11 @@ func (systemProbe) Check(ctx context.Context, target domain.NetMonitorTarget, ke
 }
 
 func checkSNMP(ctx context.Context, target domain.NetMonitorTarget, key string, timeout time.Duration) ProbeResult {
+	if target.Port < 0 || target.Port > 65535 {
+		return ProbeResult{Error: "Invalid SNMP port", PacketLossPercent: 100}
+	}
 	params := &gosnmp.GoSNMP{
-		Target: target.Address, Port: uint16(target.Port), Transport: "udp",
+		Target: target.Address, Port: uint16(target.Port), Transport: "udp", //nolint:gosec // G115: checked above.
 		Timeout: timeout, Retries: 0, Context: ctx, MaxRepetitions: 20,
 	}
 	if params.Port == 0 {
