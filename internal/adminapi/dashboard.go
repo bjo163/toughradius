@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/internal/webserver"
+	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -236,10 +237,14 @@ func fetchProfileDistribution(db *gorm.DB) []DashboardProfileSlice {
 	onlineTable := domain.RadiusOnline{}.TableName()
 	userTable := domain.RadiusUser{}.TableName()
 	profileTable := domain.RadiusProfile{}.TableName()
-	if err := db.Table(fmt.Sprintf("%s AS o", onlineTable)).
+	query := db.Table(fmt.Sprintf("%s AS o", onlineTable)).
 		Select("COALESCE(u.profile_id, 0) AS profile_id, COALESCE(p.name, '') AS profile_name, COUNT(*) AS count").
-		Joins(fmt.Sprintf("LEFT JOIN %s AS u ON u.username = o.username", userTable)).
-		Joins(fmt.Sprintf("LEFT JOIN %s AS p ON p.id = u.profile_id", profileTable)).
+		Joins(fmt.Sprintf("LEFT JOIN %s AS u ON u.username = o.username AND u.tenant_id = o.tenant_id", userTable)).
+		Joins(fmt.Sprintf("LEFT JOIN %s AS p ON p.id = u.profile_id AND p.tenant_id = u.tenant_id", profileTable))
+	if tenantID, ok := tenancy.TenantID(db.Statement.Context); ok {
+		query = query.Where("o.tenant_id = ?", tenantID)
+	}
+	if err := query.
 		Group("profile_id, profile_name").
 		Order("count DESC").
 		Scan(&rows).Error; err != nil {

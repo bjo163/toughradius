@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/internal/webserver"
 	"github.com/bjo163/mwx-isp/pkg/common"
 )
@@ -199,6 +200,8 @@ var testOperatorResolver func(c echo.Context) (*domain.SysOpr, bool)
 func resolveOperatorFromContext(c echo.Context) (*domain.SysOpr, error) {
 	if testOperatorResolver != nil {
 		if op, ok := testOperatorResolver(c); ok {
+			c.Set("tenant_id", op.TenantID)
+			c.SetRequest(c.Request().WithContext(tenancy.WithTenantID(c.Request().Context(), op.TenantID)))
 			return op, nil
 		}
 	}
@@ -246,6 +249,7 @@ func resolveOperatorFromContext(c echo.Context) (*domain.SysOpr, error) {
 	}
 	c.Set("tenant_id", tenantID)
 	c.Set("tenant", tenant)
+	c.SetRequest(c.Request().WithContext(tenancy.WithTenantID(c.Request().Context(), tenantID)))
 	operator.Password = ""
 	return &operator, nil
 }

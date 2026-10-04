@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"github.com/bjo163/mwx-isp/config"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/common"
+	"github.com/glebarez/sqlite"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -58,6 +59,7 @@ func getSqliteDatabase(config config.DBConfig, workdir string) *gorm.DB {
 		),
 	})
 	common.Must(err)
+	common.Must(tenancy.RegisterCallbacks(pool))
 
 	sqlDB, err := pool.DB()
 	common.Must(err)
@@ -95,6 +97,7 @@ func getPgDatabase(config config.DBConfig) *gorm.DB {
 		),
 	})
 	common.Must(err)
+	common.Must(tenancy.RegisterCallbacks(pool))
 	sqlDB, err := pool.DB()
 	common.Must(err)
 	// SetMaxIdleConns sets the maximum number of idle connections in the pool

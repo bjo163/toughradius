@@ -145,9 +145,18 @@ func importRadiusUsers(c echo.Context) error {
 			radiusClass = profile.RadiusClass
 		}
 
+		nodeID := cast.ToInt64(importMapString(item, "node_id", "NodeId"))
+		if nodeID > 0 {
+			var node domain.NetNode
+			if err := db.First(&node, nodeID).Error; err != nil {
+				result.Failed++
+				result.Errors = append(result.Errors, ImportUserError{Row: idx + 1, Username: username, Message: "Associated network node not found"})
+				continue
+			}
+		}
 		user := &domain.RadiusUser{
 			ID:              common.UUIDint64(),
-			NodeId:          cast.ToInt64(importMapString(item, "node_id", "NodeId")),
+			NodeId:          nodeID,
 			ProfileId:       profileID,
 			Realname:        importMapString(item, "realname", "Realname"),
 			Email:           importMapString(item, "email", "Email"),

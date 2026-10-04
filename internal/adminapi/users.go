@@ -294,7 +294,7 @@ func listRadiusUsers(c echo.Context) error {
 
 	base := GetDB(c).Model(&domain.RadiusUser{}).
 		Select("radius_user.*, COALESCE(ro.count, 0) AS online_count").
-		Joins("LEFT JOIN (SELECT username, COUNT(1) AS count FROM radius_online GROUP BY username) ro ON radius_user.username = ro.username")
+		Joins("LEFT JOIN (SELECT tenant_id, username, COUNT(1) AS count FROM radius_online GROUP BY tenant_id, username) ro ON radius_user.username = ro.username AND radius_user.tenant_id = ro.tenant_id")
 
 	base = applyUserFilters(base, c)
 

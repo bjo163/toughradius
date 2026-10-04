@@ -9,6 +9,7 @@ import (
 	"github.com/bjo163/mwx-isp/config"
 	"github.com/bjo163/mwx-isp/internal/app"
 	"github.com/bjo163/mwx-isp/internal/domain"
+	"github.com/bjo163/mwx-isp/internal/tenancy"
 	"github.com/bjo163/mwx-isp/pkg/common"
 	customValidator "github.com/bjo163/mwx-isp/pkg/validator"
 	"github.com/glebarez/sqlite"
@@ -43,6 +44,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	dbName := fmt.Sprintf("file:%s-%d?mode=memory&cache=shared", t.Name(), common.UUIDint64())
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	require.NoError(t, err)
+	require.NoError(t, tenancy.RegisterCallbacks(db))
 
 	// Automatically migrate common tables
 	err = db.AutoMigrate(
