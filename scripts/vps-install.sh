@@ -21,7 +21,8 @@ Quick install:
 Usage: sudo bash scripts/vps-install.sh [--check] [--interactive]
 
   --check  Check host prerequisites and existing configuration without changes.
-  --interactive  Ask for the domain and timezone instead of choosing defaults.
+  --interactive  Choose Let's Encrypt, self-hosted HTTPS, or localhost HTTP,
+                 and enter the hostname/timezone interactively.
   --yes    Use automatic defaults without prompting (the default behavior).
   --help   Show this help.
 
@@ -238,6 +239,120 @@ install_docker
 
 docker info >/dev/null 2>&1 || fail "Docker daemon is not responding. Check 'systemctl status docker' and rerun."
 
+valid_tls_hostname() {
+  local hostname="$1"
+  [[ "${hostname}" == localhost || "${hostname}" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$ ]]
+}
+
+infer_tls_mode() {
+  local domain="${1,,}"
+  case "${domain}" in
+    localhost|127.*|*.local|*.localhost|*.internal|*.lan) printf 'http-local\n' ;;
+    *.*)
+      if [[ "${domain}" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || getent ahostsv4 "${domain}" 2>/dev/null | awk '{ print $1 }' | grep -Eq '^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)'; then
+        printf 'internal\n'
+      else
+        printf 'letsencrypt\n'
+      fi
+      ;;
+    *) printf 'internal\n' ;;
+  esac
+}
+
+prompt_tls_settings() {
+  local default_mode="$1" domain="$2" answer choice
+  local default_choice=1
+  case "${default_mode}" in internal) default_choice=2 ;; http-local) default_choice=3 ;; esac
+  echo "Choose how the admin site will use HTTPS:"
+  echo "  1) Let's Encrypt (public DNS name; ports 80 and 443 must reach this VPS)"
+  echo "  2) Self-hosted HTTPS (Caddy internal CA; install its CA certificate on clients)"
+  echo "  3) Local HTTP (loopback only; access remotely through an SSH tunnel)"
+  read_prompt "TLS mode [1/2/3, default ${default_choice}]: "
+  choice="${REPLY:-${default_choice}}"
+  case "${choice}" in
+    1) default_mode=letsencrypt ;;
+    2) default_mode=internal ;;
+    3) default_mode=http-local ;;
+    *) fail "Choose 1 (Let's Encrypt), 2 (self-hosted HTTPS), or 3 (local HTTP)." ;;
+  esac
+  case "${default_mode}" in
+    letsencrypt)
+      [[ "${domain}" == localhost ]] && domain=""
+      if [[ -n "${domain}" ]]; then
+        read_prompt "Public DNS hostname pointing to this VPS [${domain}]: "
+        domain="${REPLY:-${domain}}"
+      else
+        read_prompt "Public DNS hostname pointing to this VPS (required, e.g. isp.example.com): "
+        domain="${REPLY}"
+      fi
+      ;;
+    internal)
+      [[ -n "${domain}" ]] || domain=localhost
+      read_prompt "Hostname clients will use [${domain}]: "
+      domain="${REPLY:-${domain}}"
+      ;;
+    http-local) domain=localhost ;;
+  esac
+  FIRST_RUN_TLS_MODE="${default_mode}"
+  FIRST_RUN_DOMAIN="${domain}"
+}
+
+write_tls_settings() {
+  local file="$1" mode="$2" domain="$3" caddy_address tls_directive caddy_bind
+  case "${mode}" in
+    letsencrypt)
+      [[ "${domain}" != localhost && "${domain}" == *.* && ! "${domain}" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || fail "Let's Encrypt requires a public DNS hostname, not localhost or an IP address. Choose self-hosted HTTPS or local HTTP for this server."
+      valid_tls_hostname "${domain}" || fail "Enter a valid DNS hostname without a scheme or port."
+      case "${domain,,}" in *.local|*.localhost|*.internal|*.lan) fail "Let's Encrypt cannot issue public certificates for private hostname '${domain}'. Choose self-hosted HTTPS or local HTTP." ;; esac
+      if ! getent ahosts "${domain}" >/dev/null 2>&1; then
+        echo "WARNING: ${domain} does not resolve on this VPS yet; Let's Encrypt certificate provisioning will fail until public DNS points here." >&2
+      fi
+      caddy_address="${domain}"
+      tls_directive=""
+      caddy_bind="0.0.0.0"
+      ;;
+    internal)
+      valid_tls_hostname "${domain}" || fail "Enter a valid hostname without a scheme or port for the self-hosted certificate."
+      caddy_address="${domain}"
+      tls_directive="tls internal"
+      caddy_bind="0.0.0.0"
+      ;;
+    http-local)
+      domain=localhost
+      caddy_address="http://localhost"
+      tls_directive=""
+      caddy_bind="127.0.0.1"
+      ;;
+    *) fail "Unknown MWX_ISP_TLS_MODE '${mode}'. Choose letsencrypt, internal, or http-local." ;;
+  esac
+  set_env_value MWX_ISP_DOMAIN "${domain}" "${file}"
+  set_env_value MWX_ISP_TLS_MODE "${mode}" "${file}"
+  set_env_value MWX_ISP_CADDY_ADDRESS "${caddy_address}" "${file}"
+  set_env_value MWX_ISP_CADDY_TLS_DIRECTIVE "${tls_directive}" "${file}"
+  set_env_value MWX_ISP_CADDY_BIND "${caddy_bind}" "${file}"
+}
+
+configure_existing_tls_settings() {
+  local file="$1" domain mode
+  domain="$(sed -n 's/^MWX_ISP_DOMAIN=//p' "${file}" | tail -n 1)"
+  domain="${domain:-localhost}"
+  mode="$(sed -n 's/^MWX_ISP_TLS_MODE=//p' "${file}" | tail -n 1)"
+  mode="${mode:-$(infer_tls_mode "${domain}")}"
+  if [[ "${INTERACTIVE}" == true ]]; then
+    [[ -t 0 || -r /dev/tty ]] || fail "--interactive needs a terminal. Run without that option for automatic defaults."
+    prompt_tls_settings "${mode}" "${domain}"
+    mode="${FIRST_RUN_TLS_MODE}"
+    domain="${FIRST_RUN_DOMAIN}"
+    echo "Admin hostname: ${domain}"
+    echo "TLS mode: ${mode}"
+    if [[ "${mode}" == letsencrypt ]]; then echo "Requirement: public DNS to this VPS and inbound TCP 80/443."; fi
+    if [[ "${mode}" == internal ]]; then echo "Requirement: trust Caddy's root CA on every client device."; fi
+    read_prompt "Apply these web access settings? [Y/n]: "
+    [[ ! "${REPLY}" =~ ^[Nn]$ ]] || fail "TLS configuration was not changed. Rerun with the desired settings."
+  fi
+  write_tls_settings "${file}" "${mode}" "${domain}"
+}
+
 read_first_run_settings() {
   local domain timezone answer
   domain="${MWX_ISP_DOMAIN:-}"
@@ -254,6 +369,9 @@ read_first_run_settings() {
       echo "No resolvable server hostname detected; using localhost with secure SSH-tunnel access."
     fi
   fi
+  if [[ "${domain}" != localhost && "${domain}" =~ ^[0-9]+(\.[0-9]+){3}$ ]]; then
+    domain="${domain}"
+  fi
   if [[ -z "${timezone}" ]]; then
     if command -v timedatectl >/dev/null 2>&1; then
       timezone="$(timedatectl show -p Timezone --value 2>/dev/null || true)"
@@ -265,15 +383,13 @@ read_first_run_settings() {
   fi
   if [[ "${INTERACTIVE}" == true ]]; then
     [[ -t 0 || -r /dev/tty ]] || fail "--interactive needs a terminal. Run without that option for automatic defaults."
-    read_prompt "Public domain for Caddy HTTPS [${domain}]: "
-    answer="${REPLY}"
-    domain="${answer:-${domain}}"
+    prompt_tls_settings "$(infer_tls_mode "${domain}")" "${domain}"
+    domain="${FIRST_RUN_DOMAIN}"
     read_prompt "Server timezone [${timezone}]: "
     answer="${REPLY}"
     timezone="${answer:-${timezone}}"
-  fi
-  if [[ "${domain}" != localhost && ! "${domain}" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$ ]]; then
-    fail "MWX_ISP_DOMAIN must be localhost or a DNS hostname (without scheme or port)."
+  else
+    FIRST_RUN_TLS_MODE="$(infer_tls_mode "${domain}")"
   fi
   [[ "${timezone}" =~ ^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$ && -e "/usr/share/zoneinfo/${timezone}" ]] || fail "Unknown or invalid timezone '${timezone}'."
   FIRST_RUN_DOMAIN="${domain}"
@@ -285,9 +401,15 @@ confirm_first_run_settings() {
   echo "Installation summary"
   echo "  Install directory: ${APP_DIR}"
   echo "  Admin URL:         ${FIRST_RUN_DOMAIN}"
+  echo "  TLS mode:          ${FIRST_RUN_TLS_MODE}"
   echo "  Timezone:          ${FIRST_RUN_TIMEZONE}"
   echo "  Data store:        PostgreSQL"
   echo "  Services:          MWX-ISP, Caddy, automatic backup/update timers (systemd)"
+  case "${FIRST_RUN_TLS_MODE}" in
+    letsencrypt) echo "  HTTPS needs:       Public DNS to this VPS and inbound TCP 80/443" ;;
+    internal) echo "  HTTPS trust:       Install Caddy's local CA certificate on each client" ;;
+    http-local) echo "  Web access:        Loopback only; use the printed SSH tunnel" ;;
+  esac
   if [[ "${INTERACTIVE}" == true ]]; then
     local answer
     [[ -t 0 || -r /dev/tty ]] || fail "--interactive needs a terminal. Run without that option for automatic defaults."
@@ -368,6 +490,21 @@ wait_for_http_endpoint() {
   fail "${label} did not return HTTP success (last status: ${status:-no response}). Check Caddy logs, hostname/DNS, and port 80/443 availability."
 }
 
+wait_for_https_endpoint() {
+  local hostname="$1" mode="$2" attempt status
+  local -a curl_args=(--silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 5 --noproxy '*' --resolve "${hostname}:443:127.0.0.1")
+  [[ "${mode}" != internal ]] || curl_args+=(--insecure)
+  for attempt in $(seq 1 90); do
+    status="$(curl "${curl_args[@]}" "https://${hostname}/admin/" 2>/dev/null || true)"
+    if [[ "${status}" =~ ^[23][0-9][0-9]$ ]]; then
+      echo "Caddy HTTPS certificate: ready (${mode})"
+      return 0
+    fi
+    sleep 2
+  done
+  fail "Caddy did not serve HTTPS for ${hostname}. For Let's Encrypt, verify public DNS points to this VPS and inbound TCP 80/443 is reachable; otherwise rerun with --interactive and choose self-hosted HTTPS or local HTTP."
+}
+
 mkdir -p "${APP_DIR}"
 [[ -d "${APP_DIR}" ]] || fail "Install path ${APP_DIR} is not a directory."
 if [[ ! -d "${APP_DIR}/.git" && -n "$(find "${APP_DIR}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
@@ -435,7 +572,7 @@ else
     wait_for_healthy_service app
   }
   if [[ -n "${any_app_container}" || -n "${any_db_container}" || -n "${existing_data}" ]]; then
-      if [[ "${INSTALL_IN_PROGRESS}" == true ]]; then
+  if [[ "${INSTALL_IN_PROGRESS}" == true ]]; then
         if ensure_existing_services_ready_for_backup; then
           step "4/6" "Creating a safety backup before resuming the interrupted installation"
           git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
@@ -488,7 +625,7 @@ if [[ ! -f "${APP_DIR}/.env" ]]; then
   sed -i "s|CHANGE_ME_use_a_unique_password|${admin_password}|" "${temporary_env}"
   sed -i "s|CHANGE_ME_use_a_long_random_password|$(openssl rand -hex 32)|" "${temporary_env}"
   set_env_value TZ "${FIRST_RUN_TIMEZONE}" "${temporary_env}"
-  set_env_value MWX_ISP_DOMAIN "${FIRST_RUN_DOMAIN}" "${temporary_env}"
+  write_tls_settings "${temporary_env}" "${FIRST_RUN_TLS_MODE}" "${FIRST_RUN_DOMAIN}"
   chmod 0600 "${temporary_env}"
   chown root:root "${temporary_env}"
   mv -f "${temporary_env}" "${APP_DIR}/.env"
@@ -505,8 +642,12 @@ elif [[ "${INSTALL_IN_PROGRESS}" == true ]]; then
     sed -i "s|CHANGE_ME_use_a_long_random_password|$(openssl rand -hex 32)|g" "${APP_DIR}/.env"
   fi
   admin_password="$(sed -n 's/^MWX_ISP_ADMIN_PASSWORD=//p' "${APP_DIR}/.env" | tail -n 1)"
+  if [[ "${INTERACTIVE}" == true ]]; then configure_existing_tls_settings "${APP_DIR}/.env"; fi
   echo "MWX-ISP admin username: admin"
   echo "MWX-ISP admin password (store securely now): ${admin_password}"
+fi
+if [[ -z "${FIRST_RUN_TLS_MODE:-}" ]]; then
+  configure_existing_tls_settings "${APP_DIR}/.env"
 fi
 chmod 0600 "${APP_DIR}/.env"
 chown root:root "${APP_DIR}/.env"
@@ -538,16 +679,19 @@ wait_for_running_service caddy
 docker compose ps
 
 domain="$(awk -F= '$1 == "MWX_ISP_DOMAIN" { print substr($0, index($0, "=") + 1) }' .env | tail -n 1)"
+tls_mode="$(sed -n 's/^MWX_ISP_TLS_MODE=//p' .env | tail -n 1)"
 web_port="$(sed -n 's/^MWX_ISP_WEB_PORT=//p' .env | tail -n 1)"
 web_port="${web_port:-1816}"
-if [[ "${domain}" != localhost ]] && ! getent ahosts "${domain}" >/dev/null 2>&1; then
+if [[ "${tls_mode}" == letsencrypt && "${domain}" != localhost ]] && ! getent ahosts "${domain}" >/dev/null 2>&1; then
   echo "WARNING: ${domain} does not currently resolve from this server. Caddy HTTPS may stay unavailable until DNS points to this VPS." >&2
 fi
 wait_for_http_endpoint "http://127.0.0.1:${web_port}/admin/" "MWX-ISP admin endpoint"
-if [[ "${domain}" == localhost ]]; then
-  wait_for_http_endpoint "http://127.0.0.1/admin/" "Caddy local proxy"
+if [[ "${domain}" == localhost ]]; then caddy_host="localhost"; else caddy_host="${domain}"; fi
+if [[ "${tls_mode}" == http-local ]]; then
+  wait_for_http_endpoint "http://127.0.0.1/" "Caddy local HTTP proxy" false "${caddy_host}"
 else
-  wait_for_http_endpoint "http://127.0.0.1/" "Caddy domain routing" true "${domain}"
+  wait_for_http_endpoint "http://127.0.0.1/" "Caddy HTTPS redirect" true "${caddy_host}"
+  wait_for_https_endpoint "${caddy_host}" "${tls_mode}"
 fi
 
 chmod +x scripts/*.sh 2>/dev/null || true
@@ -612,14 +756,22 @@ fi
 printf 'complete\n' > "${INSTALL_STATE}.tmp"
 mv -f "${INSTALL_STATE}.tmp" "${INSTALL_STATE}"
 step "6/6" "Installation complete"
-if [[ "${domain}" == localhost ]]; then
-  echo "Admin UI: http://127.0.0.1:${web_port}/admin/ (local access; configure a public domain for HTTPS)."
-  echo "Remote access: ssh -L ${web_port}:127.0.0.1:${web_port} <ssh-user>@<server-ip>, then open http://127.0.0.1:${web_port}/admin/"
-else
-  echo "Admin UI: https://${domain}/admin/ (allow DNS and certificate provisioning time on first start)."
-fi
+case "${tls_mode}" in
+  letsencrypt)
+    echo "Admin UI: https://${domain}/admin/"
+    echo "Let's Encrypt requires public DNS pointing to this VPS and inbound TCP 80/443."
+    ;;
+  internal)
+    echo "Admin UI: https://${domain}/admin/ (self-hosted Caddy CA; clients must trust the CA)."
+    echo "Ensure ${domain} resolves to this VPS on client devices. Export the CA with: cd ${APP_DIR} && docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt /root/mwx-isp-caddy-root.crt"
+    echo "Copy /root/mwx-isp-caddy-root.crt securely to client devices and add it to their trusted root certificates."
+    ;;
+  http-local)
+    echo "Admin UI through SSH tunnel: http://localhost:${web_port}/admin/"
+    echo "Remote access: ssh -L ${web_port}:127.0.0.1:${web_port} <ssh-user>@<server-ip>, then open the URL above."
+    ;;
+esac
 echo "Ready: PostgreSQL, MWX-ISP, and Caddy local routing passed their checks."
-echo "Public HTTPS needs DNS pointing to this VPS and inbound TCP 80/443."
 echo "Save the generated admin password printed above."
 echo "Open only the NAS ports you use: UDP 1812 (auth), UDP 1813 (accounting), TCP 2083 (RadSec). PostgreSQL is private."
 echo "The installer did not change your host firewall. Configure firewall rules using your existing SSH access method."

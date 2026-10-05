@@ -24,9 +24,17 @@ sendiri, berikan nilainya langsung di perintah:
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash'
 ```
 
-Pemeriksaan lokal opsional: `sudo bash scripts/vps-install.sh --check` tanpa
-mengubah server. Jika ingin menjawab pertanyaan setup, ganti `sudo bash` pada
-perintah instalasi dengan `sudo bash -s -- --interactive`.
+Untuk memilih konfigurasi web/TLS secara interaktif, jalankan:
+
+```bash
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash -s -- --interactive'
+```
+
+Pilih Let's Encrypt untuk domain publik yang mengarah ke VPS (TCP 80/443 harus
+dapat diakses), HTTPS self-hosted untuk hostname privat (pasang root CA Caddy
+pada setiap perangkat klien), atau HTTP localhost khusus akses SSH tunnel.
+Prompt ini juga muncul saat `.env` lama dipulihkan. Pemeriksaan lokal opsional
+`sudo bash scripts/vps-install.sh --check` tidak mengubah server.
 
 Installer membuat kredensial privat, menarik image rilis PostgreSQL dan MWX-ISP,
 lalu menjalankan PostgreSQL, MWX-ISP, dan Caddy. Simpan password admin satu-kali
@@ -41,11 +49,10 @@ systemd, installer mengaktifkan update dan backup harian.
 Untuk repair atau uninstall online yang aman, ikuti perintah dalam
 [Panduan Operasional VPS](./ops-guide.md#perbaikan-dan-uninstall-deployment-vps).
 
-Atur `MWX_ISP_DOMAIN` dalam `/opt/mwx-isp/.env` ke domain publik untuk HTTPS.
-Jika memakai `localhost`, layanan admin tetap privat. Buka TCP 80/443 untuk Caddy dan hanya
-port NAS yang dipakai: UDP 1812/1813 serta TCP 2083 jika memakai RadSec. Jangan
-publikasikan port PostgreSQL. Tambahkan aturan firewall lewat pengelolaan VPS
-atau firewall yang sudah digunakan, sambil menjaga akses SSH.
+Jangan publikasikan port PostgreSQL. Untuk Let's Encrypt, buka TCP 80/443 dan
+hanya port NAS yang dipakai: UDP 1812/1813 serta TCP 2083 jika memakai RadSec.
+Mode HTTP localhost hanya terikat ke loopback. Tambahkan aturan firewall lewat
+pengelolaan VPS atau firewall yang sudah digunakan, sambil menjaga akses SSH.
 
 ## 2. Login
 

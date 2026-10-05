@@ -1,8 +1,7 @@
-# MWX-ISP Caddy Reverse Proxy Configuration
-# Automatic HTTPS with Let's Encrypt when MWX_ISP_DOMAIN is set.
-# Falls back to local HTTP when MWX_ISP_DOMAIN is not specified.
+# MWX-ISP Caddy reverse proxy. The installer selects the address and TLS mode.
 
-{$MWX_ISP_DOMAIN:localhost} {
+{$MWX_ISP_CADDY_ADDRESS:localhost} {
+    {$MWX_ISP_CADDY_TLS_DIRECTIVE}
     encode gzip zstd
     reverse_proxy app:1816
 }

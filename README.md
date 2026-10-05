@@ -43,9 +43,12 @@ bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp
 ```
 
 Save the one-time admin password shown by the installer. A resolvable server
-hostname enables Caddy HTTPS; without one, admin access stays private and the
-installer prints an SSH-tunnel command. The installer does not change firewall
-rules. Public HTTPS requires DNS to point to the VPS and inbound TCP `80`/`443`.
+hostname can use Caddy HTTPS; without one, admin access stays on loopback. For
+interactive web/TLS setup, run the command with `sudo bash -s -- --interactive`
+and choose Let's Encrypt, Caddy's self-hosted CA, or localhost HTTP through an
+SSH tunnel. Let's Encrypt requires public DNS to point to the VPS and inbound
+TCP `80`/`443`; self-hosted HTTPS requires installing Caddy's root CA on each
+client. The installer does not change firewall rules.
 
 The first start of a completely empty database automatically adds marked sample
 records so you can explore the interface. Existing data is not reseeded or
