@@ -1,5 +1,14 @@
 # MWX-ISP Changelog
 
+## v0.8.1 — 2026-10-05
+
+Changes since v0.8.0:
+
+### Fixes and Improvements
+
+- pass stdin to backup-db invocation with bash -s (TR-F020)
+- remove duplicate database backup in vps-update (TR-F020)
+
 ## v0.8.0 — 2026-10-05
 
 Changes since v0.7.5:
