@@ -103,11 +103,6 @@ wait_for_db() {
   return 1
 }
 
-if [[ -x "${APP_DIR}/scripts/backup-db.sh" ]]; then
-  echo "--> Creating pre-update database backup..."
-  "${APP_DIR}/scripts/backup-db.sh" || echo "Warning: Pre-update database backup failed, continuing update with caution..." >&2
-fi
-
 git reset --hard "${new_revision}"
 if ! docker compose config --quiet || ! docker compose pull db app; then rollback "Compose validation or image pull failed; reverting source, PostgreSQL, and app images."; exit 1; fi
 if ! docker compose stop app; then rollback "Could not stop the app before the PostgreSQL patch update; reverting source and both images."; exit 1; fi
