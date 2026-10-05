@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.8.4 — 2026-10-05
+
+Changes since v0.8.3:
+
+### Fixes and Improvements
+
+- restore dashboard route at root and fix post-login redirect (TR-F013)
+
 ## v0.8.3 — 2026-10-05
 
 Changes since v0.8.2:
