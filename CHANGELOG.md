@@ -1,5 +1,19 @@
 # MWX-ISP Changelog
 
+## v0.8.0 — 2026-10-05
+
+Changes since v0.7.5:
+
+### Features
+
+- add interactive VPS TLS modes
+
+### Fixes and Improvements
+
+- preserve local checkout changes before updates
+- make registration and ticket numbering atomic
+- record creator and verify cached expiry
+
 ## v0.7.5 — 2026-10-05
 
 Changes since v0.7.4:
