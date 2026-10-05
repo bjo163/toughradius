@@ -355,3 +355,69 @@ func TestInvoicePaymentChannelAndSimulatePayFailClosed(t *testing.T) {
 	require.NoError(t, db.Model(&domain.Payment{}).Count(&payments).Error)
 	require.Zero(t, payments)
 }
+
+func TestCustomerODPPortValidation(t *testing.T) {
+	db, e, appCtx := CreateTestAppContext(t)
+	require.NoError(t, db.AutoMigrate(&domain.Customer{}, &domain.ODP{}))
+
+	odp := domain.ODP{
+		Code:       "ODP-TEST-01",
+		Name:       "ODP Test 1",
+		TotalPorts: 8,
+		Status:     "active",
+	}
+	require.NoError(t, db.Create(&odp).Error)
+
+	// 1. Assign Customer 1 to Port 1 (Success)
+	body1 := fmt.Sprintf(`{"name":"Pelanggan Satu","odp_id":"%d","odp_port":1}`, odp.ID)
+	req1 := httptest.NewRequest(http.MethodPost, "/isp/customers", strings.NewReader(body1))
+	req1.Header.Set("Content-Type", "application/json")
+	rec1 := httptest.NewRecorder()
+	c1 := CreateTestContext(e, db, req1, rec1, appCtx)
+	require.NoError(t, createCustomer(c1))
+	require.Equal(t, http.StatusCreated, rec1.Code)
+
+	var cust1 struct {
+		Data domain.Customer `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec1.Body.Bytes(), &cust1))
+	require.Equal(t, 1, cust1.Data.ODPPort)
+	require.Equal(t, "ODP-TEST-01", cust1.Data.ODPCode)
+
+	// 2. Assign Customer 2 to same Port 1 (Conflict 409)
+	bodyConflict := fmt.Sprintf(`{"name":"Pelanggan Dua","odp_id":"%d","odp_port":1}`, odp.ID)
+	reqConflict := httptest.NewRequest(http.MethodPost, "/isp/customers", strings.NewReader(bodyConflict))
+	reqConflict.Header.Set("Content-Type", "application/json")
+	recConflict := httptest.NewRecorder()
+	cConflict := CreateTestContext(e, db, reqConflict, recConflict, appCtx)
+	require.NoError(t, createCustomer(cConflict))
+	require.Equal(t, http.StatusConflict, recConflict.Code)
+
+	// 3. Assign Customer 2 to port exceeding total_ports (Bad Request 400)
+	bodyExceed := fmt.Sprintf(`{"name":"Pelanggan Dua","odp_id":"%d","odp_port":9}`, odp.ID)
+	reqExceed := httptest.NewRequest(http.MethodPost, "/isp/customers", strings.NewReader(bodyExceed))
+	reqExceed.Header.Set("Content-Type", "application/json")
+	recExceed := httptest.NewRecorder()
+	cExceed := CreateTestContext(e, db, reqExceed, recExceed, appCtx)
+	require.NoError(t, createCustomer(cExceed))
+	require.Equal(t, http.StatusBadRequest, recExceed.Code)
+
+	// 4. Update Customer 1 to Port 2 (Success)
+	updateBody := fmt.Sprintf(`{"name":"Pelanggan Satu Updated","odp_id":"%d","odp_port":2}`, odp.ID)
+	reqUpdate := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/isp/customers/%d", cust1.Data.ID), strings.NewReader(updateBody))
+	reqUpdate.Header.Set("Content-Type", "application/json")
+	recUpdate := httptest.NewRecorder()
+	cUpdate := CreateTestContext(e, db, reqUpdate, recUpdate, appCtx)
+	cUpdate.SetParamNames("id")
+	cUpdate.SetParamValues(fmt.Sprintf("%d", cust1.Data.ID))
+	require.NoError(t, updateCustomer(cUpdate))
+	require.Equal(t, http.StatusOK, recUpdate.Code)
+
+	// 5. Now Port 1 is free, Customer 2 can take Port 1 (Success)
+	req2 := httptest.NewRequest(http.MethodPost, "/isp/customers", strings.NewReader(body1))
+	req2.Header.Set("Content-Type", "application/json")
+	rec2 := httptest.NewRecorder()
+	c2 := CreateTestContext(e, db, req2, rec2, appCtx)
+	require.NoError(t, createCustomer(c2))
+	require.Equal(t, http.StatusCreated, rec2.Code)
+}

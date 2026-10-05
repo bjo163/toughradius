@@ -311,10 +311,22 @@ func createCustomer(c echo.Context) error {
 		Latitude:   in.Latitude,
 		Longitude:  in.Longitude,
 	}
-	if row.ODPID > 0 && row.ODPCode == "" {
+	if row.ODPID > 0 {
 		var odp domain.ODP
-		if GetDB(c).First(&odp, row.ODPID).Error == nil {
+		if err := GetDB(c).First(&odp, row.ODPID).Error; err != nil {
+			return fail(c, 400, "INVALID_ODP", "ODP box not found", err.Error())
+		}
+		if row.ODPCode == "" {
 			row.ODPCode = odp.Code
+		}
+		if row.ODPPort < 0 || (odp.TotalPorts > 0 && row.ODPPort > odp.TotalPorts) {
+			return fail(c, 400, "INVALID_ODP_PORT", fmt.Sprintf("ODP port must be between 1 and %d", odp.TotalPorts), nil)
+		}
+		if row.ODPPort > 0 {
+			var conflict domain.Customer
+			if err := GetDB(c).Where("odp_id = ? AND odp_port = ? AND status != ?", row.ODPID, row.ODPPort, domain.CustomerTerminated).First(&conflict).Error; err == nil {
+				return fail(c, 409, "ODP_PORT_OCCUPIED", fmt.Sprintf("Port %d on ODP %s is already occupied by customer %s", row.ODPPort, odp.Code, conflict.CustomerNo), nil)
+			}
 		}
 	}
 	err := GetDB(c).Transaction(func(tx *gorm.DB) error {
@@ -347,11 +359,26 @@ func updateCustomer(c echo.Context) error {
 		return fail(c, 404, "NOT_FOUND", "Customer not found", nil)
 	}
 	odpCode := in.ODPCode
-	if in.ODPID > 0 && odpCode == "" {
+	if in.ODPID > 0 {
 		var odp domain.ODP
-		if GetDB(c).First(&odp, in.ODPID).Error == nil {
+		if err := GetDB(c).First(&odp, in.ODPID).Error; err != nil {
+			return fail(c, 400, "INVALID_ODP", "ODP box not found", err.Error())
+		}
+		if odpCode == "" {
 			odpCode = odp.Code
 		}
+		if in.ODPPort < 0 || (odp.TotalPorts > 0 && in.ODPPort > odp.TotalPorts) {
+			return fail(c, 400, "INVALID_ODP_PORT", fmt.Sprintf("ODP port must be between 1 and %d", odp.TotalPorts), nil)
+		}
+		if in.ODPPort > 0 {
+			var conflict domain.Customer
+			if err := GetDB(c).Where("odp_id = ? AND odp_port = ? AND id != ? AND status != ?", in.ODPID, in.ODPPort, id, domain.CustomerTerminated).First(&conflict).Error; err == nil {
+				return fail(c, 409, "ODP_PORT_OCCUPIED", fmt.Sprintf("Port %d on ODP %s is already occupied by customer %s", in.ODPPort, odp.Code, conflict.CustomerNo), nil)
+			}
+		}
+	} else if in.ODPID == 0 {
+		odpCode = ""
+		in.ODPPort = 0
 	}
 	updates := map[string]interface{}{
 		"name":        strings.TrimSpace(in.Name),
