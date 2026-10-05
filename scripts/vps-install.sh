@@ -692,7 +692,7 @@ fi
 wait_for_http_endpoint "http://127.0.0.1:${web_port}/admin/" "MWX-ISP admin endpoint"
 if [[ "${domain}" == localhost ]]; then caddy_host="localhost"; else caddy_host="${domain}"; fi
 if [[ "${tls_mode}" == http-local ]]; then
-  wait_for_http_endpoint "http://127.0.0.1/" "Caddy local HTTP proxy" false "${caddy_host}"
+  wait_for_http_endpoint "http://127.0.0.1/admin/" "Caddy local HTTP proxy" false "${caddy_host}"
 else
   wait_for_http_endpoint "http://127.0.0.1/" "Caddy HTTPS redirect" true "${caddy_host}"
   wait_for_https_endpoint "${caddy_host}" "${tls_mode}"
