@@ -302,6 +302,7 @@ func TestODPAndFlappingOperations(t *testing.T) {
 		&domain.RadiusUser{},
 		&domain.RadiusAccounting{},
 		&domain.TroubleTicket{},
+		&domain.DocumentSequence{},
 	))
 
 	// 1. Create ODP
@@ -339,6 +340,7 @@ func TestODPAndFlappingOperations(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recFlap.Code)
 
 	// 4. Auto Ticket for Flapping
+	require.NoError(t, db.Create(&domain.RadiusUser{Username: "customer_flap_01", Password: "test-secret", Status: "enabled"}).Error)
 	ticketPayload := []byte(`{
 		"username": "customer_flap_01",
 		"customer_no": "CUST-0099",

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
@@ -522,13 +523,14 @@ func listPublicPackages(c echo.Context) error {
 }
 
 type publicRegisterInput struct {
-	Name      string `json:"name"`
-	Phone     string `json:"phone"`
-	Email     string `json:"email"`
-	Address   string `json:"address"`
-	City      string `json:"city"`
-	PackageID int64  `json:"package_id,string"`
-	Notes     string `json:"notes"`
+	Name       string `json:"name"`
+	Phone      string `json:"phone"`
+	Email      string `json:"email"`
+	Address    string `json:"address"`
+	City       string `json:"city"`
+	PackageID  int64  `json:"package_id,string"`
+	IdentityNo string `json:"id_card_number"`
+	Notes      string `json:"notes"`
 }
 
 func registerPublicCustomer(c echo.Context) error {
@@ -538,20 +540,49 @@ func registerPublicCustomer(c echo.Context) error {
 	}
 	name := strings.TrimSpace(in.Name)
 	phone := strings.TrimSpace(in.Phone)
-	if name == "" || phone == "" {
-		return fail(c, 400, "REQUIRED_FIELDS", "Nama lengkap dan nomor WhatsApp wajib diisi", nil)
+	address := strings.TrimSpace(in.Address)
+	email := strings.TrimSpace(in.Email)
+	if name == "" || phone == "" || address == "" {
+		return fail(c, 400, "REQUIRED_FIELDS", "Nama lengkap, nomor WhatsApp, dan alamat pemasangan wajib diisi", nil)
+	}
+	if len(name) > 150 || len(phone) > 32 || len(email) > 150 || len(address) > 500 || len(strings.TrimSpace(in.City)) > 100 || len(strings.TrimSpace(in.IdentityNo)) > 100 || len(in.Notes) > 1000 {
+		return fail(c, 400, "FIELD_TOO_LONG", "Satu atau beberapa field melebihi batas panjang", nil)
+	}
+	if !validPublicPhone(phone) {
+		return fail(c, 400, "INVALID_PHONE", "Nomor WhatsApp tidak valid", nil)
+	}
+	if email != "" {
+		parsed, err := mail.ParseAddress(email)
+		if err != nil || parsed.Address != email {
+			return fail(c, 400, "INVALID_EMAIL", "Alamat email tidak valid", nil)
+		}
+	}
+	if in.PackageID <= 0 {
+		return fail(c, 400, "PACKAGE_REQUIRED", "Pilih paket internet yang tersedia", nil)
 	}
 
 	db := GetDB(c)
 	now := time.Now()
 
 	var pkg domain.InternetPackage
-	pkgName := "Broadband Fiber"
-	if in.PackageID > 0 {
-		if err := db.First(&pkg, in.PackageID).Error; err == nil {
-			pkgName = pkg.Name
-		}
+	if err := db.Where("id = ? AND status = ?", in.PackageID, "active").First(&pkg).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return fail(c, 400, "PACKAGE_UNAVAILABLE", "Paket tidak tersedia", nil)
+	} else if err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Gagal memvalidasi paket", nil)
 	}
+	var profile domain.RadiusProfile
+	if pkg.RadiusProfileID <= 0 {
+		return fail(c, 400, "PACKAGE_UNAVAILABLE", "Profil jaringan untuk paket tidak tersedia", nil)
+	}
+	if err := db.First(&profile, pkg.RadiusProfileID).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return fail(c, 400, "PACKAGE_UNAVAILABLE", "Profil jaringan untuk paket tidak tersedia", nil)
+	} else if err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Gagal memvalidasi profil jaringan", nil)
+	}
+	if profile.Status != "enabled" && profile.Status != "1" {
+		return fail(c, 400, "PACKAGE_UNAVAILABLE", "Profil jaringan untuk paket tidak tersedia", nil)
+	}
+	pkgName := pkg.Name
 
 	notes := in.Notes
 	if notes == "" {
@@ -560,48 +591,101 @@ func registerPublicCustomer(c echo.Context) error {
 		notes = fmt.Sprintf("Pendaftaran pasang baru via website publik. Paket: %s. Catatan: %s", pkgName, notes)
 	}
 
-	customer := domain.Customer{
-		CustomerNo: fmt.Sprintf("TMP-%d", common.UUIDint64()),
-		Name:       name,
-		Phone:      phone,
-		Email:      strings.TrimSpace(in.Email),
-		Address:    strings.TrimSpace(in.Address),
-		City:       strings.TrimSpace(in.City),
-		Status:     domain.CustomerPending,
-		Notes:      notes,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-	}
+	var customer domain.Customer
+	var subscription domain.Subscription
+	var ticket domain.TroubleTicket
+	err := db.Transaction(func(tx *gorm.DB) error {
+		customer = domain.Customer{
+			CustomerNo: fmt.Sprintf("TMP-%d", common.UUIDint64()),
+			Name:       name,
+			Phone:      phone,
+			Email:      email,
+			IdentityNo: strings.TrimSpace(in.IdentityNo),
+			Address:    address,
+			City:       strings.TrimSpace(in.City),
+			Status:     domain.CustomerPending,
+			Notes:      notes,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+		if err := tx.Create(&customer).Error; err != nil {
+			return err
+		}
+		customer.CustomerNo = fmt.Sprintf("MWX-%06d", customer.ID)
+		if err := tx.Model(&customer).Update("customer_no", customer.CustomerNo).Error; err != nil {
+			return err
+		}
 
-	if err := db.Create(&customer).Error; err != nil {
-		return fail(c, 500, "DATABASE_ERROR", "Gagal menyimpan data calon pelanggan", err.Error())
-	}
+		subscription = domain.Subscription{
+			SubscriptionNo: fmt.Sprintf("TMP-%d", common.UUIDint64()),
+			CustomerID:     customer.ID,
+			PackageID:      pkg.ID,
+			Status:         domain.SubscriptionPending,
+			StartDate:      now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+		if err := tx.Create(&subscription).Error; err != nil {
+			return err
+		}
+		subscription.SubscriptionNo = fmt.Sprintf("SUB-%06d", subscription.ID)
+		if err := tx.Model(&subscription).Update("subscription_no", subscription.SubscriptionNo).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&domain.BillingEvent{
+			CustomerID: customer.ID, SubscriptionID: subscription.ID,
+			Type: "registration_submitted", Description: "Public registration awaiting review: " + subscription.SubscriptionNo,
+			CreatedAt: now,
+		}).Error; err != nil {
+			return err
+		}
 
-	customer.CustomerNo = fmt.Sprintf("MWX-%06d", customer.ID)
-	_ = db.Model(&customer).Update("customer_no", customer.CustomerNo)
-
-	// Create trouble ticket for field survey & installation
-	ticketNo := fmt.Sprintf("WO-%s-%04d", now.Format("060102"), customer.ID%10000)
-	ticket := domain.TroubleTicket{
-		TicketNo:    ticketNo,
-		CustomerID:  customer.ID,
-		Subject:     fmt.Sprintf("Pasang Baru: %s (%s)", customer.Name, pkgName),
-		Category:    "installation",
-		Priority:    "normal",
-		Status:      "open",
-		Description: fmt.Sprintf("Permohonan Pemasangan Baru:\n- Nama: %s\n- No WhatsApp: %s\n- Email: %s\n- Alamat Pemasangan: %s, %s\n- Pilihan Paket: %s\n- Catatan: %s", customer.Name, customer.Phone, customer.Email, customer.Address, customer.City, pkgName, in.Notes),
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ticketNo, err := nextISPTicketNumber(tx, "WO", now)
+		if err != nil {
+			return err
+		}
+		ticket = domain.TroubleTicket{
+			TicketNo:       ticketNo,
+			CustomerID:     customer.ID,
+			SubscriptionID: subscription.ID,
+			Subject:        fmt.Sprintf("Pasang Baru: %s (%s)", customer.Name, pkgName),
+			Category:       "installation",
+			Priority:       "normal",
+			Status:         "open",
+			Description:    fmt.Sprintf("Permohonan Pemasangan Baru:\n- Nama: %s\n- No WhatsApp: %s\n- Email: %s\n- Alamat Pemasangan: %s, %s\n- Pilihan Paket: %s\n- Catatan: %s", customer.Name, customer.Phone, customer.Email, customer.Address, customer.City, pkgName, in.Notes),
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+		return tx.Create(&ticket).Error
+	})
+	if err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Gagal menyimpan pendaftaran dan work order", nil)
 	}
-	_ = db.Create(&ticket)
 
 	return ok(c, map[string]any{
-		"success":     true,
-		"customer_no": customer.CustomerNo,
-		"ticket_no":   ticket.TicketNo,
-		"package":     pkgName,
-		"message":     "Pendaftaran berhasil diterima! Tim teknisi kami akan segera menghubungi Anda untuk jadwal survei dan instalasi.",
+		"success":             true,
+		"customer_no":         customer.CustomerNo,
+		"subscription_no":     subscription.SubscriptionNo,
+		"subscription_status": subscription.Status,
+		"ticket_no":           ticket.TicketNo,
+		"package":             pkgName,
+		"message":             "Pendaftaran berhasil diterima! Tim teknisi kami akan segera menghubungi Anda untuk jadwal survei dan instalasi.",
 	})
+}
+
+func validPublicPhone(phone string) bool {
+	digits := 0
+	for i, r := range phone {
+		switch {
+		case r >= '0' && r <= '9':
+			digits++
+		case r == '+' && i == 0:
+		case r == ' ' || r == '-' || r == '(' || r == ')' || r == '.':
+		default:
+			return false
+		}
+	}
+	return digits >= 6
 }
 
 func savePackage(c echo.Context, id int64) error {
