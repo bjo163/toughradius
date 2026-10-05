@@ -949,6 +949,44 @@ export const LandingPage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
               <CircularProgress sx={{ color: accentColor }} />
             </Box>
+          ) : filteredPackages.length === 0 ? (
+            <Box
+              sx={{
+                py: 6,
+                px: 3,
+                textAlign: 'center',
+                bgcolor: '#0D131F',
+                border: '2px dashed rgba(255,255,255,0.15)',
+                maxWidth: 600,
+                mx: 'auto',
+              }}
+            >
+              <Typography variant="h6" fontWeight={800} sx={{ color: '#FFF', mb: 1 }}>
+                Belum Ada Paket Internet Aktif
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#94A3B8', mb: 3 }}>
+                Katalog paket internet untuk kategori ini belum tersedia atau sedang dalam pembaruan oleh administrator ISP.
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleCoverageWhatsApp}
+                startIcon={<WhatsAppIcon />}
+                sx={{
+                  color: '#FFF',
+                  borderColor: accentColor,
+                  borderRadius: 0,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  '&:hover': {
+                    bgcolor: accentColor,
+                    color: '#000',
+                  },
+                }}
+              >
+                Hubungi Kami via WhatsApp
+              </Button>
+            </Box>
           ) : (
             <Grid container spacing={3.5} alignItems="stretch">
               {filteredPackages.map((pkg, idx) => {
