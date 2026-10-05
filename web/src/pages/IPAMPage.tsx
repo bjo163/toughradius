@@ -75,6 +75,9 @@ interface AuditResponse {
 
 interface PingResponse {
   host: string;
+  target_addr?: string;
+  probe_method?: string;
+  port?: string;
   sent: number;
   received: number;
   loss_percent: number;
@@ -370,20 +373,20 @@ export const IPAMPage: React.FC = () => {
           <Card variant="outlined">
             <CardContent sx={{ p: 2 }}>
               <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 0.5 }}>
-                Real-Time Reachability Probe (TCP / ICMP Ping)
+                Real-Time Reachability Probe (TCP SYN Handshake)
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                Perform instant packet latency checks directly from the MWX-ISP server to any subscriber, router, or gateway.
+                Perform instant TCP port reachability checks directly from the MWX-ISP server to any subscriber, router, or gateway. Supports IPv4, IPv6, and custom ports (e.g. 192.168.1.1:8080 or [::1]).
               </Typography>
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
                 <TextField
                   size="small"
-                  label="Target Host or IP"
-                  placeholder="e.g. 192.168.88.1 or 8.8.8.8"
+                  label="Target Host, IPv4, or IPv6"
+                  placeholder="e.g. 192.168.88.1, [::1], or 8.8.8.8:53"
                   value={pingHost}
                   onChange={(e) => setPingHost(e.target.value)}
-                  sx={{ minWidth: 260 }}
+                  sx={{ minWidth: 280 }}
                 />
                 <TextField
                   size="small"
@@ -400,7 +403,7 @@ export const IPAMPage: React.FC = () => {
                   disabled={!pingHost || pingMutation.isPending}
                   onClick={() => pingMutation.mutate()}
                 >
-                  {pingMutation.isPending ? 'Probing...' : 'Start Ping'}
+                  {pingMutation.isPending ? 'Probing...' : 'Start Probe'}
                 </Button>
               </Stack>
             </CardContent>
@@ -408,8 +411,8 @@ export const IPAMPage: React.FC = () => {
 
           {pingResult && (
             <Panel
-              title={`Ping Results — ${pingResult.host}`}
-              subtitle={`${pingResult.received}/${pingResult.sent} packets received`}
+              title={`Probe Results — ${pingResult.host}`}
+              subtitle={`${pingResult.received}/${pingResult.sent} packets reached destination (via ${pingResult.probe_method || 'tcp_syn'} port ${pingResult.port || '80'})`}
               actions={
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Typography variant="caption" color="text.secondary">LOSS: <strong style={{ color: pingResult.loss_percent > 0 ? '#ef4444' : '#22c55e' }}>{pingResult.loss_percent.toFixed(0)}%</strong></Typography>
@@ -422,8 +425,8 @@ export const IPAMPage: React.FC = () => {
                 {pingResult.details.map((d) => (
                   <div key={d.seq}>
                     {d.success
-                      ? `64 bytes from ${pingResult.host}: icmp_seq=${d.seq} time=${d.rtt_ms} ms`
-                      : `Request timeout for icmp_seq=${d.seq}: ${d.error || 'unreachable'}`}
+                      ? `TCP reply from ${pingResult.target_addr || pingResult.host}: probe_seq=${d.seq} time=${d.rtt_ms} ms`
+                      : `Request failed for probe_seq=${d.seq}: ${d.error || 'unreachable / connection timeout'}`}
                   </div>
                 ))}
               </ConsoleBox>

@@ -382,3 +382,123 @@ func TestODPAndFlappingOperations(t *testing.T) {
 	require.NoError(t, createFlappingTicket(cTicket))
 	assert.Equal(t, http.StatusOK, recTicket.Code)
 }
+
+func TestAuditIPHistoryValidationAndTemporalFiltering(t *testing.T) {
+	db, e, appCtx := CreateTestAppContext(t)
+	require.NoError(t, db.AutoMigrate(&domain.RadiusOnline{}, &domain.RadiusAccounting{}))
+
+	baseTime := time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)
+	// Active session started at 08:00
+	require.NoError(t, db.Create(&domain.RadiusOnline{
+		Username:       "user_current",
+		FramedIpaddr:   "100.64.10.5",
+		AcctSessionId:  "SESS-001",
+		AcctStartTime:  baseTime,
+		LastUpdate:     baseTime.Add(30 * time.Minute),
+	}).Error)
+
+	// Historical session yesterday
+	yesterdayStart := baseTime.Add(-24 * time.Hour)
+	yesterdayStop := yesterdayStart.Add(2 * time.Hour)
+	require.NoError(t, db.Create(&domain.RadiusAccounting{
+		Username:       "user_yesterday",
+		FramedIpaddr:   "100.64.10.5",
+		AcctSessionId:  "SESS-000",
+		AcctStartTime:  yesterdayStart,
+		AcctStopTime:   yesterdayStop,
+		AcctSessionTime: 7200,
+	}).Error)
+
+	// 1. Invalid timestamp returns 400
+	reqInvalid := httptest.NewRequest(http.MethodGet, "/api/v1/network/ipam/audit?ip=100.64.10.5&at=invalid-time", nil)
+	recInvalid := httptest.NewRecorder()
+	ctxInvalid := CreateTestContext(e, db, reqInvalid, recInvalid, appCtx)
+	require.NoError(t, auditIPHistory(ctxInvalid))
+	assert.Equal(t, http.StatusBadRequest, recInvalid.Code)
+
+	// 2. Query yesterday time returns only user_yesterday, NOT user_current
+	targetYesterday := yesterdayStart.Add(1 * time.Hour).Format(time.RFC3339)
+	reqPast := httptest.NewRequest(http.MethodGet, "/api/v1/network/ipam/audit?ip=100.64.10.5&at="+targetYesterday, nil)
+	recPast := httptest.NewRecorder()
+	ctxPast := CreateTestContext(e, db, reqPast, recPast, appCtx)
+	require.NoError(t, auditIPHistory(ctxPast))
+	assert.Equal(t, http.StatusOK, recPast.Code)
+
+	var resPast struct {
+		Data struct {
+			QueriedIP  string           `json:"queried_ip"`
+			TotalFound int              `json:"total_found"`
+			Results    []map[string]any `json:"results"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recPast.Body.Bytes(), &resPast))
+	assert.Equal(t, 1, resPast.Data.TotalFound)
+	require.Len(t, resPast.Data.Results, 1)
+	assert.Equal(t, "user_yesterday", resPast.Data.Results[0]["username"])
+	assert.Equal(t, "historical_accounting", resPast.Data.Results[0]["type"])
+
+	// 3. Query current time returns user_current
+	targetNow := baseTime.Add(15 * time.Minute).Format(time.RFC3339)
+	reqNow := httptest.NewRequest(http.MethodGet, "/api/v1/network/ipam/audit?ip=100.64.10.5&at="+targetNow, nil)
+	recNow := httptest.NewRecorder()
+	ctxNow := CreateTestContext(e, db, reqNow, recNow, appCtx)
+	require.NoError(t, auditIPHistory(ctxNow))
+	assert.Equal(t, http.StatusOK, recNow.Code)
+
+	var resNow struct {
+		Data struct {
+			TotalFound int              `json:"total_found"`
+			Results    []map[string]any `json:"results"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recNow.Body.Bytes(), &resNow))
+	assert.Equal(t, 1, resNow.Data.TotalFound)
+	assert.Equal(t, "user_current", resNow.Data.Results[0]["username"])
+	assert.Equal(t, "live_online", resNow.Data.Results[0]["type"])
+}
+
+func TestLivePingProbeIPv4AndIPv6Handling(t *testing.T) {
+	db, e, appCtx := CreateTestAppContext(t)
+
+	// 1. IPv4 loopback with custom port
+	bodyIPv4 := []byte(`{"host": "127.0.0.1:80", "count": 1}`)
+	reqIPv4 := httptest.NewRequest(http.MethodPost, "/api/v1/network/diagnostics/ping", bytes.NewReader(bodyIPv4))
+	reqIPv4.Header.Set("Content-Type", "application/json")
+	recIPv4 := httptest.NewRecorder()
+	ctxIPv4 := CreateTestContext(e, db, reqIPv4, recIPv4, appCtx)
+	require.NoError(t, runLivePing(ctxIPv4))
+	assert.Equal(t, http.StatusOK, recIPv4.Code)
+
+	var resIPv4 struct {
+		Data struct {
+			Host        string `json:"host"`
+			TargetAddr  string `json:"target_addr"`
+			ProbeMethod string `json:"probe_method"`
+			Port        string `json:"port"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recIPv4.Body.Bytes(), &resIPv4))
+	assert.Equal(t, "127.0.0.1:80", resIPv4.Data.TargetAddr)
+	assert.Equal(t, "tcp_syn", resIPv4.Data.ProbeMethod)
+	assert.Equal(t, "80", resIPv4.Data.Port)
+
+	// 2. IPv6 loopback without port
+	bodyIPv6 := []byte(`{"host": "::1", "count": 1}`)
+	reqIPv6 := httptest.NewRequest(http.MethodPost, "/api/v1/network/diagnostics/ping", bytes.NewReader(bodyIPv6))
+	reqIPv6.Header.Set("Content-Type", "application/json")
+	recIPv6 := httptest.NewRecorder()
+	ctxIPv6 := CreateTestContext(e, db, reqIPv6, recIPv6, appCtx)
+	require.NoError(t, runLivePing(ctxIPv6))
+	assert.Equal(t, http.StatusOK, recIPv6.Code)
+
+	var resIPv6 struct {
+		Data struct {
+			TargetAddr  string `json:"target_addr"`
+			ProbeMethod string `json:"probe_method"`
+			Port        string `json:"port"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recIPv6.Body.Bytes(), &resIPv6))
+	assert.Equal(t, "[::1]:80", resIPv6.Data.TargetAddr)
+	assert.Equal(t, "80", resIPv6.Data.Port)
+}
