@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.10.1 — 2026-10-05
+
+Changes since v0.10.0:
+
+### Fixes and Improvements
+
+- validate audit IP timestamp and support IPv6/custom ports in TCP probe (TR-F012, TR-F031) (#42)
+
 ## v0.10.0 — 2026-10-05
 
 Changes since v0.9.0:
