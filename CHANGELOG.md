@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.9.0 — 2026-10-05
+
+Changes since v0.8.4:
+
+### Features
+
+- ODP empty value clearing and full voucher batch printing (TR-F012, TR-F013) (#40)
+
 ## v0.8.4 — 2026-10-05
 
 Changes since v0.8.3:
