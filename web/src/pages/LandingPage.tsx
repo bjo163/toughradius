@@ -88,6 +88,7 @@ const formatSeconds = (sec: number) => {
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { branding } = useBranding();
+  const isLoggedIn = Boolean(localStorage.getItem('token'));
 
   const accentColor = branding.accent_color || '#16A34A';
   const productName = branding.product_name || 'MWX-ISP';
@@ -326,7 +327,7 @@ export const LandingPage: React.FC = () => {
           </Box>
           <Button
             size="small"
-            onClick={() => navigate('/login')}
+            onClick={() => navigate(isLoggedIn ? '/' : '/login')}
             startIcon={<AdminIcon sx={{ fontSize: '0.9rem !important' }} />}
             sx={{
               color: '#F8FAFC',
@@ -344,7 +345,7 @@ export const LandingPage: React.FC = () => {
               },
             }}
           >
-            Operator Login
+            {isLoggedIn ? 'Operator Dashboard' : 'Operator Login'}
           </Button>
         </Stack>
       </Box>
@@ -1770,7 +1771,7 @@ export const LandingPage: React.FC = () => {
                 </Typography>
                 <Typography
                   component="button"
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate(isLoggedIn ? '/' : '/login')}
                   sx={{
                     background: 'none',
                     border: 'none',
@@ -1782,7 +1783,7 @@ export const LandingPage: React.FC = () => {
                     '&:hover': { color: accentColor },
                   }}
                 >
-                  Operator Console
+                  {isLoggedIn ? 'Operator Dashboard' : 'Operator Console'}
                 </Typography>
               </Stack>
             </Grid>
