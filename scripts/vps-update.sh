@@ -73,7 +73,7 @@ if [[ -f "${APP_DIR}/scripts/backup-db.sh" ]]; then
   backup_path="$(/usr/bin/env bash "${APP_DIR}/scripts/backup-db.sh" --quiet)"
 else
   # Bootstrap a pre-update snapshot for installations created before backup tooling shipped.
-  backup_path="$(git show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet)"
+  backup_path="$(git show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -s -- --quiet)"
 fi
 echo "Pre-update backup created: ${backup_path}"
 
