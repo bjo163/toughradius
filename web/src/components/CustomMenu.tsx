@@ -13,6 +13,7 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import { Box, Typography, useTheme } from '@mui/material';
 import { MenuItemLink, MenuProps, useGetIdentity, useTranslate } from 'react-admin';
 import BrushOutlinedIcon from '@mui/icons-material/BrushOutlined';
+import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
 import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
@@ -39,8 +40,9 @@ const menuItems = [
   { to: '/network/ipam', labelKey: 'menu.ipam', icon: <DnsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/network/odp', labelKey: 'menu.odp_management', icon: <HubOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/operations', labelKey: 'menu.operations', sectionKey: 'menu.network', icon: <SensorsOutlinedIcon />, permissions: ['super', 'admin'] },
-  { to: '/system/config', labelKey: 'menu.system_config', sectionKey: 'menu.system', icon: <SettingsOutlinedIcon />, permissions: ['platform_admin'] },
-  { to: '/system/branding', labelKey: 'menu.branding', icon: <BrushOutlinedIcon />, permissions: ['platform_admin'] },
+  { to: '/system/website', labelKey: 'menu.website_editor', sectionKey: 'menu.system', icon: <LanguageOutlinedIcon />, permissions: ['super', 'admin', 'platform_admin'] },
+  { to: '/system/branding', labelKey: 'menu.branding', icon: <BrushOutlinedIcon />, permissions: ['super', 'admin', 'platform_admin'] },
+  { to: '/system/config', labelKey: 'menu.system_config', icon: <SettingsOutlinedIcon />, permissions: ['platform_admin'] },
   { to: '/system/operators', labelKey: 'menu.operators', icon: <AdminPanelSettingsOutlinedIcon />, permissions: ['super', 'admin'] },
   { to: '/system/certificate', labelKey: 'menu.certificates', icon: <VerifiedUserOutlinedIcon />, permissions: ['platform_admin'] },
   { to: '/platform/tenants', labelKey: 'menu.tenants', sectionKey: 'menu.platform', icon: <BusinessOutlinedIcon />, permissions: ['platform_admin'] },

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert, Box, Button, Chip, Divider, LinearProgress,
   Paper, Stack, Tab, Tabs, TextField, Typography,
@@ -11,6 +12,7 @@ import {
   WhatsApp as WhatsAppIcon,
   SpeedOutlined as SpeedIcon,
   CampaignOutlined as CampaignIcon,
+  BrushOutlined as BrushIcon,
 } from '@mui/icons-material';
 import { useNotify } from 'react-admin';
 import { apiRequest } from '../utils/apiClient';
@@ -21,6 +23,7 @@ import { PageHeader, Panel } from '../components/Enterprise';
 export const WebsiteEditorPage = () => {
   const notify = useNotify();
   const { branding, updateBranding } = useBranding();
+  const navigate = useNavigate();
 
   const [draft, setDraft] = useState<ProductBranding>(branding);
   const [saving, setSaving] = useState(false);
@@ -87,6 +90,26 @@ export const WebsiteEditorPage = () => {
         subtitle="Kelola konten, teks headline, nomor WhatsApp sales, SLA, dan informasi publik pada halaman utama (Landing Page / Home) ISP."
         actions={
           <Stack direction="row" spacing={1.5}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => navigate('/system/branding')}
+              startIcon={<BrushIcon />}
+              sx={{
+                borderColor: 'rgba(255,255,255,0.25)',
+                color: '#FFF',
+                fontWeight: 700,
+                borderRadius: 0,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: accent,
+                  color: accent,
+                },
+              }}
+            >
+              Logo & Branding
+            </Button>
+
             <Button
               variant="outlined"
               size="small"
