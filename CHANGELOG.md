@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.11.0 — 2026-10-05
+
+Changes since v0.10.1:
+
+### Features
+
+- enforce ODP port capacity and occupancy validation, and handle empty catalog state (TR-F027, TR-F032) (#43)
+
 ## v0.10.1 — 2026-10-05
 
 Changes since v0.10.0:
