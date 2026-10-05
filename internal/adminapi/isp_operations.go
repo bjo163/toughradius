@@ -831,18 +831,18 @@ func dispatchTicketWhatsApp(c echo.Context) error {
 // --- 5. ODP (OPTICAL DISTRIBUTION POINT) MANAGEMENT ---
 
 type odpInput struct {
-	Code        string  `json:"code"`
-	Name        string  `json:"name"`
-	Zone        string  `json:"zone"`
-	OLTName     string  `json:"olt_name"`
-	PONPort     string  `json:"pon_port"`
-	TotalPorts  int     `json:"total_ports"`
-	OpticalLoss float64 `json:"optical_loss"`
-	Status      string  `json:"status"`
-	Address     string  `json:"address"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Notes       string  `json:"notes"`
+	Code        string   `json:"code"`
+	Name        *string  `json:"name"`
+	Zone        *string  `json:"zone"`
+	OLTName     *string  `json:"olt_name"`
+	PONPort     *string  `json:"pon_port"`
+	TotalPorts  *int     `json:"total_ports"`
+	OpticalLoss *float64 `json:"optical_loss"`
+	Status      *string  `json:"status"`
+	Address     *string  `json:"address"`
+	Latitude    *float64 `json:"latitude"`
+	Longitude   *float64 `json:"longitude"`
+	Notes       *string  `json:"notes"`
 }
 
 func listODPs(c echo.Context) error {
@@ -937,29 +937,64 @@ func createODP(c echo.Context) error {
 	if input.Code == "" {
 		return fail(c, http.StatusBadRequest, "VALIDATION_FAILED", "ODP code is required (e.g. ODP-KNG-001)", nil)
 	}
-	if input.Name == "" {
-		input.Name = input.Code
+
+	name := input.Code
+	if input.Name != nil && strings.TrimSpace(*input.Name) != "" {
+		name = strings.TrimSpace(*input.Name)
 	}
-	if input.TotalPorts <= 0 {
-		input.TotalPorts = 16
+	zone := ""
+	if input.Zone != nil {
+		zone = strings.TrimSpace(*input.Zone)
 	}
-	if input.Status == "" {
-		input.Status = "active"
+	oltName := ""
+	if input.OLTName != nil {
+		oltName = strings.TrimSpace(*input.OLTName)
+	}
+	ponPort := ""
+	if input.PONPort != nil {
+		ponPort = strings.TrimSpace(*input.PONPort)
+	}
+	totalPorts := 16
+	if input.TotalPorts != nil && *input.TotalPorts > 0 {
+		totalPorts = *input.TotalPorts
+	}
+	var opticalLoss float64
+	if input.OpticalLoss != nil {
+		opticalLoss = *input.OpticalLoss
+	}
+	status := "active"
+	if input.Status != nil && strings.TrimSpace(*input.Status) != "" {
+		status = strings.TrimSpace(*input.Status)
+	}
+	address := ""
+	if input.Address != nil {
+		address = strings.TrimSpace(*input.Address)
+	}
+	var lat, lon float64
+	if input.Latitude != nil {
+		lat = *input.Latitude
+	}
+	if input.Longitude != nil {
+		lon = *input.Longitude
+	}
+	notes := ""
+	if input.Notes != nil {
+		notes = strings.TrimSpace(*input.Notes)
 	}
 
 	odp := domain.ODP{
 		Code:        input.Code,
-		Name:        input.Name,
-		Zone:        input.Zone,
-		OLTName:     input.OLTName,
-		PONPort:     input.PONPort,
-		TotalPorts:  input.TotalPorts,
-		OpticalLoss: input.OpticalLoss,
-		Status:      input.Status,
-		Address:     input.Address,
-		Latitude:    input.Latitude,
-		Longitude:   input.Longitude,
-		Notes:       input.Notes,
+		Name:        name,
+		Zone:        zone,
+		OLTName:     oltName,
+		PONPort:     ponPort,
+		TotalPorts:  totalPorts,
+		OpticalLoss: opticalLoss,
+		Status:      status,
+		Address:     address,
+		Latitude:    lat,
+		Longitude:   lon,
+		Notes:       notes,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -987,38 +1022,41 @@ func updateODP(c echo.Context) error {
 		return fail(c, http.StatusBadRequest, "INVALID_INPUT", err.Error(), nil)
 	}
 
-	if input.Name != "" {
-		odp.Name = input.Name
+	if input.Name != nil {
+		trimmed := strings.TrimSpace(*input.Name)
+		if trimmed != "" {
+			odp.Name = trimmed
+		}
 	}
-	if input.Zone != "" {
-		odp.Zone = input.Zone
+	if input.Zone != nil {
+		odp.Zone = strings.TrimSpace(*input.Zone)
 	}
-	if input.OLTName != "" {
-		odp.OLTName = input.OLTName
+	if input.OLTName != nil {
+		odp.OLTName = strings.TrimSpace(*input.OLTName)
 	}
-	if input.PONPort != "" {
-		odp.PONPort = input.PONPort
+	if input.PONPort != nil {
+		odp.PONPort = strings.TrimSpace(*input.PONPort)
 	}
-	if input.TotalPorts > 0 {
-		odp.TotalPorts = input.TotalPorts
+	if input.TotalPorts != nil && *input.TotalPorts > 0 {
+		odp.TotalPorts = *input.TotalPorts
 	}
-	if input.OpticalLoss != 0 {
-		odp.OpticalLoss = input.OpticalLoss
+	if input.OpticalLoss != nil {
+		odp.OpticalLoss = *input.OpticalLoss
 	}
-	if input.Status != "" {
-		odp.Status = input.Status
+	if input.Status != nil && strings.TrimSpace(*input.Status) != "" {
+		odp.Status = strings.TrimSpace(*input.Status)
 	}
-	if input.Address != "" {
-		odp.Address = input.Address
+	if input.Address != nil {
+		odp.Address = strings.TrimSpace(*input.Address)
 	}
-	if input.Latitude != 0 {
-		odp.Latitude = input.Latitude
+	if input.Latitude != nil {
+		odp.Latitude = *input.Latitude
 	}
-	if input.Longitude != 0 {
-		odp.Longitude = input.Longitude
+	if input.Longitude != nil {
+		odp.Longitude = *input.Longitude
 	}
-	if input.Notes != "" {
-		odp.Notes = input.Notes
+	if input.Notes != nil {
+		odp.Notes = strings.TrimSpace(*input.Notes)
 	}
 	odp.UpdatedAt = time.Now()
 

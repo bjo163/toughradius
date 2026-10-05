@@ -653,6 +653,16 @@ export const ODPPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             />
 
+            <TextField
+              fullWidth
+              label="Notes"
+              multiline
+              rows={2}
+              placeholder="Additional operational or field notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            />
+
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
