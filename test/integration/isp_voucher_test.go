@@ -96,6 +96,7 @@ func TestVoucherGenerationUsesPostgresSequenceAndActivatesAfterValidAuth(t *test
 	require.Len(t, created, batchCount)
 	seenBatchNumbers := make(map[string]struct{}, len(created))
 	for _, batch := range created {
+		assert.Equal(t, "it-admin", batch.CreatedBy)
 		if _, duplicate := seenBatchNumbers[batch.BatchNo]; duplicate {
 			t.Fatalf("duplicate concurrent batch number %q", batch.BatchNo)
 		}
@@ -156,6 +157,146 @@ func TestVoucherGenerationUsesPostgresSequenceAndActivatesAfterValidAuth(t *test
 		status, body := client.delete(t, fmt.Sprintf("/api/v1/isp/vouchers/batches/%d", batch.ID))
 		require.Equalf(t, http.StatusOK, status, "batch cleanup response: %s", string(body))
 	}
+}
+
+func TestCustomerRegistrationAndTicketsSharePostgresSequenceConcurrently(t *testing.T) {
+	db := h.appCtx.DB()
+	suffix := uniqueSuffix()
+	profileID := seedProfile(t, "it-registration-profile-"+suffix)
+	pkg := domain.InternetPackage{
+		Code: "IT-REG-" + suffix, Name: "Integration registration " + suffix,
+		Status: "active", RadiusProfileID: profileID,
+	}
+	require.NoError(t, db.Create(&pkg).Error)
+	client := newAPIClient(t)
+
+	const requestCount = 12
+	type result struct {
+		status   int
+		expected int
+		body     []byte
+		ticketNo string
+	}
+	results := make(chan result, requestCount)
+	var workers sync.WaitGroup
+	for i := 0; i < requestCount; i++ {
+		workers.Add(1)
+		go func(index int) {
+			defer workers.Done()
+			var path string
+			var payload []byte
+			expectedStatus := http.StatusOK
+			if index%2 == 0 {
+				path = "/api/v1/isp/tickets"
+				expectedStatus = http.StatusCreated
+				payload, _ = json.Marshal(map[string]any{"subject": fmt.Sprintf("Concurrent ticket %s %d", suffix, index)})
+			} else {
+				path = "/api/v1/public/register"
+				payload, _ = json.Marshal(map[string]any{
+					"name":  fmt.Sprintf("Concurrent customer %s %d", suffix, index),
+					"phone": fmt.Sprintf("08123456%04d", index), "address": "Integration test address",
+					"package_id": fmt.Sprint(pkg.ID),
+				})
+			}
+			req, err := http.NewRequest(http.MethodPost, client.base+path, bytes.NewReader(payload))
+			if err != nil {
+				results <- result{body: []byte(err.Error()), expected: expectedStatus}
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+client.token)
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := client.http.Do(req)
+			if err != nil {
+				results <- result{body: []byte(err.Error()), expected: expectedStatus}
+				return
+			}
+			defer func() { _ = resp.Body.Close() }()
+			var body bytes.Buffer
+			_, _ = body.ReadFrom(resp.Body)
+			var envelope struct {
+				Data struct {
+					TicketNo string `json:"ticket_no"`
+				} `json:"data"`
+			}
+			_ = json.Unmarshal(body.Bytes(), &envelope)
+			results <- result{status: resp.StatusCode, expected: expectedStatus, body: body.Bytes(), ticketNo: envelope.Data.TicketNo}
+		}(i)
+	}
+	workers.Wait()
+	close(results)
+
+	seen := make(map[string]struct{}, requestCount)
+	for result := range results {
+		require.Equalf(t, result.expected, result.status, "request response: %s", string(result.body))
+		require.Regexp(t, `^(TCK|WO)-[0-9]{6}-[0-9]{6}$`, result.ticketNo, "response: %s", string(result.body))
+		if _, exists := seen[result.ticketNo]; exists {
+			t.Fatalf("concurrent request received duplicate ticket/work-order number %q", result.ticketNo)
+		}
+		seen[result.ticketNo] = struct{}{}
+	}
+	require.Len(t, seen, requestCount)
+
+	var ticketCount int64
+	require.NoError(t, db.Model(&domain.TroubleTicket{}).Where("ticket_no LIKE ? OR ticket_no LIKE ?", "TCK-%", "WO-%").Count(&ticketCount).Error)
+	assert.EqualValues(t, requestCount, ticketCount)
+	var customerCount int64
+	require.NoError(t, db.Model(&domain.Customer{}).Where("name LIKE ?", "Concurrent customer "+suffix+"%").Count(&customerCount).Error)
+	assert.EqualValues(t, requestCount/2, customerCount)
+	var registrationSubscriptionCount int64
+	require.NoError(t, db.Model(&domain.Subscription{}).
+		Where("package_id = ? AND customer_id IN (SELECT id FROM isp_customer WHERE name LIKE ?)", pkg.ID, "Concurrent customer "+suffix+"%").
+		Count(&registrationSubscriptionCount).Error)
+	assert.EqualValues(t, requestCount/2, registrationSubscriptionCount, "every accepted registration must retain its selected package relationship")
+
+	// The NOC can be polled or clicked more than once while an alert is open.
+	// Row locking by RADIUS username must collapse concurrent repeats to one
+	// active incident, even when the PostgreSQL requests overlap.
+	flapUser := "it-flap-" + suffix
+	require.NoError(t, db.Create(&domain.RadiusUser{Username: flapUser, Password: "test-secret", Status: "enabled"}).Error)
+	const repeats = 8
+	flapResults := make(chan result, repeats)
+	for i := 0; i < repeats; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			payload, _ := json.Marshal(map[string]string{"username": flapUser, "description": "same active alert"})
+			req, err := http.NewRequest(http.MethodPost, client.base+"/api/v1/network/diagnostics/flapping/auto-ticket", bytes.NewReader(payload))
+			if err != nil {
+				flapResults <- result{body: []byte(err.Error()), expected: http.StatusOK}
+				return
+			}
+			req.Header.Set("Authorization", "Bearer "+client.token)
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := client.http.Do(req)
+			if err != nil {
+				flapResults <- result{body: []byte(err.Error()), expected: http.StatusOK}
+				return
+			}
+			defer func() { _ = resp.Body.Close() }()
+			var body bytes.Buffer
+			_, _ = body.ReadFrom(resp.Body)
+			var envelope struct {
+				Data domain.TroubleTicket `json:"data"`
+			}
+			_ = json.Unmarshal(body.Bytes(), &envelope)
+			flapResults <- result{status: resp.StatusCode, expected: http.StatusOK, body: body.Bytes(), ticketNo: envelope.Data.TicketNo}
+		}()
+	}
+	workers.Wait()
+	close(flapResults)
+	var flapTicketNo string
+	for response := range flapResults {
+		require.Equalf(t, response.expected, response.status, "flapping response: %s", string(response.body))
+		require.NotEmpty(t, response.ticketNo, "flapping response: %s", string(response.body))
+		if flapTicketNo == "" {
+			flapTicketNo = response.ticketNo
+		} else {
+			assert.Equal(t, flapTicketNo, response.ticketNo, "repeat active incident should return existing ticket")
+		}
+	}
+	var flapCount int64
+	require.NoError(t, db.Model(&domain.TroubleTicket{}).Where("ticket_no = ?", flapTicketNo).Count(&flapCount).Error)
+	assert.EqualValues(t, 1, flapCount)
 }
 
 func batchIDs(batches []domain.HotspotBatch) []int64 {

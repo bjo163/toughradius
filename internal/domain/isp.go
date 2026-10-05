@@ -192,8 +192,9 @@ type BillingEvent struct {
 // TableName returns the database table name for BillingEvent.
 func (BillingEvent) TableName() string { return "isp_billing_event" }
 
-// DocumentSequence stores the next monthly invoice/payment serial. The kind
-// and period pair is unique so allocation can be atomic across app instances.
+// DocumentSequence stores tenant-scoped document serials. The kind and period
+// key is unique so allocation is atomic across invoices, payments, vouchers,
+// tickets and work orders from every app instance.
 type DocumentSequence struct {
 	ID       int64  `json:"id,string" gorm:"primaryKey"`
 	TenantID int64  `json:"-" gorm:"not null;default:1;uniqueIndex:udx_isp_document_sequence_tenant,priority:1;index"`

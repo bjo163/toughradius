@@ -25,9 +25,18 @@ remote access. To use a public domain and timezone, pass them inline:
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo env MWX_ISP_DOMAIN=isp.example.com MWX_ISP_TIMEZONE=Asia/Jakarta bash'
 ```
 
-The optional `sudo bash scripts/vps-install.sh --check` command checks a local
-checkout without making changes. To use setup prompts, replace `sudo bash` in
-the install command with `sudo bash -s -- --interactive`.
+To choose the web/TLS setup interactively, run:
+
+```bash
+bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-install.sh | sudo bash -s -- --interactive'
+```
+
+Choose Let's Encrypt for a public DNS name pointing to this VPS (inbound TCP
+80/443 must be reachable), self-hosted HTTPS for a private hostname (install
+Caddy's root CA on each client), or localhost HTTP for SSH-tunnel-only access.
+This also prompts when an existing `.env` is restored. The optional
+`sudo bash scripts/vps-install.sh --check` command checks a local checkout
+without making changes.
 
 The installer creates private credentials in `/opt/mwx-isp/.env`, pulls the
 PostgreSQL and MWX-ISP release images, and starts PostgreSQL, MWX-ISP, and Caddy.
@@ -46,12 +55,10 @@ production use.
 For a safe online repair or uninstall, use the commands in the
 [VPS operations guide](./ops-guide.md#repair-and-uninstall-a-vps-deployment).
 
-Set `MWX_ISP_DOMAIN` in `/opt/mwx-isp/.env` to the public DNS name for automatic
-HTTPS. The default `localhost` keeps the admin service private. Do not expose
-PostgreSQL to the public network. Allow TCP 80/443 for Caddy and only the RADIUS
-ports needed by your NAS (UDP 1812/1813 and TCP 2083 for RadSec). Set firewall
-rules using your VPS provider or existing host firewall so your SSH access stays
-available.
+Do not expose PostgreSQL to the public network. For Let's Encrypt, allow TCP
+80/443 and only the RADIUS ports needed by your NAS (UDP 1812/1813 and TCP 2083
+for RadSec). Local HTTP binds only to loopback. Set firewall rules using your
+VPS provider or existing host firewall so your SSH access stays available.
 
 ## 2. Sign in
 

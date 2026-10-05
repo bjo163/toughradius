@@ -18,6 +18,7 @@ import (
 	"github.com/bjo163/mwx-isp/pkg/common"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func registerISPOperationsRoutes() {
@@ -120,12 +121,16 @@ func generateVouchers(c echo.Context) error {
 	if in.PackageID <= 0 {
 		return fail(c, 400, "PACKAGE_REQUIRED", "Select an active package linked to a RADIUS profile", nil)
 	}
+	operator, err := resolveOperatorFromContext(c)
+	if err != nil || operator == nil || strings.TrimSpace(operator.Username) == "" {
+		return fail(c, http.StatusUnauthorized, "OPERATOR_REQUIRED", "Unable to resolve the authenticated operator", nil)
+	}
 
 	db := GetDB(c)
 	now := time.Now()
 	var batch domain.HotspotBatch
 	vouchers := make([]domain.HotspotVoucher, in.Quantity)
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		var pkg domain.InternetPackage
 		if err := tx.Where("status = ?", "active").First(&pkg, in.PackageID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -155,7 +160,7 @@ func generateVouchers(c echo.Context) error {
 			Name:    in.Name, PackageID: pkg.ID, Quantity: in.Quantity, Price: in.Price,
 			ValiditySeconds: in.ValiditySeconds, QuotaBytes: in.QuotaMB * 1024 * 1024,
 			Prefix: strings.ToUpper(strings.TrimSpace(in.Prefix)), CodeLength: in.CodeLength,
-			CreatedBy: "operator", CreatedAt: now,
+			CreatedBy: operator.Username, CreatedAt: now,
 		}
 		if err := tx.Create(&batch).Error; err != nil {
 			return err
@@ -678,10 +683,7 @@ func createTroubleTicket(c echo.Context) error {
 	}
 
 	now := time.Now()
-	ticketNo := fmt.Sprintf("TCK-%s-%04d", now.Format("060102"), time.Now().Nanosecond()%10000)
-
 	ticket := domain.TroubleTicket{
-		TicketNo:           ticketNo,
 		CustomerID:         in.CustomerID,
 		SubscriptionID:     in.SubscriptionID,
 		Subject:            in.Subject,
@@ -701,10 +703,28 @@ func createTroubleTicket(c echo.Context) error {
 		ticket.Category = "no_internet"
 	}
 
-	if err := GetDB(c).Create(&ticket).Error; err != nil {
+	err := GetDB(c).Transaction(func(tx *gorm.DB) error {
+		ticketNo, err := nextISPTicketNumber(tx, "TCK", now)
+		if err != nil {
+			return err
+		}
+		ticket.TicketNo = ticketNo
+		return tx.Create(&ticket).Error
+	})
+	if err != nil {
 		return fail(c, 500, "DATABASE_ERROR", "Failed to create trouble ticket", nil)
 	}
 	return c.JSON(http.StatusCreated, Response{Data: ticket})
+}
+
+// nextISPTicketNumber uses the same tenant-scoped daily sequence for tickets
+// and work orders so independently created records cannot collide.
+func nextISPTicketNumber(tx *gorm.DB, prefix string, now time.Time) (string, error) {
+	serial, err := billing.NextDocumentSerial(tx, "ticket", now.Format("060102"))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s-%s-%06d", prefix, now.Format("060102"), serial), nil
 }
 
 func updateTroubleTicket(c echo.Context) error {
@@ -1131,30 +1151,68 @@ func createFlappingTicket(c echo.Context) error {
 	}
 
 	db := GetDB(c)
-	var cust domain.Customer
-	var sub domain.Subscription
-	if err := db.Where("radius_user_id IN (SELECT id FROM radius_user WHERE username = ?)", input.Username).First(&sub).Error; err == nil {
-		_ = db.First(&cust, sub.CustomerID)
-	}
-
-	ticketNo := fmt.Sprintf("FLAP-%s-%04d", time.Now().Format("060102"), time.Now().Unix()%10000)
+	now := time.Now()
 	ticket := domain.TroubleTicket{
-		TicketNo:       ticketNo,
-		CustomerID:     cust.ID,
-		SubscriptionID: sub.ID,
-		Subject:        fmt.Sprintf("[AUTO-NOC] Flapping Fiber Link Detected on %s", input.Username),
-		Category:       "los_red",
-		Priority:       "urgent",
-		Status:         "open",
+		Subject:  fmt.Sprintf("[AUTO-NOC] Flapping Fiber Link Detected on %s", input.Username),
+		Category: "los_red",
+		Priority: "urgent",
+		Status:   "open",
 		Description: fmt.Sprintf(
 			"Sistem MWX-ISP mendeteksi flapping link berulang pada akun PPPoE %s (Customer: %s / %s).\n\nDetail:\n- ODP: %s\n- Alamat: %s\n- Waktu Deteksi: %s\n- Catatan: %s",
-			input.Username, cust.CustomerNo, cust.Name, cust.ODPCode, cust.Address, time.Now().Format(time.RFC1123), input.Description,
+			input.Username, "", "", "", "", now.Format(time.RFC1123), input.Description,
 		),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
-	if err := db.Create(&ticket).Error; err != nil {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Serialize event creation by the affected RADIUS account. Concurrent
+		// polling/clicks then observe the same active ticket after the first
+		// request commits instead of creating duplicates.
+		var radiusUser domain.RadiusUser
+		userErr := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("username = ?", input.Username).First(&radiusUser).Error
+		if errors.Is(userErr, gorm.ErrRecordNotFound) {
+			return userErr
+		}
+		if userErr != nil {
+			return userErr
+		}
+		var subscription domain.Subscription
+		if err := tx.Where("radius_user_id = ?", radiusUser.ID).First(&subscription).Error; err == nil {
+			ticket.SubscriptionID = subscription.ID
+			ticket.CustomerID = subscription.CustomerID
+			var customer domain.Customer
+			if err := tx.First(&customer, subscription.CustomerID).Error; err == nil {
+				ticket.Description = fmt.Sprintf(
+					"Sistem MWX-ISP mendeteksi flapping link berulang pada akun PPPoE %s (Customer: %s / %s).\n\nDetail:\n- ODP: %s\n- Alamat: %s\n- Waktu Deteksi: %s\n- Catatan: %s",
+					input.Username, customer.CustomerNo, customer.Name, customer.ODPCode, customer.Address, now.Format(time.RFC1123), input.Description,
+				)
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		// While a flapping incident remains active, repeated clicks/poll cycles
+		// should return its existing ticket rather than opening duplicates.
+		err := tx.Where("subject = ? AND category = ? AND status IN ?", ticket.Subject, ticket.Category, []string{"open", "scheduled", "in_progress"}).First(&ticket).Error
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		ticketNo, err := nextISPTicketNumber(tx, "FLAP", now)
+		if err != nil {
+			return err
+		}
+		ticket.TicketNo = ticketNo
+		return tx.Create(&ticket).Error
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fail(c, http.StatusNotFound, "RADIUS_USER_NOT_FOUND", "RADIUS account was not found", nil)
+		}
 		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to create flapping ticket", err.Error())
 	}
 

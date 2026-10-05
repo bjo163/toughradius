@@ -69,10 +69,12 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${MWX_ISP_CADDY_BIND:-0.0.0.0}:80:80/tcp"
+      - "${MWX_ISP_CADDY_BIND:-0.0.0.0}:443:443/tcp"
     environment:
       MWX_ISP_DOMAIN: ${MWX_ISP_DOMAIN:-localhost}
+      MWX_ISP_CADDY_ADDRESS: "${MWX_ISP_CADDY_ADDRESS:-${MWX_ISP_DOMAIN:-localhost}}"
+      MWX_ISP_CADDY_TLS_DIRECTIVE: "${MWX_ISP_CADDY_TLS_DIRECTIVE:-}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

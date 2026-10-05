@@ -61,6 +61,9 @@ func TestISPOperations(t *testing.T) {
 	var batchCount int64
 	require.NoError(t, db.Model(&domain.HotspotBatch{}).Count(&batchCount).Error)
 	assert.Equal(t, int64(1), batchCount)
+	var generatedBatch domain.HotspotBatch
+	require.NoError(t, db.First(&generatedBatch).Error)
+	assert.Equal(t, "superadmin", generatedBatch.CreatedBy)
 	var radiusCount int64
 	require.NoError(t, db.Model(&domain.RadiusUser{}).Where("profile_id = ?", profile.ID).Count(&radiusCount).Error)
 	assert.Equal(t, int64(5), radiusCount)
@@ -299,6 +302,7 @@ func TestODPAndFlappingOperations(t *testing.T) {
 		&domain.RadiusUser{},
 		&domain.RadiusAccounting{},
 		&domain.TroubleTicket{},
+		&domain.DocumentSequence{},
 	))
 
 	// 1. Create ODP
@@ -336,6 +340,7 @@ func TestODPAndFlappingOperations(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recFlap.Code)
 
 	// 4. Auto Ticket for Flapping
+	require.NoError(t, db.Create(&domain.RadiusUser{Username: "customer_flap_01", Password: "test-secret", Status: "enabled"}).Error)
 	ticketPayload := []byte(`{
 		"username": "customer_flap_01",
 		"customer_no": "CUST-0099",
