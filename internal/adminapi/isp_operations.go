@@ -470,20 +470,27 @@ func auditIPHistory(c echo.Context) error {
 		return fail(c, 400, "IP_REQUIRED", "Target IP address is required", nil)
 	}
 
-	atStr := c.QueryParam("at")
+	atStr := strings.TrimSpace(c.QueryParam("at"))
 	targetTime := time.Now()
 	if atStr != "" {
-		if parsed, err := time.Parse(time.RFC3339, atStr); err == nil {
-			targetTime = parsed
+		parsed, err := time.Parse(time.RFC3339, atStr)
+		if err != nil {
+			return fail(c, 400, "INVALID_TIMESTAMP", "Format timestamp tidak valid (gunakan format RFC3339)", err.Error())
 		}
+		targetTime = parsed
 	}
 
 	db := GetDB(c)
-	// Check currently active online sessions first
-	var currentSession domain.RadiusOnline
 	var matches []map[string]any
 
-	if err := db.Where("framed_ipaddr = ?", targetIP).First(&currentSession).Error; err == nil {
+	// Check currently active online sessions: only match if targetTime is within session range (start_time <= targetTime)
+	var currentSessions []domain.RadiusOnline
+	if err := db.Where("framed_ipaddr = ? AND acct_start_time <= ?", targetIP, targetTime).Find(&currentSessions).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to query active sessions", nil)
+	}
+	for _, currentSession := range currentSessions {
+		// If last_update is recorded and targetTime is after last_update + 24h or currentSession is already stale, we still consider the session active
+		// if now is close, but targetTime MUST be >= acct_start_time.
 		matches = append(matches, map[string]any{
 			"type":            "live_online",
 			"username":        currentSession.Username,
@@ -499,10 +506,12 @@ func auditIPHistory(c echo.Context) error {
 
 	// Query historical accounting records overlapping targetTime
 	var historical []domain.RadiusAccounting
-	db.Where("framed_ipaddr = ? AND acct_start_time <= ? AND (acct_stop_time >= ? OR acct_stop_time IS NULL)", targetIP, targetTime, targetTime).
+	if err := db.Where("framed_ipaddr = ? AND acct_start_time <= ? AND (acct_stop_time >= ? OR acct_stop_time IS NULL)", targetIP, targetTime, targetTime).
 		Order("acct_start_time DESC").
 		Limit(20).
-		Find(&historical)
+		Find(&historical).Error; err != nil {
+		return fail(c, 500, "DATABASE_ERROR", "Failed to query historical accounting", nil)
+	}
 
 	for _, h := range historical {
 		matches = append(matches, map[string]any{
@@ -521,14 +530,14 @@ func auditIPHistory(c echo.Context) error {
 
 	return ok(c, map[string]any{
 		"queried_ip":   targetIP,
-		"queried_time": targetTime,
+		"queried_time": targetTime.Format(time.RFC3339),
 		"total_found":  len(matches),
 		"results":      matches,
 	})
 }
 
-// --- 3. LIVE DIAGNOSTIC PROBE (PING) ---
-
+// --- 3. LIVE DIAGNOSTIC PROBE (TCP REACHABILITY) ---
+// Note: Uses TCP SYN handshake probe (default port 80 if unspecified) to check reachability from MWX-ISP host.
 type pingRequest struct {
 	Host  string `json:"host"`
 	Count int    `json:"count"`
@@ -539,12 +548,26 @@ func runLivePing(c echo.Context) error {
 	if err := c.Bind(&in); err != nil {
 		return fail(c, 400, "INVALID_REQUEST", "Invalid ping parameters", nil)
 	}
-	host := strings.TrimSpace(in.Host)
-	if host == "" {
+	rawHost := strings.TrimSpace(in.Host)
+	if rawHost == "" {
 		return fail(c, 400, "HOST_REQUIRED", "Target host or IP address is required", nil)
 	}
 	if in.Count <= 0 || in.Count > 10 {
 		in.Count = 4
+	}
+
+	// Resolve target address properly handling IPv4, IPv6 (with or without brackets), and host:port
+	targetAddr := rawHost
+	targetPort := "80"
+
+	// Check if already has a port
+	if h, p, err := net.SplitHostPort(rawHost); err == nil {
+		targetAddr = net.JoinHostPort(h, p)
+		targetPort = p
+	} else {
+		// No port specified: strip IPv6 brackets if present, then join with default port 80
+		cleanHost := strings.Trim(rawHost, "[]")
+		targetAddr = net.JoinHostPort(cleanHost, targetPort)
 	}
 
 	type pingResult struct {
@@ -561,10 +584,6 @@ func runLivePing(c echo.Context) error {
 
 	for i := 0; i < in.Count; i++ {
 		start := time.Now()
-		targetAddr := host
-		if !strings.Contains(targetAddr, ":") {
-			targetAddr = net.JoinHostPort(targetAddr, "80") // TCP SYN ping test
-		}
 		conn, err := net.DialTimeout("tcp", targetAddr, 1500*time.Millisecond)
 		rtt := time.Since(start).Milliseconds()
 		if err == nil {
@@ -579,7 +598,7 @@ func runLivePing(c echo.Context) error {
 				maxRTT = rtt
 			}
 		} else {
-			// Even if port 80 refused, connection reaching host means host is UP!
+			// Even if port refused/reset, network route reached destination host -> host is UP!
 			if strings.Contains(err.Error(), "refused") || strings.Contains(err.Error(), "reset") {
 				results[i] = pingResult{Seq: i + 1, RTTMillis: rtt, Success: true}
 				successCount++
@@ -594,7 +613,9 @@ func runLivePing(c echo.Context) error {
 				results[i] = pingResult{Seq: i + 1, RTTMillis: 0, Success: false, Error: err.Error()}
 			}
 		}
-		time.Sleep(100 * time.Millisecond)
+		if i < in.Count-1 {
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 
 	var avgRTT int64
@@ -607,7 +628,10 @@ func runLivePing(c echo.Context) error {
 	packetLoss := float64(in.Count-successCount) / float64(in.Count) * 100.0
 
 	return ok(c, map[string]any{
-		"host":         host,
+		"host":         rawHost,
+		"target_addr":  targetAddr,
+		"probe_method": "tcp_syn",
+		"port":         targetPort,
 		"sent":         in.Count,
 		"received":     successCount,
 		"loss_percent": packetLoss,
