@@ -81,6 +81,8 @@ export const HotspotVouchersPage: React.FC = () => {
   const [selectedBatch, setSelectedBatch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
+  const [printVouchers, setPrintVouchers] = useState<Voucher[]>([]);
+  const [isLoadingPrint, setIsLoadingPrint] = useState<boolean>(false);
 
   // Form state for generating vouchers
   const [genForm, setGenForm] = useState({
@@ -93,6 +95,26 @@ export const HotspotVouchersPage: React.FC = () => {
     code_length: 6,
     same_user_pass: true,
   });
+
+  const handleOpenPrint = async () => {
+    setIsLoadingPrint(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedBatch) params.set('batch_id', selectedBatch);
+      if (statusFilter) params.set('status', statusFilter);
+      if (search.trim()) params.set('q', search.trim());
+      params.set('perPage', '500');
+      const res = await apiRequest<unknown>(`/isp/vouchers?${params.toString()}`);
+      const fetched = extractData<Voucher[]>(res) ?? [];
+      setPrintVouchers(fetched.length > 0 ? fetched : (vouchersQuery.data ?? []));
+      setPrintOpen(true);
+    } catch {
+      setPrintVouchers(vouchersQuery.data ?? []);
+      setPrintOpen(true);
+    } finally {
+      setIsLoadingPrint(false);
+    }
+  };
 
   const batchesQuery = useQuery({
     queryKey: ['isp', 'vouchers', 'batches'],
@@ -186,10 +208,10 @@ export const HotspotVouchersPage: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<Print />}
-            disabled={vouchers.length === 0}
-            onClick={() => setPrintOpen(true)}
+            disabled={vouchers.length === 0 || isLoadingPrint}
+            onClick={handleOpenPrint}
           >
-            Print Vouchers ({vouchers.length})
+            {isLoadingPrint ? 'Loading Print...' : `Print Vouchers (${vouchers.length})`}
           </Button>
           <Button
             variant="contained"
@@ -442,7 +464,7 @@ export const HotspotVouchersPage: React.FC = () => {
       {/* Print Preview Dialog */}
       <Dialog open={printOpen} onClose={() => setPrintOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Print Hotspot Vouchers ({vouchers.length} cards)</span>
+          <span>Print Hotspot Vouchers ({printVouchers.length} cards)</span>
           <Stack direction="row" spacing={1}>
             <Button
               size="small"
@@ -472,13 +494,18 @@ export const HotspotVouchersPage: React.FC = () => {
         <DialogContent dividers>
           <Alert severity="info" sx={{ mb: 2 }} className="no-print">
             Use system print dialog (Ctrl+P). Choose destination printer: Thermal Receipt for rolls, or standard printer for A4 paper.
+            {printVouchers.length > vouchers.length && (
+              <Box component="span" sx={{ ml: 1, fontWeight: 700 }}>
+                Loaded full batch of {printVouchers.length} cards for printing.
+              </Box>
+            )}
           </Alert>
 
           {/* Printable Container */}
           <Box id="printable-vouchers">
             {printMode === 'thermal' ? (
               <Box sx={{ width: 280, mx: 'auto', p: 1, border: '1px solid #ddd', borderRadius: 1 }}>
-                {vouchers.map((v) => (
+                {printVouchers.map((v) => (
                   <Box
                     key={v.id}
                     sx={{
@@ -522,7 +549,7 @@ export const HotspotVouchersPage: React.FC = () => {
                   p: 1,
                 }}
               >
-                {vouchers.map((v) => (
+                {printVouchers.map((v) => (
                   <Paper
                     key={v.id}
                     variant="outlined"

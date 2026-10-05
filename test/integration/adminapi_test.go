@@ -80,6 +80,18 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.NoError(t, tenantDB.Create(&tenantCustomer).Error)
 	tenantPackage := domain.InternetPackage{ID: common.UUIDint64(), Code: "P-" + suffix, Name: "Tenant Backup Package", Price: 100000, RadiusProfileID: tenantProfile.ID, BillingCycle: "monthly", Status: "active"}
 	require.NoError(t, tenantDB.Create(&tenantPackage).Error)
+	tenantSubscription := domain.Subscription{SubscriptionNo: "SUB-BACKUP-" + suffix, CustomerID: tenantCustomer.ID, PackageID: tenantPackage.ID, RadiusUserID: tenantUser.ID, Status: domain.SubscriptionPending, StartDate: time.Now()}
+	require.NoError(t, tenantDB.Create(&tenantSubscription).Error)
+	tenantBatch := domain.HotspotBatch{BatchNo: "BATCH-BACKUP-" + suffix, PackageID: tenantPackage.ID, Quantity: 1, CreatedAt: time.Now()}
+	require.NoError(t, tenantDB.Create(&tenantBatch).Error)
+	tenantVoucher := domain.HotspotVoucher{BatchID: tenantBatch.ID, PackageID: tenantPackage.ID, RadiusUserID: tenantUser.ID, Code: "V-" + suffix, Password: "voucher-secret", Status: "active", CreatedAt: time.Now()}
+	require.NoError(t, tenantDB.Create(&tenantVoucher).Error)
+	tenantIPAM := domain.IPAMPool{Name: "Tenant backup pool", CIDR: "100.64.16.0/24", IPVersion: 4, PoolType: "cgnat"}
+	require.NoError(t, tenantDB.Create(&tenantIPAM).Error)
+	tenantTicket := domain.TroubleTicket{TicketNo: "TCK-BACKUP-" + suffix, CustomerID: tenantCustomer.ID, SubscriptionID: tenantSubscription.ID, Subject: "Tenant backup ticket", Category: "no_internet", Priority: "normal", Status: "open"}
+	require.NoError(t, tenantDB.Create(&tenantTicket).Error)
+	tenantODP := domain.ODP{Code: "ODP-BACKUP-" + suffix, Name: "Tenant backup ODP", TotalPorts: 8}
+	require.NoError(t, tenantDB.Create(&tenantODP).Error)
 	tenantMonitor := domain.NetMonitorTarget{
 		ID: common.UUIDint64(), Name: "Tenant router " + suffix, Kind: "router", Address: "192.0.2.10",
 		ProbeType: "icmp", Enabled: true, SNMPCommunityEncrypted: []byte("community-ciphertext"),
@@ -93,11 +105,20 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	require.Equalf(t, http.StatusOK, status, "backup body: %s", string(backupBytes))
 
 	var backup struct {
-		Version        string                    `json:"version"`
-		Tenants        []domain.Tenant           `json:"tenants"`
-		Users          []domain.RadiusUser       `json:"users"`
-		Customers      []domain.Customer         `json:"customers"`
-		Packages       []domain.InternetPackage  `json:"packages"`
+		Version       string                   `json:"version"`
+		Tenants       []domain.Tenant          `json:"tenants"`
+		Users         []domain.RadiusUser      `json:"users"`
+		Customers     []domain.Customer        `json:"customers"`
+		Packages      []domain.InternetPackage `json:"packages"`
+		Subscriptions []domain.Subscription    `json:"subscriptions"`
+		Batches       []domain.HotspotBatch    `json:"hotspot_batches"`
+		Vouchers      []struct {
+			ID           string `json:"id"`
+			RadiusUserID string `json:"radius_user_id"`
+		} `json:"hotspot_vouchers"`
+		IPAMPools      []domain.IPAMPool         `json:"ipam_pools"`
+		Tickets        []domain.TroubleTicket    `json:"trouble_tickets"`
+		ODPs           []domain.ODP              `json:"odps"`
 		Memberships    []domain.TenantMembership `json:"tenant_memberships"`
 		MonitorTargets []struct {
 			ID                     string `json:"id"`
@@ -108,7 +129,7 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 		TenantIDs map[string]map[string]int64 `json:"tenant_ids"`
 	}
 	require.NoErrorf(t, json.Unmarshal(backupBytes, &backup), "backup not JSON: %s", string(backupBytes))
-	require.Equal(t, "9.2", backup.Version)
+	require.Equal(t, "9.3", backup.Version)
 	require.True(t, containsUserWithPassword(backup.Users, username, password),
 		"backup must contain %s with its plaintext password", username)
 	var backedUpTenant *domain.Tenant
@@ -135,6 +156,40 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	}
 	require.True(t, customerIncluded)
 	require.True(t, packageIncluded)
+	var backedUpSubscription, backedUpBatch, backedUpVoucher, backedUpIPAM, backedUpTicket, backedUpODP bool
+	for _, row := range backup.Subscriptions {
+		backedUpSubscription = backedUpSubscription || row.ID == tenantSubscription.ID
+	}
+	for _, row := range backup.Batches {
+		backedUpBatch = backedUpBatch || row.ID == tenantBatch.ID
+	}
+	for _, row := range backup.Vouchers {
+		if row.ID == fmt.Sprint(tenantVoucher.ID) {
+			backedUpVoucher = true
+			assert.Equal(t, fmt.Sprint(tenantUser.ID), row.RadiusUserID)
+		}
+	}
+	for _, row := range backup.IPAMPools {
+		backedUpIPAM = backedUpIPAM || row.ID == tenantIPAM.ID
+	}
+	for _, row := range backup.Tickets {
+		backedUpTicket = backedUpTicket || row.ID == tenantTicket.ID
+	}
+	for _, row := range backup.ODPs {
+		backedUpODP = backedUpODP || row.ID == tenantODP.ID
+	}
+	require.True(t, backedUpSubscription)
+	require.True(t, backedUpBatch)
+	require.True(t, backedUpVoucher)
+	require.True(t, backedUpIPAM)
+	require.True(t, backedUpTicket)
+	require.True(t, backedUpODP)
+	require.Equal(t, tenant.ID, backup.TenantIDs["isp_subscription"][fmt.Sprint(tenantSubscription.ID)])
+	require.Equal(t, tenant.ID, backup.TenantIDs["isp_hotspot_batch"][fmt.Sprint(tenantBatch.ID)])
+	require.Equal(t, tenant.ID, backup.TenantIDs["isp_hotspot_voucher"][fmt.Sprint(tenantVoucher.ID)])
+	require.Equal(t, tenant.ID, backup.TenantIDs["isp_ipam_pool"][fmt.Sprint(tenantIPAM.ID)])
+	require.Equal(t, tenant.ID, backup.TenantIDs["isp_trouble_ticket"][fmt.Sprint(tenantTicket.ID)])
+	require.Equal(t, tenant.ID, backup.TenantIDs["isp_odp"][fmt.Sprint(tenantODP.ID)])
 	require.True(t, containsUserWithPassword(backup.Users, tenantUser.Username, tenantUser.Password))
 	require.Equal(t, tenant.ID, backup.TenantIDs["radius_user"][fmt.Sprint(tenantUser.ID)])
 	require.Equal(t, tenant.ID, backup.TenantIDs["isp_customer"][fmt.Sprint(tenantCustomer.ID)])
@@ -169,6 +224,9 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 		model any
 		id    int64
 	}{
+		{&domain.HotspotVoucher{}, tenantVoucher.ID}, {&domain.HotspotBatch{}, tenantBatch.ID},
+		{&domain.TroubleTicket{}, tenantTicket.ID}, {&domain.IPAMPool{}, tenantIPAM.ID}, {&domain.ODP{}, tenantODP.ID},
+		{&domain.Subscription{}, tenantSubscription.ID},
 		{&domain.RadiusUser{}, tenantUser.ID}, {&domain.RadiusProfile{}, tenantProfile.ID},
 		{&domain.Customer{}, tenantCustomer.ID}, {&domain.InternetPackage{}, tenantPackage.ID},
 		{&domain.NetMonitorTarget{}, tenantMonitor.ID}, {&domain.Tenant{}, tenant.ID},
@@ -198,6 +256,23 @@ func TestSystemBackupRestoreRoundTrip(t *testing.T) {
 	var restoredTenantCustomer domain.Customer
 	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredTenantCustomer, tenantCustomer.ID).Error)
 	assert.Equal(t, tenant.ID, restoredTenantCustomer.TenantID)
+	var restoredSubscription domain.Subscription
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredSubscription, tenantSubscription.ID).Error)
+	assert.Equal(t, tenantPackage.ID, restoredSubscription.PackageID)
+	var restoredBatch domain.HotspotBatch
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredBatch, tenantBatch.ID).Error)
+	var restoredVoucher domain.HotspotVoucher
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredVoucher, tenantVoucher.ID).Error)
+	assert.Equal(t, tenantUser.ID, restoredVoucher.RadiusUserID)
+	var restoredTicket domain.TroubleTicket
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredTicket, tenantTicket.ID).Error)
+	assert.Equal(t, tenantSubscription.ID, restoredTicket.SubscriptionID)
+	var restoredIPAM domain.IPAMPool
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredIPAM, tenantIPAM.ID).Error)
+	assert.Equal(t, tenantIPAM.CIDR, restoredIPAM.CIDR)
+	var restoredODP domain.ODP
+	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredODP, tenantODP.ID).Error)
+	assert.Equal(t, tenantODP.Code, restoredODP.Code)
 	var restoredMonitor domain.NetMonitorTarget
 	require.NoError(t, db.WithContext(tenancy.WithTenantID(t.Context(), tenant.ID)).First(&restoredMonitor, tenantMonitor.ID).Error)
 	assert.Equal(t, tenant.ID, restoredMonitor.TenantID)

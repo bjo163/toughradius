@@ -332,6 +332,35 @@ func TestODPAndFlappingOperations(t *testing.T) {
 	require.NoError(t, listODPs(cListODP))
 	assert.Equal(t, http.StatusOK, recListODP.Code)
 
+	// 2b. Update ODP - clearing notes/address and setting coordinates to 0
+	var createdODP domain.ODP
+	require.NoError(t, db.Where("code = ?", "ODP-KNG-001").First(&createdODP).Error)
+
+	updatePayload := []byte(`{
+		"address": "",
+		"notes": "",
+		"latitude": 0,
+		"longitude": 0,
+		"status": "maintenance"
+	}`)
+	reqUpdateODP := httptest.NewRequest(http.MethodPut, "/api/v1/network/odp/"+strconv.FormatInt(createdODP.ID, 10), bytes.NewReader(updatePayload))
+	reqUpdateODP.Header.Set("Content-Type", "application/json")
+	recUpdateODP := httptest.NewRecorder()
+	cUpdateODP := CreateTestContext(e, db, reqUpdateODP, recUpdateODP, appCtx)
+	cUpdateODP.SetParamNames("id")
+	cUpdateODP.SetParamValues(strconv.FormatInt(createdODP.ID, 10))
+	require.NoError(t, updateODP(cUpdateODP))
+	assert.Equal(t, http.StatusOK, recUpdateODP.Code)
+
+	var refreshedODP domain.ODP
+	require.NoError(t, db.First(&refreshedODP, createdODP.ID).Error)
+	assert.Equal(t, "", refreshedODP.Address)
+	assert.Equal(t, "", refreshedODP.Notes)
+	assert.Equal(t, float64(0), refreshedODP.Latitude)
+	assert.Equal(t, float64(0), refreshedODP.Longitude)
+	assert.Equal(t, "maintenance", refreshedODP.Status)
+	assert.Equal(t, "ODP Kuningan Barat 01", refreshedODP.Name, "absent name field should be preserved")
+
 	// 3. Flapping Detection and Auto-Ticket
 	reqFlap := httptest.NewRequest(http.MethodGet, "/api/v1/network/diagnostics/flapping", nil)
 	recFlap := httptest.NewRecorder()
