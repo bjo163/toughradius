@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/bjo163/mwx-isp/internal/domain"
 	"github.com/stretchr/testify/assert"
@@ -108,6 +109,85 @@ func TestBackupSystem(t *testing.T) {
 	assert.Equal(t, "backup_user", backup.Users[0].Username)
 	assert.Len(t, backup.OprLogs, 1, "tenant-scoped operator audit logs remain in system backups")
 	assert.Equal(t, domain.DefaultTenantID, backup.TenantIDs["sys_opr_log"][fmt.Sprint(backup.OprLogs[0].ID)])
+}
+
+func TestSystemBackupRoundTripsOperationalISPEntities(t *testing.T) {
+	srcDB := setupBackupTestDB(t)
+	srcAppCtx := setupTestApp(t, srcDB)
+	profile := createTestProfile(srcDB, "backup-hotspot-profile")
+	user := createTestUser(srcDB, "backup-hotspot-user", profile.ID)
+	customer := domain.Customer{CustomerNo: "C-BACKUP-OPS", Name: "Backup ISP Customer", Status: domain.CustomerPending}
+	require.NoError(t, srcDB.Create(&customer).Error)
+	pkg := domain.InternetPackage{Code: "PKG-BACKUP-OPS", Name: "Backup 20 Mbps", RadiusProfileID: profile.ID, Status: "active"}
+	require.NoError(t, srcDB.Create(&pkg).Error)
+	subscription := domain.Subscription{SubscriptionNo: "SUB-BACKUP-OPS", CustomerID: customer.ID, PackageID: pkg.ID, RadiusUserID: user.ID, Status: domain.SubscriptionPending, StartDate: time.Now()}
+	require.NoError(t, srcDB.Create(&subscription).Error)
+	batch := domain.HotspotBatch{BatchNo: "BATCH-BACKUP-OPS", PackageID: pkg.ID, Quantity: 1, CreatedAt: time.Now()}
+	require.NoError(t, srcDB.Create(&batch).Error)
+	voucher := domain.HotspotVoucher{BatchID: batch.ID, PackageID: pkg.ID, RadiusUserID: user.ID, Code: "BACKUP-OPS-001", Password: "voucher-secret", Status: "active", CreatedAt: time.Now()}
+	require.NoError(t, srcDB.Create(&voucher).Error)
+	ipam := domain.IPAMPool{Name: "Backup pool", CIDR: "100.64.0.0/24", IPVersion: 4, PoolType: "cgnat"}
+	require.NoError(t, srcDB.Create(&ipam).Error)
+	ticket := domain.TroubleTicket{TicketNo: "TCK-BACKUP-OPS", CustomerID: customer.ID, SubscriptionID: subscription.ID, Subject: "Backup ticket", Status: "open"}
+	require.NoError(t, srcDB.Create(&ticket).Error)
+	odp := domain.ODP{Code: "ODP-BACKUP-OPS", Name: "Backup ODP", TotalPorts: 8}
+	require.NoError(t, srcDB.Create(&odp).Error)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/backup", nil)
+	rec := httptest.NewRecorder()
+	ctx := CreateTestContext(setupTestEcho(), srcDB, req, rec, srcAppCtx)
+	require.NoError(t, backupSystem(ctx))
+	var backup SystemBackup
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &backup))
+	assert.Equal(t, "9.3", backup.Version)
+	assert.Len(t, backup.HotspotBatches, 1)
+	assert.Len(t, backup.Vouchers, 1)
+	assert.Len(t, backup.IPAMPools, 1)
+	assert.Len(t, backup.TroubleTickets, 1)
+	assert.Len(t, backup.ODPs, 1)
+	assert.Equal(t, domain.DefaultTenantID, backup.TenantIDs["isp_hotspot_voucher"][fmt.Sprint(voucher.ID)])
+
+	dstDB := setupBackupTestDB(t)
+	dstAppCtx := setupTestApp(t, dstDB)
+	restoreReq, restoreRec := restoreRequest(t, rec.Body.Bytes())
+	restoreCtx := CreateTestContext(setupTestEcho(), dstDB, restoreReq, restoreRec, dstAppCtx)
+	require.NoError(t, restoreSystem(restoreCtx))
+	assert.Equal(t, http.StatusOK, restoreRec.Code, restoreRec.Body.String())
+	var result struct {
+		Data SystemRestoreResult `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(restoreRec.Body.Bytes(), &result))
+	assert.Equal(t, 1, result.Data.HotspotBatches)
+	assert.Equal(t, 1, result.Data.Vouchers)
+	assert.Equal(t, 1, result.Data.IPAMPools)
+	assert.Equal(t, 1, result.Data.TroubleTickets)
+	assert.Equal(t, 1, result.Data.ODPs)
+
+	var restoredVoucher domain.HotspotVoucher
+	require.NoError(t, dstDB.First(&restoredVoucher, voucher.ID).Error)
+	assert.Equal(t, voucher.RadiusUserID, restoredVoucher.RadiusUserID)
+	var restoredTicket domain.TroubleTicket
+	require.NoError(t, dstDB.First(&restoredTicket, ticket.ID).Error)
+	assert.Equal(t, subscription.ID, restoredTicket.SubscriptionID)
+	var restoredODP domain.ODP
+	require.NoError(t, dstDB.First(&restoredODP, odp.ID).Error)
+	assert.Equal(t, odp.Code, restoredODP.Code)
+}
+
+func TestValidateBackupRejectsCrossTenantOperationalReferences(t *testing.T) {
+	backup := SystemBackup{
+		Version: backupVersion,
+		Tenants: []domain.Tenant{
+			{ID: 1, Name: "Default", Slug: "default"},
+			{ID: 2, Name: "Other", Slug: "other"},
+		},
+		Customers: []domain.Customer{{ID: 10, TenantID: 2, CustomerNo: "C-10", Name: "Tenant 2"}},
+		Packages:  []domain.InternetPackage{{ID: 20, TenantID: 1, Code: "P-20", Name: "Tenant 1 package"}},
+		Subscriptions: []domain.Subscription{{
+			ID: 30, TenantID: 2, CustomerID: 10, PackageID: 20, Status: domain.SubscriptionPending,
+		}},
+	}
+	require.ErrorContains(t, validateBackup(&backup), "from another tenant")
 }
 
 func TestRestoreSystem(t *testing.T) {

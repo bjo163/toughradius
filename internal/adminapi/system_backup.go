@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,7 +23,7 @@ import (
 )
 
 // backupVersion identifies the backup payload schema.
-const backupVersion = "9.2"
+const backupVersion = "9.3"
 
 // supportedBackupMajor is the only schema major version restoreSystem accepts.
 const supportedBackupMajor = "9"
@@ -94,6 +95,16 @@ type SystemBackup struct {
 	BillingEvents []domain.BillingEvent `json:"billing_events,omitempty"`
 	// Sequences stores tenant-local document numbering state.
 	Sequences []domain.DocumentSequence `json:"document_sequences,omitempty"`
+	// HotspotBatches stores durable voucher generation batches.
+	HotspotBatches []domain.HotspotBatch `json:"hotspot_batches,omitempty"`
+	// Vouchers stores prepaid hotspot credentials and their RADIUS links.
+	Vouchers []SystemBackupVoucher `json:"hotspot_vouchers,omitempty"`
+	// IPAMPools stores configured address pools.
+	IPAMPools []domain.IPAMPool `json:"ipam_pools,omitempty"`
+	// TroubleTickets stores ISP support and installation work orders.
+	TroubleTickets []domain.TroubleTicket `json:"trouble_tickets,omitempty"`
+	// ODPs stores optical distribution point inventories.
+	ODPs []domain.ODP `json:"odps,omitempty"`
 	// MonitorTargets stores tenant-owned probe configuration and encrypted secrets.
 	MonitorTargets []SystemBackupMonitorTarget `json:"monitor_targets,omitempty"`
 	// MonitorSamples stores bounded network probe history.
@@ -113,6 +124,23 @@ type SystemBackupMonitorTarget struct {
 	SNMPCommunityEncrypted []byte `json:"snmp_community_encrypted,omitempty"`
 	SNMPAuthEncrypted      []byte `json:"snmp_auth_encrypted,omitempty"`
 	SNMPPrivacyEncrypted   []byte `json:"snmp_privacy_encrypted,omitempty"`
+}
+
+// SystemBackupVoucher preserves the API-hidden RADIUS credential relation in
+// the privileged backup format while keeping ordinary voucher responses lean.
+type SystemBackupVoucher struct {
+	domain.HotspotVoucher
+	RadiusUserID int64 `json:"radius_user_id,string,omitempty"`
+}
+
+func newSystemBackupVoucher(voucher domain.HotspotVoucher) SystemBackupVoucher {
+	return SystemBackupVoucher{HotspotVoucher: voucher, RadiusUserID: voucher.RadiusUserID}
+}
+
+func (b SystemBackupVoucher) toHotspotVoucher() domain.HotspotVoucher {
+	voucher := b.HotspotVoucher
+	voucher.RadiusUserID = b.RadiusUserID
+	return voucher
 }
 
 func newSystemBackupMonitorTarget(target domain.NetMonitorTarget) SystemBackupMonitorTarget {
@@ -140,6 +168,9 @@ func tenantOwnedBackupRows(b *SystemBackup) map[string]any {
 		"isp_subscription": b.Subscriptions, "isp_invoice": b.Invoices,
 		"isp_invoice_item": b.InvoiceItems, "isp_payment": b.Payments,
 		"isp_billing_event": b.BillingEvents, "isp_document_sequence": b.Sequences,
+		"isp_hotspot_batch": b.HotspotBatches, "isp_hotspot_voucher": b.Vouchers,
+		"isp_ipam_pool": b.IPAMPools, "isp_trouble_ticket": b.TroubleTickets,
+		"isp_odp":            b.ODPs,
 		"net_monitor_target": b.MonitorTargets, "net_monitor_sample": b.MonitorSamples,
 		"net_monitor_incident":  b.MonitorIncidents,
 		"notification_settings": b.NotificationSettings, "notification_outbox": b.NotificationOutbox,
@@ -294,6 +325,8 @@ func backupSystem(c echo.Context) error {
 		{"subscriptions", &backup.Subscriptions}, {"invoices", &backup.Invoices},
 		{"invoice items", &backup.InvoiceItems}, {"payments", &backup.Payments},
 		{"billing events", &backup.BillingEvents}, {"document sequences", &backup.Sequences},
+		{"hotspot voucher batches", &backup.HotspotBatches},
+		{"IPAM pools", &backup.IPAMPools}, {"trouble tickets", &backup.TroubleTickets}, {"ODPs", &backup.ODPs},
 		{"monitor samples", &backup.MonitorSamples}, {"monitor incidents", &backup.MonitorIncidents},
 		{"notification settings", &backup.NotificationSettings}, {"notification outbox", &backup.NotificationOutbox},
 	}
@@ -308,6 +341,13 @@ func backupSystem(c echo.Context) error {
 	}
 	for _, target := range monitorTargets {
 		backup.MonitorTargets = append(backup.MonitorTargets, newSystemBackupMonitorTarget(target))
+	}
+	var vouchers []domain.HotspotVoucher
+	if err := db.Find(&vouchers).Error; err != nil {
+		return fail(c, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to export hotspot vouchers", err.Error())
+	}
+	for _, voucher := range vouchers {
+		backup.Vouchers = append(backup.Vouchers, newSystemBackupVoucher(voucher))
 	}
 	var certs []domain.SysCert
 	if err := db.Find(&certs).Error; err != nil {
@@ -382,6 +422,16 @@ type SystemRestoreResult struct {
 	BillingEvents int `json:"billing_events"`
 	// Sequences is the number of tenant document sequences restored.
 	Sequences int `json:"sequences"`
+	// HotspotBatches is the number of voucher batches restored.
+	HotspotBatches int `json:"hotspot_batches"`
+	// Vouchers is the number of hotspot voucher credentials restored.
+	Vouchers int `json:"hotspot_vouchers"`
+	// IPAMPools is the number of configured address pools restored.
+	IPAMPools int `json:"ipam_pools"`
+	// TroubleTickets is the number of trouble tickets/work orders restored.
+	TroubleTickets int `json:"trouble_tickets"`
+	// ODPs is the number of optical distribution points restored.
+	ODPs int `json:"odps"`
 	// MonitorTargets is the number of network monitor targets restored.
 	MonitorTargets int `json:"monitor_targets"`
 	// MonitorSamples is the number of network monitor samples restored.
@@ -560,6 +610,40 @@ func restoreSystem(c echo.Context) error {
 			}
 			result.Sequences = len(backup.Sequences)
 		}
+		if len(backup.HotspotBatches) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.HotspotBatches).Error; err != nil {
+				return err
+			}
+			result.HotspotBatches = len(backup.HotspotBatches)
+		}
+		if len(backup.Vouchers) > 0 {
+			vouchers := make([]domain.HotspotVoucher, 0, len(backup.Vouchers))
+			for _, voucher := range backup.Vouchers {
+				vouchers = append(vouchers, voucher.toHotspotVoucher())
+			}
+			if err := tx.Clauses(upsert).Create(&vouchers).Error; err != nil {
+				return err
+			}
+			result.Vouchers = len(backup.Vouchers)
+		}
+		if len(backup.IPAMPools) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.IPAMPools).Error; err != nil {
+				return err
+			}
+			result.IPAMPools = len(backup.IPAMPools)
+		}
+		if len(backup.TroubleTickets) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.TroubleTickets).Error; err != nil {
+				return err
+			}
+			result.TroubleTickets = len(backup.TroubleTickets)
+		}
+		if len(backup.ODPs) > 0 {
+			if err := tx.Clauses(upsert).Create(&backup.ODPs).Error; err != nil {
+				return err
+			}
+			result.ODPs = len(backup.ODPs)
+		}
 		if len(backup.MonitorTargets) > 0 {
 			targets := make([]domain.NetMonitorTarget, 0, len(backup.MonitorTargets))
 			for _, target := range backup.MonitorTargets {
@@ -697,6 +781,8 @@ func validateBackup(b *SystemBackup) error {
 		"customers": len(b.Customers), "packages": len(b.Packages), "subscriptions": len(b.Subscriptions),
 		"invoices": len(b.Invoices), "invoice_items": len(b.InvoiceItems), "payments": len(b.Payments),
 		"billing_events": len(b.BillingEvents), "document_sequences": len(b.Sequences),
+		"hotspot_batches": len(b.HotspotBatches), "hotspot_vouchers": len(b.Vouchers),
+		"ipam_pools": len(b.IPAMPools), "trouble_tickets": len(b.TroubleTickets), "odps": len(b.ODPs),
 		"monitor_targets": len(b.MonitorTargets), "monitor_samples": len(b.MonitorSamples),
 		"monitor_incidents": len(b.MonitorIncidents), "notification_settings": len(b.NotificationSettings),
 		"notification_outbox": len(b.NotificationOutbox), "tenant_memberships": len(b.Memberships),
@@ -778,6 +864,129 @@ func validateBackup(b *SystemBackup) error {
 		}
 		if !isValidCertType(b.Certs[i].CertType) {
 			return fmt.Errorf("certs[%d]: invalid cert_type %q", i, b.Certs[i].CertType)
+		}
+	}
+	if err := validateOperationalBackupRelations(b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateOperationalBackupRelations(b *SystemBackup) error {
+	profiles := make(map[int64]int64, len(b.Profiles))
+	users := make(map[int64]int64, len(b.Users))
+	customers := make(map[int64]domain.Customer, len(b.Customers))
+	packages := make(map[int64]domain.InternetPackage, len(b.Packages))
+	subscriptions := make(map[int64]domain.Subscription, len(b.Subscriptions))
+	batches := make(map[int64]domain.HotspotBatch, len(b.HotspotBatches))
+	for _, row := range b.Profiles {
+		profiles[row.ID] = row.TenantID
+	}
+	for _, row := range b.Users {
+		users[row.ID] = row.TenantID
+	}
+	for _, row := range b.Customers {
+		customers[row.ID] = row
+	}
+	for _, row := range b.Packages {
+		packages[row.ID] = row
+	}
+	for _, row := range b.Subscriptions {
+		subscriptions[row.ID] = row
+	}
+	for _, row := range b.HotspotBatches {
+		batches[row.ID] = row
+	}
+
+	checkTenantReference := func(table string, rowID, tenantID, refID, refTenantID int64) error {
+		if refID <= 0 {
+			return nil
+		}
+		if refTenantID == 0 {
+			return fmt.Errorf("%s row %d references missing record %d", table, rowID, refID)
+		}
+		if refTenantID != tenantID {
+			return fmt.Errorf("%s row %d references record %d from another tenant", table, rowID, refID)
+		}
+		return nil
+	}
+	for _, row := range b.Packages {
+		if row.ID <= 0 || row.TenantID <= 0 || strings.TrimSpace(row.Name) == "" {
+			return fmt.Errorf("isp_package: id, tenant and name are required")
+		}
+		if err := checkTenantReference("isp_package", row.ID, row.TenantID, row.RadiusProfileID, profiles[row.RadiusProfileID]); err != nil {
+			return err
+		}
+	}
+	for _, row := range b.Subscriptions {
+		if row.ID <= 0 || row.TenantID <= 0 {
+			return fmt.Errorf("isp_subscription: id and tenant are required")
+		}
+		if err := checkTenantReference("isp_subscription", row.ID, row.TenantID, row.CustomerID, customers[row.CustomerID].TenantID); err != nil {
+			return err
+		}
+		if err := checkTenantReference("isp_subscription", row.ID, row.TenantID, row.PackageID, packages[row.PackageID].TenantID); err != nil {
+			return err
+		}
+		if err := checkTenantReference("isp_subscription", row.ID, row.TenantID, row.RadiusUserID, users[row.RadiusUserID]); err != nil {
+			return err
+		}
+	}
+	for _, row := range b.HotspotBatches {
+		if row.ID <= 0 || row.TenantID <= 0 || strings.TrimSpace(row.BatchNo) == "" {
+			return fmt.Errorf("isp_hotspot_batch: id, tenant and batch number are required")
+		}
+		if err := checkTenantReference("isp_hotspot_batch", row.ID, row.TenantID, row.PackageID, packages[row.PackageID].TenantID); err != nil {
+			return err
+		}
+	}
+	for _, row := range b.Vouchers {
+		if row.ID <= 0 || row.TenantID <= 0 || strings.TrimSpace(row.Code) == "" {
+			return fmt.Errorf("isp_hotspot_voucher: id, tenant and code are required")
+		}
+		switch row.Status {
+		case "", "active", "used", "expired", "revoked":
+		default:
+			return fmt.Errorf("isp_hotspot_voucher row %d has invalid status %q", row.ID, row.Status)
+		}
+		if err := checkTenantReference("isp_hotspot_voucher", row.ID, row.TenantID, row.BatchID, batches[row.BatchID].TenantID); err != nil {
+			return err
+		}
+		if err := checkTenantReference("isp_hotspot_voucher", row.ID, row.TenantID, row.PackageID, packages[row.PackageID].TenantID); err != nil {
+			return err
+		}
+		if err := checkTenantReference("isp_hotspot_voucher", row.ID, row.TenantID, row.RadiusUserID, users[row.RadiusUserID]); err != nil {
+			return err
+		}
+		if row.BatchID > 0 && row.PackageID > 0 && batches[row.BatchID].PackageID > 0 && batches[row.BatchID].PackageID != row.PackageID {
+			return fmt.Errorf("isp_hotspot_voucher row %d package does not match its batch", row.ID)
+		}
+	}
+	for _, row := range b.IPAMPools {
+		if row.ID <= 0 || row.TenantID <= 0 {
+			return fmt.Errorf("isp_ipam_pool: id and tenant are required")
+		}
+		if _, err := netip.ParsePrefix(strings.TrimSpace(row.CIDR)); err != nil {
+			return fmt.Errorf("isp_ipam_pool row %d has invalid CIDR %q", row.ID, row.CIDR)
+		}
+	}
+	for _, row := range b.TroubleTickets {
+		if row.ID <= 0 || row.TenantID <= 0 || strings.TrimSpace(row.TicketNo) == "" {
+			return fmt.Errorf("isp_trouble_ticket: id, tenant and ticket number are required")
+		}
+		if err := checkTenantReference("isp_trouble_ticket", row.ID, row.TenantID, row.CustomerID, customers[row.CustomerID].TenantID); err != nil {
+			return err
+		}
+		if err := checkTenantReference("isp_trouble_ticket", row.ID, row.TenantID, row.SubscriptionID, subscriptions[row.SubscriptionID].TenantID); err != nil {
+			return err
+		}
+		if row.SubscriptionID > 0 && row.CustomerID > 0 && subscriptions[row.SubscriptionID].CustomerID != row.CustomerID {
+			return fmt.Errorf("isp_trouble_ticket row %d customer does not match its subscription", row.ID)
+		}
+	}
+	for _, row := range b.ODPs {
+		if row.ID <= 0 || row.TenantID <= 0 || strings.TrimSpace(row.Code) == "" {
+			return fmt.Errorf("isp_odp: id, tenant and code are required")
 		}
 	}
 	return nil
