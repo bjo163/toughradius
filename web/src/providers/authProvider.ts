@@ -202,7 +202,7 @@ export const authProvider: AuthProvider = {
     // React Admin can run the auth check while resolving its public login,
     // public customer portal route, or public landing page. Rejecting repeatedly there leaves the
     // unauthenticated shell in its loading state; these routes grant no access to admin resources.
-    if (!token && (route === '/login' || route === '/portal' || route === '' || route === '/' || route === '/home')) {
+    if (!token && (route === '/login' || route === '/portal' || route === '/home')) {
       return Promise.resolve();
     }
 

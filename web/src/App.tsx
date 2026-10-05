@@ -205,7 +205,6 @@ const App = ({ initialBranding = defaultProductBranding }: AppProps) => {
 
     {/* Custom routes */}
     <CustomRoutes noLayout>
-      <Route path="/" element={<LandingPage />} />
       <Route path="/home" element={<LandingPage />} />
       <Route path="/portal" element={<CustomerPortalPage />} />
     </CustomRoutes>

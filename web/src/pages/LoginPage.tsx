@@ -62,6 +62,13 @@ export const LoginPage = () => {
     return () => { cancelled = true; };
   }, [notify, translate]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && token.length >= 10) {
+      window.location.hash = '#/';
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -72,7 +79,7 @@ export const LoginPage = () => {
 
     setLoading(true);
     try {
-      await login({ username, password, tenantSlug });
+      await login({ username, password, tenantSlug }, '/');
       // Ensure AppBar UserMenu picks up the newly stored identity.
       await queryClient.invalidateQueries({ queryKey: ['auth', 'getIdentity'] });
       await queryClient.invalidateQueries({ queryKey: ['auth', 'getPermissions'] });
@@ -195,7 +202,18 @@ export const LoginPage = () => {
             </Button>
           </form>
 
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => { window.location.hash = '#/home'; }}
+              sx={{ textTransform: 'none', color: 'text.secondary' }}
+            >
+              ← Kembali ke Beranda
+            </Button>
+          </Box>
+
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               {branding.product_name} © {new Date().getFullYear()}
             </Typography>
