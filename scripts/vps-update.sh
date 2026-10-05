@@ -10,7 +10,10 @@ fi
 [[ -f .env && -f docker-compose.yml && -d .git ]] || { echo "No MWX-ISP Compose installation found in ${APP_DIR}." >&2; exit 1; }
 if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=[^#]*CHANGE_ME' .env; then echo "Replace all CHANGE_ME values in ${APP_DIR}/.env first." >&2; exit 1; fi
 if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Refusing update: ${APP_DIR} contains local changes. Commit or back them up before updating." >&2; exit 1
+  dirty_backup_dir="${APP_DIR}.local-changes.$(date -u +%Y%m%dT%H%M%SZ)"
+  [[ ! -e "${dirty_backup_dir}" ]] || { echo "Local-change backup path ${dirty_backup_dir} already exists; move it before retrying." >&2; exit 1; }
+  echo "Uncommitted checkout changes found. Saving a complete copy to ${dirty_backup_dir} before updating."
+  cp -a -- "${APP_DIR}" "${dirty_backup_dir}" || { echo "Could not preserve local changes to ${dirty_backup_dir}; update was not performed." >&2; exit 1; }
 fi
 remote_url="$(git remote get-url origin)"
 case "${remote_url}" in

@@ -56,6 +56,14 @@ memulihkan layanan tanpa mengganti `.env` atau volume data:
 curl -fsSL https://raw.githubusercontent.com/bjo163/mwx-isp/main/scripts/vps-repair.sh | sudo bash
 ```
 
+Jika checkout di `/opt/mwx-isp` memiliki perubahan lokal yang belum di-commit,
+installer dan updater membuat salinan lengkap terlebih dahulu di direktori
+sejajar seperti `/opt/mwx-isp.local-changes.<waktu-UTC>`, kemudian memperbarui
+checkout resmi. File `.env` tetap dipertahankan dan database/aplikasi tetap
+melewati backup pra-update. Tinjau atau ambil file yang dibutuhkan dari salinan
+tersebut setelah layanan pulih; jangan menghapusnya sebelum memastikan isinya
+tidak diperlukan.
+
 Jika uninstall lama menghapus direktori yang sedang dipakai sesi SSH, jalankan
 `cd /opt` pada sesi tersebut lalu ulangi installer. Installer terbaru otomatis
 memulihkan working directory yang sudah tidak valid. Uninstall berikutnya

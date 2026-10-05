@@ -84,7 +84,6 @@ check_host() {
       https://github.com/bjo163/mwx-isp.git|git@github.com:bjo163/mwx-isp.git) ;;
       *) fail "Unexpected origin remote (${remote_url}); refusing to install over another project." ;;
     esac
-    [[ -z "$(git -C "${APP_DIR}" status --porcelain)" ]] || fail "${APP_DIR} has local changes; save or back them up before installation."
   fi
   # shellcheck disable=SC1091
   . /etc/os-release
@@ -527,7 +526,12 @@ if [[ ! -d "${APP_DIR}/.git" ]]; then
 else
   remote_url="$(git -C "${APP_DIR}" remote get-url origin)"
   case "${remote_url}" in https://github.com/bjo163/mwx-isp.git|git@github.com:bjo163/mwx-isp.git) ;; *) echo "Unexpected origin remote (${remote_url}); refusing to install over another project." >&2; exit 1 ;; esac
-  if [[ -n "$(git -C "${APP_DIR}" status --porcelain)" ]]; then echo "${APP_DIR} has local changes; installer will not overwrite them." >&2; exit 1; fi
+  if [[ -n "$(git -C "${APP_DIR}" status --porcelain)" ]]; then
+    dirty_backup_dir="${APP_DIR}.local-changes.$(date -u +%Y%m%dT%H%M%SZ)"
+    [[ ! -e "${dirty_backup_dir}" ]] || fail "Local-change backup path ${dirty_backup_dir} already exists; move it before retrying."
+    echo "Uncommitted checkout changes found. Saving a complete copy to ${dirty_backup_dir} before updating."
+    cp -a -- "${APP_DIR}" "${dirty_backup_dir}" || fail "Could not preserve local changes to ${dirty_backup_dir}; checkout was not updated."
+  fi
   git -C "${APP_DIR}" fetch --quiet --force origin main
   if [[ -f "${APP_DIR}/.env" ]]; then
     cd "${APP_DIR}"
