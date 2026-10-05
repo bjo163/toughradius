@@ -579,7 +579,7 @@ else
   if [[ "${INSTALL_IN_PROGRESS}" == true ]]; then
         if ensure_existing_services_ready_for_backup; then
           step "4/6" "Creating a safety backup before resuming the interrupted installation"
-          git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
+          git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -s -- --quiet
           echo "Resuming an interrupted install with its existing configuration and volumes."
         else
           echo "Continuing the interrupted first installation after clearing only empty data volumes."
@@ -587,7 +587,7 @@ else
       else
         if ensure_existing_services_ready_for_backup; then
           step "4/6" "Creating a safety backup before updating an existing installation"
-          git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet
+          git -C "${APP_DIR}" show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -s -- --quiet
         else
           echo "Proceeding as a clean installation after clearing only empty data volumes."
         fi

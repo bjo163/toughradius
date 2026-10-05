@@ -73,7 +73,7 @@ if [[ -f "${APP_DIR}/scripts/backup-db.sh" ]]; then
   backup_path="$(/usr/bin/env bash "${APP_DIR}/scripts/backup-db.sh" --quiet)"
 else
   # Bootstrap a pre-update snapshot for installations created before backup tooling shipped.
-  backup_path="$(git show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -- --quiet)"
+  backup_path="$(git show origin/main:scripts/backup-db.sh | MWX_ISP_DIR="${APP_DIR}" bash -s -- --quiet)"
 fi
 echo "Pre-update backup created: ${backup_path}"
 
@@ -102,11 +102,6 @@ wait_for_db() {
   done
   return 1
 }
-
-if [[ -x "${APP_DIR}/scripts/backup-db.sh" ]]; then
-  echo "--> Creating pre-update database backup..."
-  "${APP_DIR}/scripts/backup-db.sh" || echo "Warning: Pre-update database backup failed, continuing update with caution..." >&2
-fi
 
 git reset --hard "${new_revision}"
 if ! docker compose config --quiet || ! docker compose pull db app; then rollback "Compose validation or image pull failed; reverting source, PostgreSQL, and app images."; exit 1; fi
