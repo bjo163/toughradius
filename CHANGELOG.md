@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.10.0 — 2026-10-05
+
+Changes since v0.9.0:
+
+### Features
+
+- expose website & home editor in sidebar and public website shortcut in appbar (TR-F013) (#41)
+
 ## v0.9.0 — 2026-10-05
 
 Changes since v0.8.4:
