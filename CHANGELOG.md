@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.8.2 — 2026-10-05
+
+Changes since v0.8.1:
+
+### Fixes and Improvements
+
+- verify Caddy local HTTP proxy against /admin/ endpoint (TR-F020)
+
 ## v0.8.1 — 2026-10-05
 
 Changes since v0.8.0:
