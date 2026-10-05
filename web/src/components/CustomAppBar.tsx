@@ -4,6 +4,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import { Box, Chip, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
 import { AppBar, AppBarProps, TitlePortal, ToggleThemeButton, useRedirect, useGetIdentity, usePermissions, useTranslate, useSidebarState } from 'react-admin';
 import { useEffect, useState } from 'react';
@@ -127,6 +128,12 @@ export const CustomAppBar = (props: AppBarProps) => {
           <Typography aria-label="Interface language" variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 800, letterSpacing: '0.12em', px: 1 }}>
             EN
           </Typography>
+
+          <Tooltip title="View Public Website (Landing Page)">
+            <IconButton size="large" aria-label="Open landing page" onClick={() => window.open('/admin#/home', '_blank')} sx={{ color: theme.palette.primary.main }}>
+              <PublicOutlinedIcon />
+            </IconButton>
+          </Tooltip>
 
           <Tooltip title="User guide">
             <IconButton size="large" aria-label="Open user guide" onClick={() => redirect('/guide')} sx={{ color: theme.palette.text.secondary }}>
