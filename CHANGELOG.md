@@ -1,5 +1,13 @@
 # MWX-ISP Changelog
 
+## v0.8.3 — 2026-10-05
+
+Changes since v0.8.2:
+
+### Fixes and Improvements
+
+- enable interactive prompts by default during vps-repair (TR-F020)
+
 ## v0.8.2 — 2026-10-05
 
 Changes since v0.8.1:
