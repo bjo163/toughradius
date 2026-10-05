@@ -333,10 +333,13 @@ write_tls_settings() {
 
 configure_existing_tls_settings() {
   local file="$1" domain mode
-  domain="$(sed -n 's/^MWX_ISP_DOMAIN=//p' "${file}" | tail -n 1)"
+  domain="${MWX_ISP_DOMAIN:-$(sed -n 's/^MWX_ISP_DOMAIN=//p' "${file}" | tail -n 1)}"
   domain="${domain:-localhost}"
   mode="$(sed -n 's/^MWX_ISP_TLS_MODE=//p' "${file}" | tail -n 1)"
   mode="${mode:-$(infer_tls_mode "${domain}")}"
+  if [[ "${INTERACTIVE}" != true && -n "${MWX_ISP_DOMAIN:-}" ]]; then
+    mode="$(infer_tls_mode "${domain}")"
+  fi
   if [[ "${INTERACTIVE}" == true ]]; then
     [[ -t 0 || -r /dev/tty ]] || fail "--interactive needs a terminal. Run without that option for automatic defaults."
     prompt_tls_settings "${mode}" "${domain}"

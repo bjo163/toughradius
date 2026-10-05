@@ -18,4 +18,19 @@ bash -n "${temporary_installer}" || { echo "Downloaded installer failed shell sy
 
 echo "Starting the current MWX-ISP installer in safe upgrade/repair mode."
 echo "Existing credentials and database volumes are preserved; the installer creates a backup before updating a running installation."
-bash "${temporary_installer}" --yes "$@"
+installer_args=()
+if [[ $# -eq 0 ]]; then
+  if [[ -t 0 || -r /dev/tty ]]; then
+    installer_args+=(--interactive)
+  else
+    installer_args+=(--yes)
+  fi
+else
+  installer_args+=("$@")
+fi
+
+if [[ -r /dev/tty ]]; then
+  bash "${temporary_installer}" "${installer_args[@]}" </dev/tty
+else
+  bash "${temporary_installer}" "${installer_args[@]}"
+fi
